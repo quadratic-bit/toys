@@ -1,0 +1,72 @@
+CXX ?= g++
+AR ?= ar
+RM ?= rm -f
+MKDIR_P ?= mkdir -p
+
+BIN_DIR := bin
+BUILD_DIR := build
+INC_PUBLIC := headers
+INC_SRC := src/draww
+
+LIB_SRC := $(wildcard src/draww/*.cpp)
+MAIN_SRC := src/main.cpp
+
+LIB_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(LIB_SRC))
+MAIN_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(MAIN_SRC))
+
+LIB_STATIC := $(BUILD_DIR)/libdraww.a
+DEPFILES := $(LIB_OBJS:.o=.d) $(MAIN_OBJS:.o=.d) $(TEST_OBJS:.o=.d)
+
+MODE ?= debug   # debug | release
+
+CXXFLAGS_COMMON := -std=c++98 -pedantic-errors -Wall -Wextra -Werror \
+				   -Wshadow -Wformat=2 \
+				   -Wmissing-declarations -Wmissing-field-initializers \
+				   -Wcast-align -Wwrite-strings \
+				   -Wpointer-arith -Wstrict-aliasing=2 \
+				   -I$(INC_PUBLIC) -I$(INC_SRC)
+
+ifeq ($(SAN),1)
+	CXXFLAGS_SAN := -fsanitize=address,undefined
+	LDFLAGS_SAN := -fsanitize=address,undefined
+endif
+
+CXXFLAGS_debug := -O1 -g -fstack-protector-all $(CXXFLAGS_SAN)
+LDFLAGS_debug := $(LDFLAGS_SAN)
+
+CXXFLAGS_release := -O2 -flto -fstack-protector-strong
+LDFLAGS_release:= -flto
+
+CXXFLAGS := $(CXXFLAGS_COMMON) $(CXXFLAGS_$(MODE))
+LDFLAGS := $(LDFLAGS_$(MODE)) -Wl,-rpath,/usr/local/lib
+#LDLIBS := -lz
+LDLIBS := -L/usr/local/lib -lSDL3 -lSDL3_gfx
+
+DEPFLAGS := -MMD -MP
+
+.PHONY: all clean distclean test run help
+
+all: $(BIN_DIR)/example
+
+$(BIN_DIR)/example: $(LIB_STATIC) $(MAIN_OBJS) | $(BIN_DIR)
+	$(CXX) $(LDFLAGS) -o $@ $(MAIN_OBJS) $(LIB_STATIC) $(LDLIBS)
+
+$(LIB_STATIC): $(LIB_OBJS) | $(BUILD_DIR)
+	$(AR) rcs $@ $(LIB_OBJS)
+
+$(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
+	@$(MKDIR_P) $(dir $@)
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c $< -o $@
+
+run: $(BIN_DIR)/example
+	./$(BIN_DIR)/example
+
+$(BIN_DIR) $(BUILD_DIR):
+	$(MKDIR_P) $@
+
+clean:
+	$(RM) -r $(BUILD_DIR) $(BIN_DIR)/example
+
+distclean: clean
+
+-include $(DEPFILES)
