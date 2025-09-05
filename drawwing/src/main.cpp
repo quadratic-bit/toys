@@ -1,32 +1,32 @@
 #include <cmath>
 
-#include "draww/vector.hpp"
+#include "draww/linalg.hpp"
 #include "draww/window.hpp"
 #include "draww/axes.hpp"
+
+static const int FPS = 60;
+static const Uint64 FRAME_NS = SDL_NS_PER_SECOND / FPS;
 
 static float fun(float x) {
 	return std::sin(x) * 2;
 }
 
-static const int FPS = 60;
-static const Uint64 FRAME_NS = SDL_NS_PER_SECOND / FPS;
+static bool is_ev_close(const SDL_Event *event) {
+	return event->type == SDL_EVENT_QUIT ||
+		event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED;
+}
 
 int main() {
 	SDL_Event ev;
 	bool running = true;
 
-	Axis x_axis_main = { 400, 30 };
-	Axis y_axis_main = { 550, 30 };
-	SDL_FRect cs_rect_main = { 200, 150, 700, 500 };
-	CoordinateSystem *cs_main = new CoordinateSystem(x_axis_main, y_axis_main, cs_rect_main);
-
-	Axis x_axis_aux = { 600, 20 };
-	Axis y_axis_aux = { 1050, 20 };
-	SDL_FRect cs_rect_aux = { 1000, 450, 200, 200 };
-	CoordinateSystem *cs_aux = new CoordinateSystem(x_axis_aux, y_axis_aux, cs_rect_aux);
+	Axis x_axis = { 400, 30 };
+	Axis y_axis = { 550, 30 };
+	SDL_FRect cs_rect = { 200, 150, 700, 500 };
+	CoordinateSystem *cs = new CoordinateSystem(x_axis, y_axis, cs_rect);
 
 	DrawWindow *window = new DrawWindow(1280, 720);
-	Vector sample = { 1, 2 };
+	Vector2 sample(1, 2);
 
 	Uint64 next_frame = SDL_GetTicksNS();
 
@@ -42,8 +42,7 @@ int main() {
 
 			if (SDL_WaitEventTimeout(&ev, (int)timeout_ms)) {
 				do {
-					if (ev.type == SDL_EVENT_QUIT ||
-							ev.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
+					if (is_ev_close(&ev)) {
 						running = false;
 						break;
 					}
@@ -53,26 +52,21 @@ int main() {
 		}
 		if (!running) break;
 
-		while (SDL_PollEvent(&ev)) {
-			if (ev.type == SDL_EVENT_QUIT ||
-					ev.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
+		while (SDL_PollEvent(&ev))
+			if (is_ev_close(&ev))
 				running = false;
-			}
-		}
+
 		if (!running) break;
 
 		// Rendering
 
 		window->clear();
 
-		window->blit_coordinates(*cs_main);
-		window->draw_func(*cs_main, fun);
+		window->blit_coordinates(*cs);
+		window->draw_func(*cs, fun);
 
-		window->blit_coordinates(*cs_aux);
-		window->draw_func(*cs_aux, std::cos);
-
-		window->draw_vector(*cs_main, sample);
-		rotate_vector(sample, M_PI / 64);
+		window->draw_vector(*cs, sample);
+		sample.rotate(M_PI / 64);
 
 		window->present();
 

@@ -1,18 +1,32 @@
 #include <math.h>
 #include <SDL3_gfx/SDL3_gfxPrimitives.h>
-#include "vector.hpp"
+#include "linalg.hpp"
 #include "window.hpp"
 
-void rotate_vector(Vector &vec, float angle) {
-	// (cos phi, -sin phi) / (sin phi, cos phi)
-	float new_x = vec.x * cos(angle) - vec.y * sin(angle);
-	float new_y = vec.x * sin(angle) + vec.y * cos(angle);
-	vec.x = new_x;
-	vec.y = new_y;
+Vector2::Vector2(double x_coord, double y_coord) {
+	this->x = x_coord;
+	this->y = y_coord;
 }
 
-static ArrowHead arrow_head_45(const Vector& vec, float size) {
-	ArrowHead head = { { vec.x, vec.y }, { vec.x, vec.y } };
+void Vector2::rotate(double angle) {
+	// (cos phi, -sin phi) / (sin phi, cos phi)
+	// Mat2 m = Mat2::rotation(angle);
+	float new_x = x * cos(angle) - y * sin(angle);
+	float new_y = x * sin(angle) + y * cos(angle);
+	x = new_x;
+	y = new_y;
+}
+
+Vector3::Vector3(double x_coord, double y_coord, double z_coord) {
+	this->x = x_coord;
+	this->y = y_coord;
+	this->z = z_coord;
+}
+
+// TODO: abolish
+static ArrowHead arrow_head_45(const Vector2& vec, float size) {
+	Vector2 left(vec.x, vec.y), right(vec.x, vec.y);
+	ArrowHead head = { left, right };
 	float len = std::sqrt(vec.x * vec.x + vec.y * vec.y);
 	if (len == 0.0f) return head;  // degenerate
 
@@ -30,7 +44,7 @@ static ArrowHead arrow_head_45(const Vector& vec, float size) {
 	return head;
 }
 
-void DrawWindow::draw_vector(const CoordinateSystem &cs, Vector &vec) {
+void DrawWindow::draw_vector(const CoordinateSystem &cs, Vector2 &vec) {
 	float screen_x = cs.y_axis.center + vec.x * (float)cs.y_axis.scale;
 	float screen_y = cs.x_axis.center - vec.y * (float)cs.x_axis.scale;
 	ArrowHead head = arrow_head_45(vec, 0.5);

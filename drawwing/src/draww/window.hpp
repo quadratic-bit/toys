@@ -1,7 +1,7 @@
 #pragma once
 #include <SDL3/SDL.h>
 #include "axes.hpp"
-#include "vector.hpp"
+#include "linalg.hpp"
 
 #define CLR_BG 50, 50, 50
 #define CLR_GRID 180, 180, 180
@@ -20,7 +20,7 @@ public:
 	void present();
 
 	void blit_coordinates(const CoordinateSystem &cs);
-	void draw_vector(const CoordinateSystem &cs, Vector &vec);
+	void draw_vector(const CoordinateSystem &cs, Vector2 &vec);
 
 	void draw_func(const CoordinateSystem &cs, float (fn)(float));
 };

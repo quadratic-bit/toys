@@ -15,11 +15,6 @@ DrawWindow::DrawWindow(int width, int height) {
 		throw std::runtime_error(SDL_GetError());
 	}
 
-	// if (!SDL_SetRenderVSync(renderer, 1)) {
-	// 	SDL_Log("Couldn't enable VSync: %s\n", SDL_GetError() );
-	// 	throw std::runtime_error(SDL_GetError());
-	// }
-
 	SDL_SetRenderDrawColor(renderer, CLR_BG, SDL_ALPHA_OPAQUE);
 	SDL_RenderClear(renderer);
 
