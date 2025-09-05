@@ -19,7 +19,7 @@ DEPFILES := $(LIB_OBJS:.o=.d) $(MAIN_OBJS:.o=.d) $(TEST_OBJS:.o=.d)
 
 MODE ?= debug   # debug | release
 
-CXXFLAGS_COMMON := -std=c++98 -pedantic-errors -Wall -Wextra -Werror \
+CXXFLAGS_COMMON := -std=c++03 -pedantic-errors -Wall -Wextra -Werror \
 				   -Wshadow -Wformat=2 \
 				   -Wmissing-declarations -Wmissing-field-initializers \
 				   -Wcast-align -Wwrite-strings \
