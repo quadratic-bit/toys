@@ -3,24 +3,8 @@
 #include "linalg.hpp"
 #include "window.hpp"
 
-Vector2::Vector2(double x_coord, double y_coord) {
-	this->x = x_coord;
-	this->y = y_coord;
-}
-
-void Vector2::rotate(double angle) {
-	// (cos phi, -sin phi) / (sin phi, cos phi)
-	// Mat2 m = Mat2::rotation(angle);
-	float new_x = x * cos(angle) - y * sin(angle);
-	float new_y = x * sin(angle) + y * cos(angle);
-	x = new_x;
-	y = new_y;
-}
-
-Vector3::Vector3(double x_coord, double y_coord, double z_coord) {
-	this->x = x_coord;
-	this->y = y_coord;
-	this->z = z_coord;
+Vector3 operator*(double left, const Vector3 &right) {
+	return right * left;
 }
 
 // TODO: abolish
@@ -44,7 +28,7 @@ static ArrowHead arrow_head_45(const Vector2& vec, float size) {
 	return head;
 }
 
-void DrawWindow::draw_vector(const CoordinateSystem &cs, Vector2 &vec) {
+void DrawWindow::draw_vector(const CoordinateSystem &cs, const Vector2 &vec) {
 	float screen_x = cs.y_axis.center + vec.x * (float)cs.y_axis.scale;
 	float screen_y = cs.x_axis.center - vec.y * (float)cs.x_axis.scale;
 	ArrowHead head = arrow_head_45(vec, 0.5);

@@ -1,15 +1,9 @@
-#include <cmath>
-
 #include "draww/linalg.hpp"
 #include "draww/window.hpp"
 #include "draww/axes.hpp"
 
 static const int FPS = 60;
 static const Uint64 FRAME_NS = SDL_NS_PER_SECOND / FPS;
-
-static float fun(float x) {
-	return std::sin(x) * 2;
-}
 
 static bool is_ev_close(const SDL_Event *event) {
 	return event->type == SDL_EVENT_QUIT ||
@@ -26,7 +20,10 @@ int main() {
 	CoordinateSystem *cs = new CoordinateSystem(x_axis, y_axis, cs_rect);
 
 	DrawWindow *window = new DrawWindow(1280, 720);
-	Vector2 sample(1, 2);
+	Vector3 origin(0, 0, 0);
+	Vector3 light(-10, -5, 20);
+	Vector3 camera(0, 0, 10);
+	Sphere sph(origin, 5);
 
 	Uint64 next_frame = SDL_GetTicksNS();
 
@@ -60,13 +57,8 @@ int main() {
 
 		// Rendering
 
-		window->clear();
-
-		window->blit_coordinates(*cs);
-		window->draw_func(*cs, fun);
-
-		window->draw_vector(*cs, sample);
-		sample.rotate(M_PI / 64);
+		window->render_sphere(*cs, sph, light, camera);
+		//light.rotate_xz(M_PI / 64);
 
 		window->present();
 

@@ -1,5 +1,9 @@
+#include <SDL3/SDL_system.h>
 #include <SDL3_gfx/SDL3_gfxPrimitives.h>
+#include <algorithm>
 #include <cassert>
+#include <cmath>
+#include <cstdio>
 #include <stdexcept>
 
 #include "axes.hpp"
@@ -16,11 +20,11 @@ CoordinateSystem::CoordinateSystem(Axis x_ax, Axis y_ax, SDL_FRect dims) {
 }
 
 float CoordinateSystem::x_screen_to_space(float x_screen) const {
-	return x_screen / (float)x_axis.scale;
+	return (x_screen - y_axis.center) / (float)x_axis.scale;
 }
 
 float CoordinateSystem::y_screen_to_space(float y_screen) const {
-	return y_screen / (float)y_axis.scale;
+	return (x_axis.center - y_screen) / (float)y_axis.scale;
 }
 
 float CoordinateSystem::x_space_to_screen(float x_space) const {
@@ -28,22 +32,22 @@ float CoordinateSystem::x_space_to_screen(float x_space) const {
 }
 
 float CoordinateSystem::y_space_to_screen(float y_space) const {
-	return x_axis.center + y_space * (float)y_axis.scale;
+	return x_axis.center - y_space * (float)y_axis.scale;
 }
 
-void DrawWindow::blit_coordinates(const CoordinateSystem &cs) {
-	SDL_FRect surface;
+void DrawWindow::blit_axes(const CoordinateSystem &cs) {
+	if (cs.x_axis.center >= cs.dim.y && cs.x_axis.center <= cs.dim.y + cs.dim.h) {
+		thickLineRGBA(renderer, cs.dim.x, cs.x_axis.center, cs.dim.x + cs.dim.w, cs.x_axis.center, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
+	}
+
+	if (cs.y_axis.center >= cs.dim.x && cs.y_axis.center <= cs.dim.x + cs.dim.w) {
+		thickLineRGBA(renderer, cs.y_axis.center, cs.dim.y, cs.y_axis.center, cs.dim.y + cs.dim.h, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
+	}
+}
+
+void DrawWindow::blit_grid(const CoordinateSystem &cs) {
 	int grid_offset_x, grid_offset_y, i;
 
-	// Surface
-	SDL_SetRenderDrawColor(renderer, CLR_WHITE, SDL_ALPHA_OPAQUE);
-	surface.x = cs.dim.x;
-	surface.y = cs.dim.y;
-	surface.w = cs.dim.w;
-	surface.h = cs.dim.h;
-	SDL_RenderFillRect(renderer, &surface);
-
-	// Grid
 	grid_offset_x = pos_mod(cs.y_axis.center - cs.dim.x, cs.x_axis.scale);
 	grid_offset_y = pos_mod(cs.x_axis.center - cs.dim.y, cs.y_axis.scale);
 
@@ -55,15 +59,17 @@ void DrawWindow::blit_coordinates(const CoordinateSystem &cs) {
 	for (i = grid_offset_y; i <= cs.dim.h; i += cs.y_axis.scale) {
 		SDL_RenderLine(renderer, cs.dim.x, cs.dim.y + i, cs.dim.x + cs.dim.w, cs.dim.y + i);
 	}
+}
 
-	// Axes
-	if (cs.x_axis.center >= cs.dim.y && cs.x_axis.center <= cs.dim.y + cs.dim.h) {
-		thickLineRGBA(renderer, cs.dim.x, cs.x_axis.center, cs.dim.x + cs.dim.w, cs.x_axis.center, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
-	}
+void DrawWindow::blit_cs_bg(const CoordinateSystem &cs) {
+	SDL_FRect surface;
 
-	if (cs.y_axis.center >= cs.dim.x && cs.y_axis.center <= cs.dim.x + cs.dim.w) {
-		thickLineRGBA(renderer, cs.y_axis.center, cs.dim.y, cs.y_axis.center, cs.dim.y + cs.dim.h, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
-	}
+	SDL_SetRenderDrawColor(renderer, CLR_WHITE, SDL_ALPHA_OPAQUE);
+	surface.x = cs.dim.x;
+	surface.y = cs.dim.y;
+	surface.w = cs.dim.w;
+	surface.h = cs.dim.h;
+	SDL_RenderFillRect(renderer, &surface);
 }
 
 void DrawWindow::draw_func(const CoordinateSystem &cs, float (fn)(float)) {
@@ -80,7 +86,7 @@ void DrawWindow::draw_func(const CoordinateSystem &cs, float (fn)(float)) {
 
 	float cs_x, value;
 	for (i = 0; i < n_pixels; ++i) {
-		cs_x = cs.x_screen_to_space(cs.y_axis.center - cs.dim.x + (float)i);
+		cs_x = cs.x_screen_to_space(cs.dim.x + (float)i);
 		value = fn(cs_x);
 		pixels[i].x = cs.dim.x + i;
 		pixels[i].y = cs.y_space_to_screen(value);
@@ -90,4 +96,58 @@ void DrawWindow::draw_func(const CoordinateSystem &cs, float (fn)(float)) {
 	}
 	SDL_SetRenderDrawColor(renderer, CLR_BLACK, SDL_ALPHA_OPAQUE);
 	SDL_RenderPoints(renderer, pixels, n_pixels);
+}
+
+#define RGB_VOID 25
+#define RGB_AMBIENT 26
+#define RGB_DIFFUSION 147
+#define RGB_SPECULAR 110
+#define CLR_MONO(v) v, v, v
+#define CLR_AMBIENT CLR_MONO(RGB_AMBIENT)
+#define CLR_VOID CLR_MONO(RGB_VOID)
+
+static const int SPEC_POW = 30;
+
+Uint8 quantize(Uint8 value, Uint8 steps);
+Uint8 quantize(Uint8 value, Uint8 steps) {
+	Uint8 scale = 255 / steps;
+	return value / scale * scale;
+}
+
+void DrawWindow::render_sphere(const CoordinateSystem &cs, const Sphere &sph, const Vector3 &light, const Vector3 &camera) {
+	SDL_SetRenderDrawColor(renderer, CLR_AMBIENT, SDL_ALPHA_OPAQUE);
+	for (int h = cs.dim.y; h < cs.dim.y + cs.dim.h; ++h) {
+		for (int w = cs.dim.x; w < cs.dim.x + cs.dim.w; ++w) {
+			double x = cs.x_screen_to_space(w);
+			double y = cs.y_screen_to_space(h);
+			if (!sph.contains_2d(x, y)) {
+				//SDL_SetRenderDrawColor(renderer, CLR_VOID, SDL_ALPHA_OPAQUE);
+				//SDL_RenderPoint(renderer, w, h);
+				continue;
+			}
+			Vector3 point(x, y, sph.z_from_xy(x, y));
+			Vector3 point_light = light - point;
+			Vector3 normal = sph.normal(point);
+			double cosalpha = !point_light ^ normal;
+
+			Vector3 reflect = 2 * normal - point_light;
+			Vector3 point_cam = - camera - point;
+			double cosbeta = !point_cam ^ !reflect;
+
+			double specular = 0;
+			if (cosbeta > 0) {
+				specular = RGB_SPECULAR * std::pow(cosbeta, SPEC_POW);
+			}
+
+			Uint8 lumin = std::min(
+				RGB_AMBIENT +
+				std::max(RGB_DIFFUSION * cosalpha, 0.0) +
+				specular,
+				255.0
+			);
+
+			SDL_SetRenderDrawColor(renderer, CLR_MONO(quantize(lumin, 255)), SDL_ALPHA_OPAQUE);
+			SDL_RenderPoint(renderer, w, h);
+		}
+	}
 }
