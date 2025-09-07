@@ -50,7 +50,47 @@ public:
 			}
 		}
 	}
+
+	Matrix<T, H, W> operator-(const Matrix<T, H, W> &other) {
+		T new_data[H][W];
+		Matrix<T, H, W> new_mat(new_data);
+		for (int row = 0; row < H; ++row) {
+			for (int col = 0; col < W; ++col) {
+				new_data[row][col] = this->data[row][col] - other.data[row][col];
+			}
+		}
+	}
+
+	Matrix<T, H, W> operator*(int scalar) {
+		T new_data[H][W];
+		Matrix<T, H, W> new_mat(new_data);
+		for (int row = 0; row < H; ++row) {
+			for (int col = 0; col < W; ++col) {
+				new_data[row][col] = this->data[row][col] * scalar;
+			}
+		}
+	}
+
+	Matrix<T, H, W> operator*(double scalar) {
+		T new_data[H][W];
+		Matrix<T, H, W> new_mat(new_data);
+		for (int row = 0; row < H; ++row) {
+			for (int col = 0; col < W; ++col) {
+				new_data[row][col] = this->data[row][col] * scalar;
+			}
+		}
+	}
 };
+
+template<class T, unsigned int H, unsigned int W>
+Matrix<T, H, W> operator*(int scalar, Matrix<T, H, W> matrix) {
+	return matrix * scalar;
+}
+
+template<class T, unsigned int H, unsigned int W>
+Matrix<T, H, W> operator*(double scalar, Matrix<T, H, W> matrix) {
+	return matrix * scalar;
+}
 
 typedef Matrix<double, 2, 2> Mat2;
 

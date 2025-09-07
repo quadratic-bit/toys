@@ -20,9 +20,9 @@ int main() {
 	SDL_Event ev;
 	bool running = true;
 
-	Axis x_axis = { 400, 30 };
-	Axis y_axis = { 550, 30 };
-	SDL_FRect cs_rect = { 200, 150, 700, 500 };
+	Axis x_axis = { 360, 30 };
+	Axis y_axis = { 640, 30 };
+	SDL_FRect cs_rect = { 0, 0, 1280, 720 };
 	CoordinateSystem *cs = new CoordinateSystem(x_axis, y_axis, cs_rect);
 
 	DrawWindow *window = new DrawWindow(1280, 720);
