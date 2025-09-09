@@ -39,10 +39,10 @@ void DrawWindow::blit_grid(const CoordinateSystem * const cs) {
 	}
 }
 
-void DrawWindow::blit_bg(const CoordinateSystem * const cs) {
+void DrawWindow::blit_bg(const CoordinateSystem * const cs, Uint8 r, Uint8 g, Uint8 b) {
 	SDL_FRect surface;
 
-	SDL_SetRenderDrawColor(renderer, CLR_WHITE, SDL_ALPHA_OPAQUE);
+	SDL_SetRenderDrawColor(renderer, r, g, b, SDL_ALPHA_OPAQUE);
 	surface.x = cs->dim.x;
 	surface.y = cs->dim.y;
 	surface.w = cs->dim.w;
@@ -90,15 +90,25 @@ void DrawWindow::render_sphere(
 		const Vector3 * const light,
 		const Vector3 * const camera
 ) {
-	SDL_SetRenderDrawColor(renderer, CLR_AMBIENT, SDL_ALPHA_OPAQUE);
-	for (int h = cs->dim.y; h < cs->dim.y + cs->dim.h; ++h) {
-		for (int w = cs->dim.x; w < cs->dim.x + cs->dim.w; ++w) {
+	SDL_Rect lock = { (int)(cs->dim.x), (int)(cs->dim.y), (int)(cs->dim.w), (int)(cs->dim.h) };
+
+	void *pixels = NULL;
+	int pitch = 0;
+	if (!pb->lock(&lock, &pixels, &pitch)) {
+		SDL_Log("LockTexture failed: %s", SDL_GetError());
+		return;
+	}
+
+	for (int sy = 0; sy < lock.h; ++sy) {
+		int h = lock.y + sy;
+		double y = cs->y_screen_to_space(h);
+
+		for (int sx = 0; sx < lock.w; ++sx) {
+			int w = lock.x + sx;
 			double x = cs->x_screen_to_space(w);
-			double y = cs->y_screen_to_space(h);
 
 			if (!sph->contains_2d(x, y)) {
-				//SDL_SetRenderDrawColor(renderer, CLR_VOID, SDL_ALPHA_OPAQUE);
-				//SDL_RenderPoint(renderer, w, h);
+				//pb->set_pixel_gray(pixels, pitch, sx, sy, quantize(RGB_VOID, 255));
 				continue;
 			}
 
@@ -108,11 +118,15 @@ void DrawWindow::render_sphere(
 			Vector3 point_light = *light - point;
 			Vector3 point_cam = *camera - point;
 
+			// diffuse
 			double cosalpha = !point_light ^ !normal;
-			double dir_cam_normal = !point_cam ^ !normal;
+
+			// NOTE: no need to normalize, as we need sign only
+			double dir_cam_normal = point_cam ^ normal;
 			double specular = 0;
 			if (cosalpha > 0 && dir_cam_normal > 0) {
 				Vector3 reflect = point_light.reflect(&normal);
+				// specular
 				double cosbeta = !point_cam ^ !reflect;
 
 				if (cosbeta > 0) {
@@ -127,8 +141,11 @@ void DrawWindow::render_sphere(
 				255.0
 			);
 
-			SDL_SetRenderDrawColor(renderer, CLR_MONO(quantize(lumin, 255)), SDL_ALPHA_OPAQUE);
-			SDL_RenderPoint(renderer, w, h);
+			pb->set_pixel_gray(pixels, pitch, sx, sy, quantize(lumin, 255));
 		}
 	}
+
+	pb->unlock();
+
+	pb->draw();
 }

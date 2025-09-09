@@ -4,12 +4,13 @@
 
 #include "axes.hpp"
 #include "linalg.hpp"
+#include "pixel_buffer.hpp"
 
 #define RGB_BLACK 0
 #define RGB_WHITE 255
 
 #define RGB_LIGHT_GRAY 180
-#define RGB_VOID 25
+#define RGB_VOID 18
 
 #define RGB_AMBIENT 26
 #define RGB_DIFFUSION 147
@@ -30,6 +31,7 @@ class DrawWindow {
 public:
 	SDL_Window *window;
 	SDL_Renderer *renderer;
+	PixelBuffer *pb;
 
 	DrawWindow(int width, int height) {
 		SDL_SetAppMetadata("Example Draww", "0.1", "com.example.draww");
@@ -44,9 +46,10 @@ public:
 			throw std::runtime_error(SDL_GetError());
 		}
 
+		pb = new PixelBuffer(renderer, width, height);
+
 		SDL_SetRenderDrawColor(renderer, CLR_BG, SDL_ALPHA_OPAQUE);
 		SDL_RenderClear(renderer);
-
 		SDL_RenderPresent(renderer);
 	}
 
@@ -67,7 +70,7 @@ public:
 
 	void blit_axes(const CoordinateSystem *cs);
 	void blit_grid(const CoordinateSystem *cs);
-	void blit_bg(const CoordinateSystem *cs);
+	void blit_bg(const CoordinateSystem *cs, Uint8 r, Uint8 g, Uint8 b);
 	void blit_vector(const CoordinateSystem *cs, const Vector2 *vec);
 
 	void draw_func(const CoordinateSystem *cs, float (fn)(float));

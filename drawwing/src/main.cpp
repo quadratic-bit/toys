@@ -15,11 +15,17 @@ int main() {
 	bool running = true;
 
 	Axis x_axis = { 360, 30 };
-	Axis y_axis = { 640, 30 };
-	SDL_FRect cs_rect = { 0, 0, 1280, 720 };
+	Axis y_axis = { 320, 30 };
+	SDL_FRect cs_rect = { 0, 0, 640, 720 };
 	CoordinateSystem *cs = new CoordinateSystem(x_axis, y_axis, cs_rect);
 
+	Axis x_axis2 = { 360, 30 };
+	Axis y_axis2 = { 960, 30 };
+	SDL_FRect cs_rect2 = { 640, 0, 640, 720 };
+	CoordinateSystem *cs2 = new CoordinateSystem(x_axis2, y_axis2, cs_rect2);
+
 	DrawWindow *window = new DrawWindow(1280, 720);
+	Vector2 sample(-1, -2);
 	Vector3 origin(0, 0, 0);
 	Vector3 light(-10, 10, 20);
 	Vector3 camera(0, 0, 10);
@@ -57,8 +63,15 @@ int main() {
 
 		// Rendering
 
-		//light.rotate_xz(M_PI / 64);
+		window->blit_bg(cs, CLR_VOID);
 		window->render_sphere(cs, &sph, &light, &camera);
+		light.rotate_xz(M_PI / 64);
+
+		window->blit_bg(cs2, CLR_WHITE);
+		window->blit_grid(cs2);
+		window->blit_axes(cs2);
+		window->blit_vector(cs2, &sample);
+		sample.rotate(-M_PI / 64);
 
 		window->present();
 
