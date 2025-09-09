@@ -95,29 +95,34 @@ void DrawWindow::render_sphere(
 		for (int w = cs->dim.x; w < cs->dim.x + cs->dim.w; ++w) {
 			double x = cs->x_screen_to_space(w);
 			double y = cs->y_screen_to_space(h);
+
 			if (!sph->contains_2d(x, y)) {
 				//SDL_SetRenderDrawColor(renderer, CLR_VOID, SDL_ALPHA_OPAQUE);
 				//SDL_RenderPoint(renderer, w, h);
 				continue;
 			}
+
 			Vector3 point(x, y, sph->z_from_xy(x, y));
-			Vector3 point_light = *light - point;
 			Vector3 normal = sph->normal(point);
-			double cosalpha = !point_light ^ normal;
 
-			Vector3 reflect = 2 * normal - point_light;
-			// NOTE: this minus v is a mystery
-			Vector3 point_cam = - *camera - point;
-			double cosbeta = !point_cam ^ !reflect;
+			Vector3 point_light = *light - point;
+			Vector3 point_cam = *camera - point;
 
+			double cosalpha = !point_light ^ !normal;
+			double dir_cam_normal = !point_cam ^ !normal;
 			double specular = 0;
-			if (cosbeta > 0) {
-				specular = RGB_SPECULAR * std::pow(cosbeta, SPEC_POW);
+			if (cosalpha > 0 && dir_cam_normal > 0) {
+				Vector3 reflect = point_light.reflect(&normal);
+				double cosbeta = !point_cam ^ !reflect;
+
+				if (cosbeta > 0) {
+					specular = RGB_SPECULAR * std::pow(cosbeta, SPEC_POW);
+				}
 			}
 
 			Uint8 lumin = std::min(
 				RGB_AMBIENT +
-				std::max(RGB_DIFFUSION * cosalpha, 0.0) +
+				std::max(0.0, RGB_DIFFUSION * cosalpha) +
 				specular,
 				255.0
 			);

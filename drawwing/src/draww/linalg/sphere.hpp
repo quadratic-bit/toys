@@ -20,7 +20,7 @@ public:
 	}
 
 	Vector3 normal(const Vector3 &point) const {
-		return !point;
+		return point;
 	}
 };
 

@@ -13,7 +13,7 @@
 
 #define RGB_AMBIENT 26
 #define RGB_DIFFUSION 147
-#define RGB_SPECULAR 200
+#define RGB_SPECULAR 100
 
 #define CLR_MONO(v) v, v, v
 

@@ -1,5 +1,4 @@
 #pragma once
-
 #include <cassert>
 #include <cmath>
 
@@ -18,6 +17,11 @@ public:
 		double csn = std::cos(rad), sn = std::sin(rad);
 		double new_data[2][2] = { { csn, -sn }, { sn, csn } };
 		return Matrix<2, 2>(new_data);
+	}
+
+	static Matrix zero() {
+		double data[H][W] = {0};
+		return Matrix(data);
 	}
 
 	double *mut_at(unsigned int row, unsigned int col) {

@@ -21,7 +21,7 @@ int main() {
 
 	DrawWindow *window = new DrawWindow(1280, 720);
 	Vector3 origin(0, 0, 0);
-	Vector3 light(-10, -5, 20);
+	Vector3 light(-10, 10, 20);
 	Vector3 camera(0, 0, 10);
 	Sphere sph(origin, 5);
 

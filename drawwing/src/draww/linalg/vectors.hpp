@@ -93,7 +93,8 @@ public:
 	//    \     |      /
 	// this  normal  result
 	Vector3 reflect(const Vector3 * const normal) {
-		return *normal * 2 - *this;
+		double normal_scale = !*normal ^ *this;
+		return *normal * normal_scale * 2 - *this;
 	}
 
 	Vector3 operator-() const {
