@@ -57,8 +57,8 @@ int main() {
 
 		// Rendering
 
-		window->render_sphere(*cs, sph, light, camera);
 		//light.rotate_xz(M_PI / 64);
+		window->render_sphere(cs, &sph, &light, &camera);
 
 		window->present();
 

@@ -1,44 +1,33 @@
-#include <math.h>
 #include <SDL3_gfx/SDL3_gfxPrimitives.h>
+
 #include "linalg.hpp"
 #include "window.hpp"
+
+static const double ARROW_HEAD_SIZE = 0.5;
 
 Vector3 operator*(double left, const Vector3 &right) {
 	return right * left;
 }
 
-// TODO: abolish
-static ArrowHead arrow_head_45(const Vector2& vec, float size) {
-	Vector2 left(vec.x, vec.y), right(vec.x, vec.y);
-	ArrowHead head = { left, right };
-	float len = std::sqrt(vec.x * vec.x + vec.y * vec.y);
-	if (len == 0.0f) return head;  // degenerate
-
-	float ux = vec.x / len, uy = vec.y / len;
-	float px = -uy, py = ux;
-
-	const float scale = size * (float)(M_SQRT1_2);  // 45deg
-
-	head.left.x = vec.x - scale * (ux + px);
-	head.left.y = vec.y - scale * (uy + py);
-
-	head.right.x = vec.x - scale * (ux - px);
-	head.right.y = vec.y - scale * (uy - py);
-
-	return head;
+Vector2 operator*(double left, const Vector2 &right) {
+	return right * left;
 }
 
-void DrawWindow::draw_vector(const CoordinateSystem &cs, const Vector2 &vec) {
-	float screen_x = cs.y_axis.center + vec.x * (float)cs.y_axis.scale;
-	float screen_y = cs.x_axis.center - vec.y * (float)cs.x_axis.scale;
-	ArrowHead head = arrow_head_45(vec, 0.5);
+void DrawWindow::blit_vector(const CoordinateSystem * const cs, const Vector2 * const vec) {
+	float screen_x = cs->x_space_to_screen(vec->x);
+	float screen_y = cs->y_space_to_screen(vec->y);
 
-	float head_left_x = cs.y_axis.center + head.left.x * (float)cs.y_axis.scale;
-	float head_left_y = cs.x_axis.center - head.left.y * (float)cs.x_axis.scale;
-	float head_right_x = cs.y_axis.center + head.right.x * (float)cs.y_axis.scale;
-	float head_right_y = cs.x_axis.center - head.right.y * (float)cs.x_axis.scale;
+	Vector2 back_dir = -(!*vec);
+	Vector2 right_wing = ((!*vec).perp_right() + back_dir) * ARROW_HEAD_SIZE + *vec;
+	Vector2 left_wing = ((!*vec).perp_left() + back_dir) * ARROW_HEAD_SIZE + *vec;
 
-	thickLineRGBA(renderer, cs.y_axis.center, cs.x_axis.center, screen_x, screen_y, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
-	thickLineRGBA(renderer, head_left_x, head_left_y, screen_x, screen_y, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
-	thickLineRGBA(renderer, head_right_x, head_right_y, screen_x, screen_y, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
+	cs->vector2_space_to_screen(&right_wing);
+	cs->vector2_space_to_screen(&left_wing);
+
+	// Vector
+	thickLineRGBA(renderer, cs->y_axis.center, cs->x_axis.center, screen_x, screen_y, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
+
+	// Head
+	thickLineRGBA(renderer, right_wing.x, right_wing.y, screen_x, screen_y, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
+	thickLineRGBA(renderer, left_wing.x, left_wing.y, screen_x, screen_y, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
 }
