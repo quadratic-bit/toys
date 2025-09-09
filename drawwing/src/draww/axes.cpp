@@ -84,7 +84,7 @@ Uint8 quantize(Uint8 value, Uint8 steps) {
 	return value / scale * scale;
 }
 
-void DrawWindow::render_sphere(
+void DrawWindow::render_sphere_with_ambient_diffusion_and_specular_light(
 		const CoordinateSystem * const cs,
 		const Sphere * const sph,
 		const Vector3 * const light,

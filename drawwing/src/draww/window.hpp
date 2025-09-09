@@ -75,5 +75,9 @@ public:
 
 	void draw_func(const CoordinateSystem *cs, float (fn)(float));
 
-	void render_sphere(const CoordinateSystem *cs, const Sphere *sph, const Vector3 *light, const Vector3 *camera);
+	void render_sphere_with_ambient_diffusion_and_specular_light(
+		const CoordinateSystem *cs,
+		const Sphere *sph,
+		const Vector3 *light,
+		const Vector3 *camera);
 };

@@ -64,7 +64,12 @@ int main() {
 		// Rendering
 
 		window->blit_bg(cs, CLR_VOID);
-		window->render_sphere(cs, &sph, &light, &camera);
+		window->render_sphere_with_ambient_diffusion_and_specular_light(
+			cs,
+			&sph,
+			&light,
+			&camera
+		);
 		light.rotate_xz(M_PI / 64);
 
 		window->blit_bg(cs2, CLR_WHITE);
