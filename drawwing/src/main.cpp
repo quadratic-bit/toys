@@ -87,5 +87,7 @@ int main() {
 	}
 
 	delete window;
+	delete cs;
+	delete cs2;
 	return 0;
 }
