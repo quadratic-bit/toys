@@ -2,8 +2,11 @@
 #include <cassert>
 #include <cmath>
 
-template<unsigned int H, unsigned int W> class Matrix {
+template<unsigned int H, unsigned int W>
+class Matrix {
+	template<unsigned int, unsigned int> friend class Matrix;
 	double data[H][W];
+
 public:
 	Matrix(const double (&m)[H][W]) {
 		for (unsigned int row = 0; row < H; ++row) {
@@ -24,6 +27,14 @@ public:
 		return Matrix(data);
 	}
 
+	static Matrix<H, H> id() {
+		double data[H][H] = {0};
+		for (int i = 0; i < H; ++i) {
+			data[i] = 1;
+		}
+		return Matrix(data);
+	}
+
 	double *mut_at(unsigned int row, unsigned int col) {
 		assert(row < H);
 		assert(col < W);
@@ -36,29 +47,29 @@ public:
 		return data[row][col];
 	}
 
-	Matrix<H, W> operator+(const Matrix<H, W> &other) {
+	Matrix<H, W> operator+(const Matrix<H, W> &other) const {
 		double new_data[H][W];
 		Matrix<H, W> new_mat(new_data);
 		for (unsigned int row = 0; row < H; ++row) {
 			for (unsigned int col = 0; col < W; ++col) {
-				new_data[row][col] = this->data[row][col] + other.at(row, col);
+				new_data[row][col] = this->data[row][col] + other.data[row][col];
 			}
 		}
 		return new_mat;
 	}
 
-	Matrix<H, W> operator-(const Matrix<H, W> &other) {
+	Matrix<H, W> operator-(const Matrix<H, W> &other) const {
 		double new_data[H][W];
 		Matrix<H, W> new_mat(new_data);
 		for (unsigned int row = 0; row < H; ++row) {
 			for (unsigned int col = 0; col < W; ++col) {
-				new_data[row][col] = this->data[row][col] - other.at(row, col);
+				new_data[row][col] = this->data[row][col] - other.data[row][col];
 			}
 		}
 		return new_mat;
 	}
 
-	Matrix<H, W> operator*(double scalar) {
+	Matrix<H, W> operator*(double scalar) const {
 		double new_data[H][W];
 		Matrix<H, W> new_mat(new_data);
 		for (unsigned int row = 0; row < H; ++row) {
@@ -70,23 +81,23 @@ public:
 	}
 
 	template<unsigned int D>
-	Matrix<H, D> operator*(const Matrix<W, D> &other) {
+	Matrix<H, D> operator*(const Matrix<W, D> &other) const {
 		double new_data[H][D] = {{0}};
 		Matrix<H, D> new_mat(new_data);
 		for (unsigned int row = 0; row < H; ++row) {
 			for (unsigned int col = 0; col < D; ++col) {
 				for (unsigned int i = 0; i < W; ++i) {
-					*new_mat.mut_at(row, col) += this->data[row][i] * other.at(i, col);
+					new_mat.data[row][col] += this->data[row][i] * other.data[i][col];
 				}
 			}
 		}
 		return new_mat;
 	}
+
+	friend Matrix<H, W> operator*(double scalar, Matrix<H, W> matrix) {
+		return matrix * scalar;
+	}
 };
 
-template<unsigned int H, unsigned int W>
-Matrix<H, W> operator*(double scalar, Matrix<H, W> matrix) {
-	return matrix * scalar;
-}
-
 typedef Matrix<2, 2> Mat2;
+typedef Matrix<3, 3> Mat3;

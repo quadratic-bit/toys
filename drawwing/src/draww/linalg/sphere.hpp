@@ -1,5 +1,4 @@
 #pragma once
-
 #include "vectors.hpp"
 
 class Sphere {
@@ -26,4 +25,3 @@ public:
 		return point;
 	}
 };
-

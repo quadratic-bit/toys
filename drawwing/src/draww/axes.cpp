@@ -9,8 +9,25 @@
 #include "axes.hpp"
 #include "window.hpp"
 
-static int pos_mod(int a, int b) {
-	return (a % b + b) % b;
+static const double ARROW_HEAD_SIZE = 0.5;
+
+void DrawWindow::blit_vector(const CoordinateSystem * const cs, const Vector2 * const vec) {
+	float screen_x = cs->x_space_to_screen(vec->x);
+	float screen_y = cs->y_space_to_screen(vec->y);
+
+	Vector2 back_dir = -(!*vec);
+	Vector2 right_wing = ((!*vec).perp_right() + back_dir) * ARROW_HEAD_SIZE + *vec;
+	Vector2 left_wing = ((!*vec).perp_left() + back_dir) * ARROW_HEAD_SIZE + *vec;
+
+	cs->vector2_space_to_screen(&right_wing);
+	cs->vector2_space_to_screen(&left_wing);
+
+	// Vector
+	thickLineRGBA(renderer, cs->y_axis.center, cs->x_axis.center, screen_x, screen_y, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
+
+	// Head
+	thickLineRGBA(renderer, right_wing.x, right_wing.y, screen_x, screen_y, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
+	thickLineRGBA(renderer, left_wing.x, left_wing.y, screen_x, screen_y, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
 }
 
 void DrawWindow::blit_axes(const CoordinateSystem * const cs) {
@@ -21,6 +38,10 @@ void DrawWindow::blit_axes(const CoordinateSystem * const cs) {
 	if (cs->y_axis.center >= cs->dim.x && cs->y_axis.center <= cs->dim.x + cs->dim.w) {
 		thickLineRGBA(renderer, cs->y_axis.center, cs->dim.y, cs->y_axis.center, cs->dim.y + cs->dim.h, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
 	}
+}
+
+static inline int pos_mod(int a, int b) {
+	return (a % b + b) % b;
 }
 
 void DrawWindow::blit_grid(const CoordinateSystem * const cs) {
@@ -56,7 +77,7 @@ void DrawWindow::draw_func(const CoordinateSystem * const cs, float (fn)(float))
 	assert(cs->y_axis.scale > 0);
 
 	size_t n_pixels = (size_t)(cs->dim.w), i;
-	SDL_FPoint *pixels = (SDL_FPoint *)malloc(n_pixels * sizeof(SDL_FPoint));
+	SDL_FPoint *pixels = new SDL_FPoint[n_pixels];
 
 	if (pixels == NULL) {
 		throw std::runtime_error("OOM");
@@ -74,7 +95,7 @@ void DrawWindow::draw_func(const CoordinateSystem * const cs, float (fn)(float))
 	}
 	SDL_SetRenderDrawColor(renderer, CLR_BLACK, SDL_ALPHA_OPAQUE);
 	SDL_RenderPoints(renderer, pixels, n_pixels);
-	free(pixels);
+	delete[] pixels;
 }
 
 static const int SPEC_POW = 30;
@@ -142,7 +163,7 @@ void DrawWindow::render_sphere_with_ambient_diffusion_and_specular_light(
 				255.0
 			);
 
-			pb->set_pixel_gray(pixels, pitch, sx, sy, quantize(lumin, 255));
+			pb->set_pixel_gray(pixels, pitch, sx, sy, quantize(lumin, 8));
 		}
 	}
 

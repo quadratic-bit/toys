@@ -14,22 +14,30 @@ int main() {
 	SDL_Event ev;
 	bool running = true;
 
-	Axis x_axis = { 360, 30 };
-	Axis y_axis = { 320, 30 };
-	SDL_FRect cs_rect = { 0, 0, 640, 720 };
-	CoordinateSystem *cs = new CoordinateSystem(x_axis, y_axis, cs_rect);
-
-	Axis x_axis2 = { 360, 30 };
-	Axis y_axis2 = { 960, 30 };
-	SDL_FRect cs_rect2 = { 640, 0, 640, 720 };
-	CoordinateSystem *cs2 = new CoordinateSystem(x_axis2, y_axis2, cs_rect2);
-
-	DrawWindow *window = new DrawWindow(1280, 720);
-	Vector2 sample(-1, -2);
+	Axis x_axis_sphere = { 360, 30 };
+	Axis y_axis_sphere = { 320, 30 };
+	SDL_FRect cs_rect_sphere = { 0, 0, 640, 720 };
+	CoordinateSystem *cs_sphere = new CoordinateSystem(
+		x_axis_sphere,
+		y_axis_sphere,
+		cs_rect_sphere
+	);
 	Vector3 origin(0, 0, 0);
 	Vector3 light(-10, 10, 20);
 	Vector3 camera(0, 0, 10);
 	Sphere sph(origin, 5);
+
+	Axis x_axis_plane = { 360, 30 };
+	Axis y_axis_plane = { 960, 30 };
+	SDL_FRect cs_rect_plane = { 640, 0, 640, 720 };
+	CoordinateSystem *cs_plane = new CoordinateSystem(
+		x_axis_plane,
+		y_axis_plane,
+		cs_rect_plane
+	);
+	Vector2 sample(-1, -2);
+
+	DrawWindow *window = new DrawWindow(1280, 720);
 
 	Uint64 next_frame = SDL_GetTicksNS();
 
@@ -39,11 +47,11 @@ int main() {
 			Uint64 now = SDL_GetTicksNS();
 			if (now >= next_frame) break;
 
-			Uint32 timeout_ms = (Uint32)((next_frame - now) / SDL_NS_PER_MS);
+			Uint32 timeout_ms = (next_frame - now) / SDL_NS_PER_MS;
 
 			if (timeout_ms == 0) break;
 
-			if (SDL_WaitEventTimeout(&ev, (int)timeout_ms)) {
+			if (SDL_WaitEventTimeout(&ev, timeout_ms)) {
 				do {
 					if (is_ev_close(&ev)) {
 						running = false;
@@ -63,19 +71,19 @@ int main() {
 
 		// Rendering
 
-		window->blit_bg(cs, CLR_VOID);
+		window->blit_bg(cs_sphere, CLR_VOID);
 		window->render_sphere_with_ambient_diffusion_and_specular_light(
-			cs,
+			cs_sphere,
 			&sph,
 			&light,
 			&camera
 		);
 		light.rotate_xz(M_PI / 64);
 
-		window->blit_bg(cs2, CLR_WHITE);
-		window->blit_grid(cs2);
-		window->blit_axes(cs2);
-		window->blit_vector(cs2, &sample);
+		window->blit_bg(cs_plane, CLR_WHITE);
+		window->blit_grid(cs_plane);
+		window->blit_axes(cs_plane);
+		window->blit_vector(cs_plane, &sample);
 		sample.rotate(-M_PI / 64);
 
 		window->present();
@@ -87,7 +95,7 @@ int main() {
 	}
 
 	delete window;
-	delete cs;
-	delete cs2;
+	delete cs_sphere;
+	delete cs_plane;
 	return 0;
 }

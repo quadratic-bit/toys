@@ -1,5 +1,4 @@
 #pragma once
-
 #include <cmath>
 
 #include "matrices.hpp"
@@ -53,6 +52,10 @@ public:
 		return Vector2(x * scalar, y * scalar);
 	}
 
+	friend Vector2 operator*(double left, const Vector2 &right) {
+		return right * left;
+	}
+
 	Vector2 operator/(double scalar) const {
 		return Vector2(x / scalar, y / scalar);
 	}
@@ -75,6 +78,11 @@ public:
 		this->x = m.at(0, 0);
 		this->y = m.at(0, 1);
 		this->z = m.at(0, 2);
+	}
+
+	operator Matrix<3, 1>() {
+		double data[3][1] = { { this->x }, { this->y }, { this->z } };
+		return Matrix<3, 1>(data);
 	}
 
 	double length() const {
@@ -121,6 +129,10 @@ public:
 		return Vector3(x * scalar, y * scalar, z * scalar);
 	}
 
+	friend Vector3 operator*(double left, const Vector3 &right) {
+		return right * left;
+	}
+
 	double operator^(const Vector3 &right) const {
 		return x * right.x + y * right.y + z * right.z;
 	}
@@ -128,12 +140,4 @@ public:
 	Vector3 operator!() const {
 		return *this / this->length();
 	}
-
-	operator Matrix<3, 1>() {
-		double data[3][1] = { { this->x }, { this->y }, { this->z } };
-		return Matrix<3, 1>(data);
-	}
 };
-
-Vector3 operator*(double left, const Vector3 &right);
-Vector2 operator*(double left, const Vector2 &right);
