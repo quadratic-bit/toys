@@ -74,6 +74,7 @@ void DrawWindow::draw_func(const CoordinateSystem * const cs, float (fn)(float))
 	}
 	SDL_SetRenderDrawColor(renderer, CLR_BLACK, SDL_ALPHA_OPAQUE);
 	SDL_RenderPoints(renderer, pixels, n_pixels);
+	free(pixels);
 }
 
 static const int SPEC_POW = 30;
