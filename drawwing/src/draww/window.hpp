@@ -41,7 +41,10 @@ public:
 			throw std::runtime_error(SDL_GetError());
 		}
 
-		if (!SDL_CreateWindowAndRenderer("example", width, height, 0, &window, &renderer)) {
+		if (!SDL_CreateWindowAndRenderer(
+				"example", width, height, SDL_WindowFlags(0),
+				&window, &renderer
+		)) {
 			SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
 			throw std::runtime_error(SDL_GetError());
 		}
@@ -72,9 +75,9 @@ public:
 	void blit_axes(const CoordinateSystem *cs);
 	void blit_grid(const CoordinateSystem *cs);
 	void blit_bg(const CoordinateSystem *cs, Uint8 r, Uint8 g, Uint8 b);
-	void blit_vector(const CoordinateSystem *cs, const Vector2 *vec);
+	void blit_vector(const CoordinateSystem *cs, Vector2 vec);
 
-	void draw_func(const CoordinateSystem *cs, float (fn)(float));
+	void draw_func(const CoordinateSystem *cs, double (fn)(double));
 
 	void render_sphere_with_ambient_diffusion_and_specular_light(
 		const CoordinateSystem *cs,

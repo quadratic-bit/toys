@@ -1,9 +1,6 @@
-#include <SDL3/SDL_system.h>
+#include <SDL3/SDL.h>
 #include <SDL3_gfx/SDL3_gfxPrimitives.h>
-#include <algorithm>
 #include <cassert>
-#include <cmath>
-#include <cstdio>
 #include <stdexcept>
 
 #include "axes.hpp"
@@ -11,23 +8,34 @@
 
 static const double ARROW_HEAD_SIZE = 0.5;
 
-void DrawWindow::blit_vector(const CoordinateSystem * const cs, const Vector2 * const vec) {
-	float screen_x = cs->x_space_to_screen(vec->x);
-	float screen_y = cs->y_space_to_screen(vec->y);
+void DrawWindow::blit_vector(const CoordinateSystem * const cs, Vector2 vec) {
+	Vector2 norm = !vec;
+	Vector2 right_wing = (norm.perp_right() - norm) * ARROW_HEAD_SIZE + vec;
+	Vector2 left_wing = (norm.perp_left() - norm) * ARROW_HEAD_SIZE + vec;
 
-	Vector2 back_dir = -(!*vec);
-	Vector2 right_wing = ((!*vec).perp_right() + back_dir) * ARROW_HEAD_SIZE + *vec;
-	Vector2 left_wing = ((!*vec).perp_left() + back_dir) * ARROW_HEAD_SIZE + *vec;
-
+	cs->vector2_space_to_screen(&vec);
 	cs->vector2_space_to_screen(&right_wing);
 	cs->vector2_space_to_screen(&left_wing);
 
 	// Vector
-	thickLineRGBA(renderer, cs->y_axis.center, cs->x_axis.center, screen_x, screen_y, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
+	thickLineRGBA(
+		renderer,
+		cs->y_axis.center, cs->x_axis.center,
+		vec.x, vec.y,
+		3, CLR_BLACK, SDL_ALPHA_OPAQUE
+	);
 
 	// Head
-	thickLineRGBA(renderer, right_wing.x, right_wing.y, screen_x, screen_y, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
-	thickLineRGBA(renderer, left_wing.x, left_wing.y, screen_x, screen_y, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
+	thickLineRGBA(
+		renderer,
+		right_wing.x, right_wing.y, vec.x, vec.y,
+		3, CLR_BLACK, SDL_ALPHA_OPAQUE
+	);
+	thickLineRGBA(
+		renderer,
+		left_wing.x, left_wing.y, vec.x, vec.y,
+		3, CLR_BLACK, SDL_ALPHA_OPAQUE
+	);
 }
 
 void DrawWindow::blit_axes(const CoordinateSystem * const cs) {
@@ -71,7 +79,7 @@ void DrawWindow::blit_bg(const CoordinateSystem * const cs, Uint8 r, Uint8 g, Ui
 	SDL_RenderFillRect(renderer, &surface);
 }
 
-void DrawWindow::draw_func(const CoordinateSystem * const cs, float (fn)(float)) {
+void DrawWindow::draw_func(const CoordinateSystem * const cs, double (fn)(double)) {
 	assert(cs->dim.w >= 0);
 	assert(cs->x_axis.scale > 0);
 	assert(cs->y_axis.scale > 0);

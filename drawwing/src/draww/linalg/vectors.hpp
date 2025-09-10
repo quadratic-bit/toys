@@ -1,6 +1,4 @@
 #pragma once
-#include <cmath>
-
 #include "matrices.hpp"
 
 class Vector2 {
@@ -42,6 +40,10 @@ public:
 
 	Vector2 operator-() const {
 		return Vector2(-x, -y);
+	}
+
+	Vector2 operator-(const Vector2 &other) const {
+		return Vector2(x - other.x, y - other.y);
 	}
 
 	Vector2 operator+(const Vector2 &other) const {

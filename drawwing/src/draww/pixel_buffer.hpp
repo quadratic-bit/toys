@@ -23,7 +23,7 @@ public:
 
 		details = SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGBA32);
 		for (int i = 0; i < 256; ++i) {
-			grayLUT[i] = SDL_MapRGBA(details, NULL, (Uint8)i, (Uint8)i, (Uint8)i, 255);
+			grayLUT[i] = SDL_MapRGBA(details, NULL, i, i, i, 255);
 		}
 	}
 
@@ -43,15 +43,15 @@ public:
 	void set_pixel_gray(void *base, int pitch, int x, int y, Uint8 gray) {
 		// NOTE: base points to the top-left of the locked rect
 		Uint8 *row = (Uint8*)(base) + y * pitch;
-		Uint32 *bigger_row = (Uint32*)(row);
-		bigger_row[x] = grayLUT[gray];
+		Uint32 *colors = (Uint32*)(row);
+		colors[x] = grayLUT[gray];
 	}
 
 	void set_pixel_rgba(void *base, int pitch, int x, int y, Uint8 r, Uint8 g, Uint8 b, Uint8 a=255) {
 		Uint32 px = SDL_MapRGBA(details, NULL, r, g, b, a);
 		Uint8 *row = (Uint8*)(base) + y * pitch;
-		Uint32 *bigger_row = (Uint32*)(row);
-		bigger_row[x] = px;
+		Uint32 *colors = (Uint32*)(row);
+		colors[x] = px;
 	}
 
 	void draw() {

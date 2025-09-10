@@ -83,7 +83,7 @@ int main() {
 		window->blit_bg(cs_plane, CLR_WHITE);
 		window->blit_grid(cs_plane);
 		window->blit_axes(cs_plane);
-		window->blit_vector(cs_plane, &sample);
+		window->blit_vector(cs_plane, sample);
 		sample.rotate(-M_PI / 64);
 
 		window->present();
