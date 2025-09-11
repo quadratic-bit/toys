@@ -1,37 +1,19 @@
 #pragma once
 #include <SDL3/SDL.h>
 #include <stdexcept>
+#include <vector>
 
 #include "axes.hpp"
 #include "linalg.hpp"
 #include "pixel_buffer.hpp"
-
-#define RGB_BLACK 0
-#define RGB_WHITE 255
-
-#define RGB_LIGHT_GRAY 180
-#define RGB_VOID 18
-
-#define RGB_AMBIENT 26
-#define RGB_DIFFUSION 147
-#define RGB_SPECULAR 100
-
-#define CLR_MONO(v) v, v, v
-
-#define CLR_BLACK CLR_MONO(RGB_BLACK)
-#define CLR_WHITE CLR_MONO(RGB_WHITE)
-#define CLR_GRID CLR_MONO(RGB_LIGHT_GRAY)
-
-#define CLR_BG CLR_BLACK
-
-#define CLR_AMBIENT CLR_MONO(RGB_AMBIENT)
-#define CLR_VOID CLR_MONO(RGB_VOID)
+#include "scene.hpp"
 
 class DrawWindow {
-public:
 	SDL_Window *window;
 	SDL_Renderer *renderer;
 	PixelBuffer *pb;
+public:
+	std::vector<Scene*> scenes;
 
 	DrawWindow(int width, int height) {
 		SDL_SetAppMetadata("Example Draww", "0.1", "com.example.draww");
@@ -50,6 +32,7 @@ public:
 		}
 
 		pb = new PixelBuffer(renderer, width, height);
+		scenes = std::vector<Scene*>();
 
 		SDL_SetRenderDrawColor(renderer, CLR_BG, SDL_ALPHA_OPAQUE);
 		SDL_RenderClear(renderer);
@@ -63,6 +46,12 @@ public:
 		SDL_Quit();
 	}
 
+	Scene *add_scene(CoordinateSystem *cs) {
+		Scene *scene = new Scene(cs, renderer, pb);
+		scenes.push_back(scene);
+		return scene;
+	}
+
 	void clear() {
 		SDL_SetRenderDrawColor(renderer, CLR_BG, SDL_ALPHA_OPAQUE);
 		SDL_RenderClear(renderer);
@@ -71,17 +60,4 @@ public:
 	void present() {
 		SDL_RenderPresent(renderer);
 	}
-
-	void blit_axes(const CoordinateSystem *cs);
-	void blit_grid(const CoordinateSystem *cs);
-	void blit_bg(const CoordinateSystem *cs, Uint8 r, Uint8 g, Uint8 b);
-	void blit_vector(const CoordinateSystem *cs, Vector2 vec);
-
-	void draw_func(const CoordinateSystem *cs, double (fn)(double));
-
-	void render_sphere_with_ambient_diffusion_and_specular_light(
-		const CoordinateSystem *cs,
-		const Sphere *sph,
-		const Vector3 *light,
-		const Vector3 *camera);
 };

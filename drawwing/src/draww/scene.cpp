@@ -1,14 +1,21 @@
-#include <SDL3/SDL.h>
 #include <SDL3_gfx/SDL3_gfxPrimitives.h>
-#include <cassert>
 #include <stdexcept>
 
-#include "axes.hpp"
-#include "window.hpp"
+#include "scene.hpp"
 
 static const double ARROW_HEAD_SIZE = 0.5;
+static const int SPEC_POW = 30;
 
-void DrawWindow::blit_vector(const CoordinateSystem * const cs, Vector2 vec) {
+static inline int pos_mod(int a, int b) {
+	return (a % b + b) % b;
+}
+
+static inline Uint8 quantize(Uint8 value, Uint8 steps) {
+	Uint8 scale = 255 / steps;
+	return value / scale * scale;
+}
+
+void Scene::blit_vector(Vector2 vec) {
 	Vector2 norm = !vec;
 	Vector2 right_wing = (norm.perp_right() - norm) * ARROW_HEAD_SIZE + vec;
 	Vector2 left_wing = (norm.perp_left() - norm) * ARROW_HEAD_SIZE + vec;
@@ -38,7 +45,7 @@ void DrawWindow::blit_vector(const CoordinateSystem * const cs, Vector2 vec) {
 	);
 }
 
-void DrawWindow::blit_axes(const CoordinateSystem * const cs) {
+void Scene::blit_axes() {
 	if (cs->x_axis.center >= cs->dim.y && cs->x_axis.center <= cs->dim.y + cs->dim.h) {
 		thickLineRGBA(renderer, cs->dim.x, cs->x_axis.center, cs->dim.x + cs->dim.w, cs->x_axis.center, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
 	}
@@ -48,11 +55,7 @@ void DrawWindow::blit_axes(const CoordinateSystem * const cs) {
 	}
 }
 
-static inline int pos_mod(int a, int b) {
-	return (a % b + b) % b;
-}
-
-void DrawWindow::blit_grid(const CoordinateSystem * const cs) {
+void Scene::blit_grid() {
 	int grid_offset_x, grid_offset_y, i;
 
 	grid_offset_x = pos_mod(cs->y_axis.center - cs->dim.x, cs->x_axis.scale);
@@ -68,7 +71,7 @@ void DrawWindow::blit_grid(const CoordinateSystem * const cs) {
 	}
 }
 
-void DrawWindow::blit_bg(const CoordinateSystem * const cs, Uint8 r, Uint8 g, Uint8 b) {
+void Scene::blit_bg(Uint8 r, Uint8 g, Uint8 b) {
 	SDL_FRect surface;
 
 	SDL_SetRenderDrawColor(renderer, r, g, b, SDL_ALPHA_OPAQUE);
@@ -79,7 +82,7 @@ void DrawWindow::blit_bg(const CoordinateSystem * const cs, Uint8 r, Uint8 g, Ui
 	SDL_RenderFillRect(renderer, &surface);
 }
 
-void DrawWindow::draw_func(const CoordinateSystem * const cs, double (fn)(double)) {
+void Scene::draw_func(double (fn)(double)) {
 	assert(cs->dim.w >= 0);
 	assert(cs->x_axis.scale > 0);
 	assert(cs->y_axis.scale > 0);
@@ -106,20 +109,16 @@ void DrawWindow::draw_func(const CoordinateSystem * const cs, double (fn)(double
 	delete[] pixels;
 }
 
-static const int SPEC_POW = 30;
-
-Uint8 quantize(Uint8 value, Uint8 steps);
-Uint8 quantize(Uint8 value, Uint8 steps) {
-	Uint8 scale = 255 / steps;
-	return value / scale * scale;
+bool Scene::any_sphere_intersects(const Vector3 &light, const Vector3 &point, size_t exclude) {
+	for (size_t sph_i = 0; sph_i < spheres.size(); ++sph_i) {
+		if (sph_i == exclude) continue;
+		Sphere *sph = &spheres[sph_i];
+		if (sph->intersects(point, light)) return true;
+	}
+	return false;
 }
 
-void DrawWindow::render_sphere_with_ambient_diffusion_and_specular_light(
-		const CoordinateSystem * const cs,
-		const Sphere * const sph,
-		const Vector3 * const light,
-		const Vector3 * const camera
-) {
+void Scene::render_with_ambient_diffusion_and_specular_light(const Vector3 * const camera) {
 	SDL_Rect lock = { (int)(cs->dim.x), (int)(cs->dim.y), (int)(cs->dim.w), (int)(cs->dim.h) };
 
 	void *pixels = NULL;
@@ -137,41 +136,55 @@ void DrawWindow::render_sphere_with_ambient_diffusion_and_specular_light(
 			int w = lock.x + sx;
 			double x = cs->x_screen_to_space(w);
 
-			if (!sph->contains_2d(x, y)) {
-				//pb->set_pixel_gray(pixels, pitch, sx, sy, quantize(RGB_VOID, 255));
-				continue;
-			}
+			Uint8 lumin = RGB_VOID;
 
-			Vector3 point(x, y, sph->z_from_xy(x, y));
-			Vector3 normal = sph->normal(point);
+			for (size_t sph_i = 0; sph_i < spheres.size(); ++sph_i) {
+				Sphere *sph = &spheres[sph_i];
 
-			Vector3 point_light = *light - point;
-			Vector3 point_cam = *camera - point;
-
-			// diffuse
-			double cosalpha = !point_light ^ !normal;
-
-			// NOTE: no need to normalize, as we need sign only
-			double dir_cam_normal = point_cam ^ normal;
-			double specular = 0;
-			if (cosalpha > 0 && dir_cam_normal > 0) {
-				Vector3 reflect = point_light.reflect(&normal);
-				// specular
-				double cosbeta = !point_cam ^ !reflect;
-
-				if (cosbeta > 0) {
-					specular = RGB_SPECULAR * std::pow(cosbeta, SPEC_POW);
+				if (!sph->contains_2d(x, y)) {
+					continue;
 				}
+				lumin = RGB_AMBIENT;
+
+				for (size_t light_i = 0; light_i < light_sources.size(); ++light_i) {
+					Vector3 *light = &light_sources[light_i];
+
+					Vector3 point(x, y, sph->z_from_xy(x, y));
+
+					if (this->any_sphere_intersects(*light, point, sph_i)) continue;
+
+					Vector3 normal = sph->normal(point);
+
+					Vector3 point_light = *light - point;
+					Vector3 point_cam = *camera - point;
+
+					// diffuse
+					double cosalpha = !point_light ^ !normal;
+
+					// NOTE: no need to normalize, as we need sign only
+					double dir_cam_normal = point_cam ^ normal;
+					double specular = 0;
+					if (cosalpha > 0 && dir_cam_normal > 0) {
+						Vector3 reflect = point_light.reflect(&normal);
+						// specular
+						double cosbeta = !point_cam ^ !reflect;
+
+						if (cosbeta > 0) {
+							specular = RGB_SPECULAR * std::pow(cosbeta, SPEC_POW);
+						}
+					}
+
+					lumin = std::min(
+						lumin +
+						std::max(0.0, RGB_DIFFUSION * cosalpha) +
+						specular,
+						255.0
+					);
+				}
+				break; // TODO: sphere ordering
 			}
 
-			Uint8 lumin = std::min(
-				RGB_AMBIENT +
-				std::max(0.0, RGB_DIFFUSION * cosalpha) +
-				specular,
-				255.0
-			);
-
-			pb->set_pixel_gray(pixels, pitch, sx, sy, quantize(lumin, 8));
+			pb->set_pixel_gray(pixels, pitch, sx, sy, quantize(lumin, 255));
 		}
 	}
 
