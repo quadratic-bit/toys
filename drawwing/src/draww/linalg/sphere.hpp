@@ -14,8 +14,8 @@ public:
 	}
 
 	bool contains_2d(double x, double y) const {
-		return (x - pos.x) * (x - pos.x) +
-			(y - pos.y) * (y - pos.y) <= radius * radius;
+		const double dx = x - pos.x, dy = y - pos.y;
+		return dx * dx + dy * dy - 1e-12 <= radius * radius;
 	}
 
 	bool contains(const Vector3 &point) const {
@@ -23,27 +23,14 @@ public:
 		return (vec ^ vec) <= radius * radius;
 	}
 
-	bool intersects(const Vector3 &A, const Vector3& B) {
-		Vector3 vec = B - A;
-		double len_sqr = vec ^ vec;
-
-		if (len_sqr == 0) {  // degenerate
-			return contains(A);
-		}
-
-		double t = ((pos - A) ^ (vec)) / len_sqr;
-		if (t < 0) t = 0;
-		else if (t > 1) t = 1;
-
-		Vector3 closest = A + vec * t;
-		Vector3 dist = closest - pos;
-		return (dist ^ dist) <= radius * radius;
-	}
-
 	double z_from_xy(double x, double y) const {
-		assert(contains_2d(x, y));
-		return std::sqrt(radius * radius -
-				(x - pos.x) * (x - pos.x) -
-				(y - pos.y) * (y - pos.y));
+		const double dx = x - pos.x, dy = y - pos.y;
+		double d2 = radius * radius - dx * dx - dy * dy;
+
+		if (d2 < 0.0 && d2 > -1e-12) d2 = 0.0;
+
+		assert(d2 >= 0.0);
+
+		return pos.z + std::sqrt(d2);
 	}
 };

@@ -23,12 +23,14 @@ int main() {
 		cs_rect_sphere
 	);
 	Vector3 light(-19, 14, 20);
-	Vector3 camera(0, 0, 10);
+	Vector3 camera(0, 0, 20);
 
-	Vector3 origin1(-5, -5, 0);
+	Vector3 origin1(-5, -5, -14);
 	Vector3 origin2(5, 5, 0);
+	Vector3 origin3(-5, -5, 0);
 	Sphere sph1(origin1, 7);
 	Sphere sph2(origin2, 2);
+	Sphere sph3(origin3, 4);
 
 	Axis x_axis_plane = { 360, 30 };
 	Axis y_axis_plane = { 960, 30 };
@@ -47,6 +49,7 @@ int main() {
 
 	scene_sph->spheres.push_back(sph1);
 	scene_sph->spheres.push_back(sph2);
+	scene_sph->spheres.push_back(sph3);
 	scene_sph->light_sources.push_back(light);
 
 	Uint64 next_frame = SDL_GetTicksNS();
@@ -85,13 +88,13 @@ int main() {
 		scene_sph->render_with_ambient_diffusion_and_specular_light(
 			&camera
 		);
-		scene_sph->light_sources[0].rotate_xz(M_PI / 64);
+		scene_sph->light_sources[0].rotate_xz(M_PI / 96);
 
 		scene_plane->blit_bg(CLR_WHITE);
 		scene_plane->blit_grid();
 		scene_plane->blit_axes();
 		scene_plane->blit_vector(sample);
-		sample.rotate(-M_PI / 64);
+		sample.rotate(-M_PI / 96);
 
 		window->present();
 

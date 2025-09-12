@@ -1,15 +1,15 @@
 #pragma once
+#include <vector>
 
 #include "axes.hpp"
 #include "linalg.hpp"
 #include "pixel_buffer.hpp"
-#include <vector>
 
 #define RGB_BLACK 0
 #define RGB_WHITE 255
 
 #define RGB_LIGHT_GRAY 180
-#define RGB_VOID 18
+#define RGB_VOID 21
 
 #define RGB_AMBIENT 26
 #define RGB_DIFFUSION 147
@@ -31,7 +31,8 @@ class Scene {
 	SDL_Renderer *renderer;
 	PixelBuffer *pb;
 
-	bool any_sphere_intersects(const Vector3 &light, const Vector3 &point, size_t exclude);
+	bool any_sphere_intersects(const Vector3 &light, const Vector3 &point, const Sphere * exclude) const;
+	double shadow_factor_to_light(const Vector3& light, const Vector3& point, const Sphere* exclude) const;
 
 public:
 	std::vector<Sphere> spheres;

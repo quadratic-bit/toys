@@ -88,7 +88,7 @@ public:
 	}
 
 	double length() const {
-		return std::sqrt(x * x + y * y + z * z);
+		return std::sqrt(*this ^ *this);
 	}
 
 	void rotate_xz(double angle) {

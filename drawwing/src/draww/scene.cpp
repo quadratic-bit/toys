@@ -1,10 +1,8 @@
 #include <SDL3_gfx/SDL3_gfxPrimitives.h>
+#include <limits>
 #include <stdexcept>
 
 #include "scene.hpp"
-
-static const double ARROW_HEAD_SIZE = 0.5;
-static const int SPEC_POW = 30;
 
 static inline int pos_mod(int a, int b) {
 	return (a % b + b) % b;
@@ -15,7 +13,23 @@ static inline Uint8 quantize(Uint8 value, Uint8 steps) {
 	return value / scale * scale;
 }
 
+static inline double clamp01(double x) {
+	return x < 0 ? 0 : (x > 1 ? 1 : x);
+}
+
+static inline double atan_penumbra(double dist, double radius, double width) {
+	static const double SHADOW_ROUGH = 8.0;  // arctg roughness
+
+	if (dist <= radius) return 0.0;
+	// f(l0)=0, f(l0+w)=1
+	const double num = std::atan(SHADOW_ROUGH * (dist - radius));
+	const double den = std::atan(SHADOW_ROUGH * width) + 1e-12;
+	return clamp01(num / den);
+}
+
 void Scene::blit_vector(Vector2 vec) {
+	static const double ARROW_HEAD_SIZE = 0.5;
+
 	Vector2 norm = !vec;
 	Vector2 right_wing = (norm.perp_right() - norm) * ARROW_HEAD_SIZE + vec;
 	Vector2 left_wing = (norm.perp_left() - norm) * ARROW_HEAD_SIZE + vec;
@@ -26,23 +40,23 @@ void Scene::blit_vector(Vector2 vec) {
 
 	// Vector
 	thickLineRGBA(
-		renderer,
-		cs->y_axis.center, cs->x_axis.center,
-		vec.x, vec.y,
-		3, CLR_BLACK, SDL_ALPHA_OPAQUE
-	);
+			renderer,
+			cs->y_axis.center, cs->x_axis.center,
+			vec.x, vec.y,
+			3, CLR_BLACK, SDL_ALPHA_OPAQUE
+		     );
 
 	// Head
 	thickLineRGBA(
-		renderer,
-		right_wing.x, right_wing.y, vec.x, vec.y,
-		3, CLR_BLACK, SDL_ALPHA_OPAQUE
-	);
+			renderer,
+			right_wing.x, right_wing.y, vec.x, vec.y,
+			3, CLR_BLACK, SDL_ALPHA_OPAQUE
+		     );
 	thickLineRGBA(
-		renderer,
-		left_wing.x, left_wing.y, vec.x, vec.y,
-		3, CLR_BLACK, SDL_ALPHA_OPAQUE
-	);
+			renderer,
+			left_wing.x, left_wing.y, vec.x, vec.y,
+			3, CLR_BLACK, SDL_ALPHA_OPAQUE
+		     );
 }
 
 void Scene::blit_axes() {
@@ -109,16 +123,45 @@ void Scene::draw_func(double (fn)(double)) {
 	delete[] pixels;
 }
 
-bool Scene::any_sphere_intersects(const Vector3 &light, const Vector3 &point, size_t exclude) {
-	for (size_t sph_i = 0; sph_i < spheres.size(); ++sph_i) {
-		if (sph_i == exclude) continue;
-		Sphere *sph = &spheres[sph_i];
-		if (sph->intersects(point, light)) return true;
+double Scene::shadow_factor_to_light(const Vector3& light, const Vector3& point, const Sphere* exclude) const {
+	static const double EARLY_EXIT = 1e-3;
+	static const double REL_W = 0.30;  // penumbra width phrased as a radius fraction
+
+	Vector3 segment = light - point;
+	double len = segment.length();
+	Vector3 dir = !segment;
+
+	double shadow = 1.0;
+
+	for (size_t i = 0; i < spheres.size(); ++i) {
+		const Sphere* s = &spheres[i];
+		if (s == exclude) continue;
+
+		// project sphere center onto (point + t*d) ray
+		double t = (s->pos - point) ^ dir;
+		if (t <= 0.0 || t >= len) continue;
+
+		Vector3 closest = point + dir * t;
+		Vector3 diff = s->pos - closest;
+		double delta = diff.length();
+
+		// hard shadow
+		if (delta < s->radius) return 0.0;
+
+		// penumbra
+		const double w = REL_W * s->radius;
+		double fac = atan_penumbra(delta, s->radius, w);
+		shadow *= fac;
+
+		if (shadow < EARLY_EXIT) return 0.0;
 	}
-	return false;
+
+	return clamp01(shadow);
 }
 
 void Scene::render_with_ambient_diffusion_and_specular_light(const Vector3 * const camera) {
+	static const int SPEC_POW = 30;
+
 	SDL_Rect lock = { (int)(cs->dim.x), (int)(cs->dim.y), (int)(cs->dim.w), (int)(cs->dim.h) };
 
 	void *pixels = NULL;
@@ -138,50 +181,57 @@ void Scene::render_with_ambient_diffusion_and_specular_light(const Vector3 * con
 
 			Uint8 lumin = RGB_VOID;
 
+			Sphere *sph = NULL;
+			Vector3 point(x, y, -std::numeric_limits<double>::infinity());
+
 			for (size_t sph_i = 0; sph_i < spheres.size(); ++sph_i) {
-				Sphere *sph = &spheres[sph_i];
-
-				if (!sph->contains_2d(x, y)) {
-					continue;
+				if (!spheres[sph_i].contains_2d(x, y)) continue;
+				double z = spheres[sph_i].z_from_xy(x, y);
+				if (z > point.z) {
+					point.z = z;
+					sph = &spheres[sph_i];
 				}
-				lumin = RGB_AMBIENT;
+			}
 
-				for (size_t light_i = 0; light_i < light_sources.size(); ++light_i) {
-					Vector3 *light = &light_sources[light_i];
+			if (sph == NULL) {
+				pb->set_pixel_gray(pixels, pitch, sx, sy, quantize(lumin, 255));
+				continue;
+			}
 
-					Vector3 point(x, y, sph->z_from_xy(x, y));
+			Vector3 normal = sph->normal(point);
 
-					if (this->any_sphere_intersects(*light, point, sph_i)) continue;
+			lumin = RGB_AMBIENT;
 
-					Vector3 normal = sph->normal(point);
+			for (size_t light_i = 0; light_i < light_sources.size(); ++light_i) {
+				Vector3 *light = &light_sources[light_i];
 
-					Vector3 point_light = *light - point;
-					Vector3 point_cam = *camera - point;
+				double shadow = this->shadow_factor_to_light(*light, point, sph);
+				if (shadow <= 0.0) continue;
 
-					// diffuse
-					double cosalpha = !point_light ^ !normal;
+				Vector3 point_light = *light - point;
+				Vector3 point_cam = *camera - point;
 
-					// NOTE: no need to normalize, as we need sign only
-					double dir_cam_normal = point_cam ^ normal;
-					double specular = 0;
-					if (cosalpha > 0 && dir_cam_normal > 0) {
-						Vector3 reflect = point_light.reflect(&normal);
-						// specular
-						double cosbeta = !point_cam ^ !reflect;
+				// diffuse
+				double cosalpha = !point_light ^ !normal;
 
-						if (cosbeta > 0) {
-							specular = RGB_SPECULAR * std::pow(cosbeta, SPEC_POW);
-						}
+				double specular = 0.0;
+				// NOTE: no need to normalize, as we need sign only
+				double dir_cam_normal = point_cam ^ normal;
+				if (cosalpha > 0.0 && dir_cam_normal > 0.0) {
+					Vector3 reflect = point_light.reflect(&normal);
+					// specular
+					double cosbeta = !point_cam ^ !reflect;
+
+					if (cosbeta > 0.0) {
+						specular = RGB_SPECULAR * std::pow(cosbeta, SPEC_POW);
 					}
-
-					lumin = std::min(
-						lumin +
-						std::max(0.0, RGB_DIFFUSION * cosalpha) +
-						specular,
-						255.0
-					);
 				}
-				break; // TODO: sphere ordering
+
+				lumin = std::min(
+						lumin +
+						shadow * (std::max(0.0, RGB_DIFFUSION * cosalpha) + specular),
+						255.0
+						);
 			}
 
 			pb->set_pixel_gray(pixels, pitch, sx, sy, quantize(lumin, 255));
