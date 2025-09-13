@@ -8,7 +8,8 @@ class Matrix {
 	double data[H][W];
 
 public:
-	Matrix(const double (&m)[H][W]) {
+	// TODO: explicit
+	Matrix(const double m[H][W]) {
 		for (unsigned int row = 0; row < H; ++row) {
 			for (unsigned int col = 0; col < W; ++col) {
 				data[row][col] = m[row][col];

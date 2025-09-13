@@ -32,7 +32,7 @@ void Scene::blit_vector(Vector2 vec) {
 
 	Vector2 norm = !vec;
 	Vector2 right_wing = (norm.perp_right() - norm) * ARROW_HEAD_SIZE + vec;
-	Vector2 left_wing = (norm.perp_left() - norm) * ARROW_HEAD_SIZE + vec;
+	Vector2 left_wing  = (norm.perp_left()  - norm) * ARROW_HEAD_SIZE + vec;
 
 	cs->vector2_space_to_screen(&vec);
 	cs->vector2_space_to_screen(&right_wing);
@@ -40,32 +40,42 @@ void Scene::blit_vector(Vector2 vec) {
 
 	// Vector
 	thickLineRGBA(
-			renderer,
-			cs->y_axis.center, cs->x_axis.center,
-			vec.x, vec.y,
-			3, CLR_BLACK, SDL_ALPHA_OPAQUE
-		     );
+		renderer,
+		cs->y_axis.center, cs->x_axis.center,
+		vec.x, vec.y,
+		3, CLR_BLACK, SDL_ALPHA_OPAQUE
+	);
 
 	// Head
 	thickLineRGBA(
-			renderer,
-			right_wing.x, right_wing.y, vec.x, vec.y,
-			3, CLR_BLACK, SDL_ALPHA_OPAQUE
-		     );
+		renderer,
+		right_wing.x, right_wing.y, vec.x, vec.y,
+		3, CLR_BLACK, SDL_ALPHA_OPAQUE
+	);
 	thickLineRGBA(
-			renderer,
-			left_wing.x, left_wing.y, vec.x, vec.y,
-			3, CLR_BLACK, SDL_ALPHA_OPAQUE
-		     );
+		renderer,
+		left_wing.x, left_wing.y, vec.x, vec.y,
+		3, CLR_BLACK, SDL_ALPHA_OPAQUE
+	);
 }
 
 void Scene::blit_axes() {
 	if (cs->x_axis.center >= cs->dim.y && cs->x_axis.center <= cs->dim.y + cs->dim.h) {
-		thickLineRGBA(renderer, cs->dim.x, cs->x_axis.center, cs->dim.x + cs->dim.w, cs->x_axis.center, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
+		thickLineRGBA(
+			renderer,
+			cs->dim.x, cs->x_axis.center,
+			cs->dim.x + cs->dim.w, cs->x_axis.center,
+			3, CLR_BLACK, SDL_ALPHA_OPAQUE
+		);
 	}
 
 	if (cs->y_axis.center >= cs->dim.x && cs->y_axis.center <= cs->dim.x + cs->dim.w) {
-		thickLineRGBA(renderer, cs->y_axis.center, cs->dim.y, cs->y_axis.center, cs->dim.y + cs->dim.h, 3, CLR_BLACK, SDL_ALPHA_OPAQUE);
+		thickLineRGBA(
+			renderer,
+			cs->y_axis.center, cs->dim.y,
+			cs->y_axis.center, cs->dim.y + cs->dim.h,
+			3, CLR_BLACK, SDL_ALPHA_OPAQUE
+		);
 	}
 }
 
@@ -159,9 +169,60 @@ double Scene::shadow_factor_to_light(const Vector3& light, const Vector3& point,
 	return clamp01(shadow);
 }
 
-void Scene::render_with_ambient_diffusion_and_specular_light(const Vector3 * const camera) {
+const Sphere *Scene::nearest_sphere(Vector3 *vec) const {
+	const Sphere *sph = NULL;
+	vec->z = -std::numeric_limits<double>::infinity();
+
+	for (size_t sph_i = 0; sph_i < spheres.size(); ++sph_i) {
+		if (!spheres[sph_i].contains_2d(vec->x, vec->y)) continue;
+		double z = spheres[sph_i].z_from_xy(vec->x, vec->y);
+		if (z > vec->z) {
+			vec->z = z;
+			sph = &spheres[sph_i];
+		}
+	}
+	return sph;
+}
+
+double Scene::calculate_light(const Vector3 &light, const RenderContext &ctx) const {
 	static const int SPEC_POW = 30;
 
+	double shadow = this->shadow_factor_to_light(light, ctx.point, ctx.sph);
+	if (shadow <= 0.0) return 0;
+
+	Vector3 point_light = light       - ctx.point;
+	Vector3 point_cam   = *ctx.camera - ctx.point;
+
+	// diffuse
+	double cosalpha = !point_light ^ !ctx.normal;
+
+	double specular = 0.0;
+	// NOTE: no need to normalize, as we need sign only
+	double dir_cam_normal = point_cam ^ ctx.normal;
+	if (cosalpha > 0.0 && dir_cam_normal > 0.0) {
+		Vector3 reflect = point_light.reflect(&ctx.normal);
+		// specular
+		double cosbeta = !point_cam ^ !reflect;
+
+		if (cosbeta > 0.0) {
+			specular = RGB_SPECULAR * std::pow(cosbeta, SPEC_POW);
+		}
+	}
+
+	return shadow * (std::max(0.0, RGB_DIFFUSION * cosalpha) + specular);
+}
+
+double Scene::accum_lights(const RenderContext &ctx) const {
+	double lumin = RGB_AMBIENT;
+	for (size_t light_i = 0; light_i < light_sources.size(); ++light_i) {
+		const Vector3 *light = &light_sources[light_i];
+		double added_lumin = calculate_light(*light, ctx);
+		lumin += added_lumin;
+	}
+	return std::min(lumin, 255.0);
+}
+
+void Scene::render_with_ambient_diffusion_and_specular_light(const Vector3 * const camera) {
 	SDL_Rect lock = { (int)(cs->dim.x), (int)(cs->dim.y), (int)(cs->dim.w), (int)(cs->dim.h) };
 
 	void *pixels = NULL;
@@ -181,17 +242,8 @@ void Scene::render_with_ambient_diffusion_and_specular_light(const Vector3 * con
 
 			Uint8 lumin = RGB_VOID;
 
-			Sphere *sph = NULL;
-			Vector3 point(x, y, -std::numeric_limits<double>::infinity());
-
-			for (size_t sph_i = 0; sph_i < spheres.size(); ++sph_i) {
-				if (!spheres[sph_i].contains_2d(x, y)) continue;
-				double z = spheres[sph_i].z_from_xy(x, y);
-				if (z > point.z) {
-					point.z = z;
-					sph = &spheres[sph_i];
-				}
-			}
+			Vector3 point(x, y, 0);
+			const Sphere *sph = nearest_sphere(&point);
 
 			if (sph == NULL) {
 				pb->set_pixel_gray(pixels, pitch, sx, sy, quantize(lumin, 255));
@@ -199,40 +251,9 @@ void Scene::render_with_ambient_diffusion_and_specular_light(const Vector3 * con
 			}
 
 			Vector3 normal = sph->normal(point);
+			RenderContext ctx = { point, normal, sph, camera };
 
-			lumin = RGB_AMBIENT;
-
-			for (size_t light_i = 0; light_i < light_sources.size(); ++light_i) {
-				Vector3 *light = &light_sources[light_i];
-
-				double shadow = this->shadow_factor_to_light(*light, point, sph);
-				if (shadow <= 0.0) continue;
-
-				Vector3 point_light = *light - point;
-				Vector3 point_cam = *camera - point;
-
-				// diffuse
-				double cosalpha = !point_light ^ !normal;
-
-				double specular = 0.0;
-				// NOTE: no need to normalize, as we need sign only
-				double dir_cam_normal = point_cam ^ normal;
-				if (cosalpha > 0.0 && dir_cam_normal > 0.0) {
-					Vector3 reflect = point_light.reflect(&normal);
-					// specular
-					double cosbeta = !point_cam ^ !reflect;
-
-					if (cosbeta > 0.0) {
-						specular = RGB_SPECULAR * std::pow(cosbeta, SPEC_POW);
-					}
-				}
-
-				lumin = std::min(
-						lumin +
-						shadow * (std::max(0.0, RGB_DIFFUSION * cosalpha) + specular),
-						255.0
-						);
-			}
+			lumin = accum_lights(ctx);
 
 			pb->set_pixel_gray(pixels, pitch, sx, sy, quantize(lumin, 255));
 		}

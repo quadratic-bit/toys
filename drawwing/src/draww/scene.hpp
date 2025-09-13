@@ -26,13 +26,24 @@
 #define CLR_AMBIENT CLR_MONO(RGB_AMBIENT)
 #define CLR_VOID CLR_MONO(RGB_VOID)
 
+struct RenderContext {
+	Vector3 point;
+	Vector3 normal;
+	const Sphere *sph;
+	const Vector3 *camera;
+};
+
 class Scene {
 	CoordinateSystem *cs;
 	SDL_Renderer *renderer;
 	PixelBuffer *pb;
 
-	bool any_sphere_intersects(const Vector3 &light, const Vector3 &point, const Sphere * exclude) const;
-	double shadow_factor_to_light(const Vector3& light, const Vector3& point, const Sphere* exclude) const;
+	double shadow_factor_to_light(const Vector3 &light, const Vector3 &point, const Sphere *exclude) const;
+
+	double calculate_light(const Vector3 &light, const RenderContext &ctx) const;
+	double accum_lights(const RenderContext &ctx) const;
+
+	const Sphere *nearest_sphere(Vector3 *vec) const;
 
 public:
 	std::vector<Sphere> spheres;
@@ -42,7 +53,7 @@ public:
 		CoordinateSystem *coords,
 		SDL_Renderer *rend,
 		PixelBuffer *buf
-	     ) : cs(coords), renderer(rend), pb(buf) {
+	) : cs(coords), renderer(rend), pb(buf) {
 		spheres = std::vector<Sphere>();
 		light_sources = std::vector<Vector3>();
 	};

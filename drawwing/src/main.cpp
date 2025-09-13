@@ -26,8 +26,8 @@ int main() {
 	Vector3 camera(0, 0, 20);
 
 	Vector3 origin1(-5, -5, -14);
-	Vector3 origin2(5, 5, 0);
-	Vector3 origin3(-5, -5, 0);
+	Vector3 origin2( 5,  5,   0);
+	Vector3 origin3(-5, -5,   0);
 	Sphere sph1(origin1, 7);
 	Sphere sph2(origin2, 2);
 	Sphere sph3(origin3, 4);
@@ -44,7 +44,7 @@ int main() {
 
 	DrawWindow *window = new DrawWindow(1280, 720);
 
-	Scene *scene_sph = window->add_scene(cs_sphere);
+	Scene *scene_sph   = window->add_scene(cs_sphere);
 	Scene *scene_plane = window->add_scene(cs_plane);
 
 	scene_sph->spheres.push_back(sph1);
