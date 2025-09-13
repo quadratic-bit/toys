@@ -4,6 +4,25 @@
 
 #include "scene.hpp"
 
+// Floor
+static const double FLOOR_Y = -20.0;  // XZ plane
+
+static inline double checker_albedo(double x, double z) {
+	static const double CHECK_SIZE = 2.5;  // in world units
+	static const double CHECK_ALBEDO_LIGHT = 0.85;
+	static const double CHECK_ALBEDO_DARK  = 0.30;
+
+	int ix = std::floor(x / CHECK_SIZE);
+	int iz = std::floor(z / CHECK_SIZE);
+	return ((ix + iz) & 1) ? CHECK_ALBEDO_DARK : CHECK_ALBEDO_LIGHT;
+}
+static inline double darken_by_distance(double dist) {
+	static const double DIST_DARKEN_K = 0.010; // in world units
+
+	double a = std::exp(-DIST_DARKEN_K * std::max(0.0, dist));
+	return a < 0.0 ? 0.0 : (a > 1.0 ? 1.0 : a);
+}
+
 static inline int pos_mod(int a, int b) {
 	return (a % b + b) % b;
 }
@@ -25,6 +44,21 @@ static inline double atan_penumbra(double dist, double radius, double width) {
 	const double num = std::atan(SHADOW_ROUGH * (dist - radius));
 	const double den = std::atan(SHADOW_ROUGH * width) + 1e-12;
 	return clamp01(num / den);
+}
+
+static inline CamBasis make_cam_basis(const Camera *camera) {
+	CamBasis cb;
+	cb.pos   = camera->pos;
+	cb.focal = camera->dir.length();
+	cb.fwd   = !camera->dir;
+
+	Vector3 world_up(0.0, 1.0, 0.0);
+
+	if (std::abs(cb.fwd ^ world_up) > 0.999) world_up = Vector3(0.0, 0.0, 1.0);
+
+	cb.right = !(cb.fwd   % world_up);
+	cb.up    =  (cb.right % cb.fwd);
+	return cb;
 }
 
 void Scene::blit_vector(Vector2 vec) {
@@ -169,21 +203,6 @@ double Scene::shadow_factor_to_light(const Vector3& light, const Vector3& point,
 	return clamp01(shadow);
 }
 
-const Sphere *Scene::nearest_sphere(Vector3 *vec) const {
-	const Sphere *sph = NULL;
-	vec->z = -std::numeric_limits<double>::infinity();
-
-	for (size_t sph_i = 0; sph_i < spheres.size(); ++sph_i) {
-		if (!spheres[sph_i].contains_2d(vec->x, vec->y)) continue;
-		double z = spheres[sph_i].z_from_xy(vec->x, vec->y);
-		if (z > vec->z) {
-			vec->z = z;
-			sph = &spheres[sph_i];
-		}
-	}
-	return sph;
-}
-
 double Scene::calculate_light(const Vector3 &light, const RenderContext &ctx) const {
 	static const int SPEC_POW = 30;
 
@@ -221,8 +240,118 @@ double Scene::accum_lights(const RenderContext &ctx) const {
 	}
 	return std::min(lumin, 255.0);
 }
+bool Scene::project_point_perspective(const Vector3 &p, const Camera *camera, SDL_FPoint *out) const {
+	CamBasis cb = make_cam_basis(camera);
 
-void Scene::render_with_ambient_diffusion_and_specular_light(const Vector3 * const camera) {
+	// camera-space
+	Vector3 v = p - cb.pos;
+	double zc = v ^ cb.fwd;
+	if (zc <= 1e-6) return false;  // behind or too close
+
+	double xc = v ^ cb.right;
+	double yc = v ^ cb.up;
+
+	// image plane at distance f along +fwd
+	double u  = cb.focal * (xc / zc);   // world-X on image plane
+	double v2 = cb.focal * (yc / zc);   // world-Y on image plane
+
+	out->x = cs->principal_x_px() + (float)(u  * cs->x_axis.scale);
+	out->y = cs->principal_y_px() - (float)(v2 * cs->y_axis.scale);
+	return (out->x >= cs->dim.x && out->x <= cs->dim.x + cs->dim.w &&
+	        out->y >= cs->dim.y && out->y <= cs->dim.y + cs->dim.h);
+}
+
+void Scene::blit_axes_3d(const Camera* camera, double len_units = 6.0) {
+	SDL_FPoint o2d, x2d, y2d, z2d;
+	Vector3 O = Vector3();
+	if (!project_point_perspective(O, camera, &o2d)) return;
+
+	Vector3 X(len_units, 0, 0), Y(0, len_units, 0), Z(0, 0, len_units);
+
+	bool vx = project_point_perspective(X, camera, &x2d);
+	bool vy = project_point_perspective(Y, camera, &y2d);
+	bool vz = project_point_perspective(Z, camera, &z2d);
+
+	if (vx) thickLineRGBA(renderer, o2d.x, o2d.y, x2d.x, x2d.y, 3, 255, 0, 0, SDL_ALPHA_OPAQUE);
+	if (vy) thickLineRGBA(renderer, o2d.x, o2d.y, y2d.x, y2d.y, 3, 0, 255, 0, SDL_ALPHA_OPAQUE);
+	if (vz) thickLineRGBA(renderer, o2d.x, o2d.y, z2d.x, z2d.y, 3, 0, 0, 255, SDL_ALPHA_OPAQUE);
+}
+
+const Sphere *Scene::sphere_intersect(double *hit, const CamBasis &cb, const Vector3 &ray_dir) const {
+	const Sphere *sph = NULL;
+	*hit = std::numeric_limits<double>::infinity();
+
+	for (size_t i = 0; i < spheres.size(); ++i) {
+		const Sphere& s = spheres[i];
+		Vector3 oc = cb.pos - s.pos;
+		double b = oc ^ ray_dir;
+		double c = (oc ^ oc) - s.radius * s.radius;
+		double disc = b * b - c;
+		if (disc < 0.0) continue;
+
+		double t = -b - std::sqrt(disc);
+		if (t <= 1e-6) t = -b + std::sqrt(disc);
+		if (t > 1e-6 && t < *hit) {
+			*hit = t;
+			sph = &s;
+		}
+	}
+	return sph;
+}
+
+bool Scene::is_occluded(const Vector3 &A, const Vector3 &B) const {
+	static const double EPS_RAY = 1e-6;
+
+	Vector3 d = B - A;
+	double tMax = d.length();
+	if (tMax <= EPS_RAY) return false;
+	Vector3 dir = !d;
+
+	for (size_t i = 0; i < spheres.size(); ++i) {
+		const Sphere &s = spheres[i];
+		Vector3 oc = A - s.pos;
+		double b = oc ^ dir;
+		double c = (oc ^ oc) - s.radius * s.radius;
+		double disc = b * b - c;
+		if (disc < 0.0) continue;
+
+		double sqrt_disc = std::sqrt(disc);
+		double t = -b - sqrt_disc;
+		if (t <= EPS_RAY) t = -b + sqrt_disc;
+		if (t > EPS_RAY && t < tMax - EPS_RAY) return true;
+	}
+
+	if (std::abs(dir.y) > EPS_RAY) {
+		double t = (FLOOR_Y - A.y) / dir.y;
+		if (t > EPS_RAY && t < tMax - EPS_RAY) return true;
+	}
+
+	return false;
+}
+
+void Scene::blit_light_sources(const Camera *camera, int radius_px, bool occlusion_test) {
+	for (size_t i = 0; i < light_sources.size(); ++i) {
+		const Vector3 *L = &light_sources[i];
+		if (occlusion_test && is_occluded(camera->pos, *L)) continue;
+
+		SDL_FPoint p2d;
+		if (!project_point_perspective(*L, camera, &p2d)) continue;
+
+		if (p2d.x < cs->dim.x || p2d.x > cs->dim.x + cs->dim.w ||
+				p2d.y < cs->dim.y || p2d.y > cs->dim.y + cs->dim.h)
+			continue;
+
+		filledCircleRGBA(
+			renderer,
+			lround(p2d.x),
+			lround(p2d.y),
+			radius_px,
+			255, 255, 255, SDL_ALPHA_OPAQUE
+		);
+	}
+}
+
+void Scene::render_with_ambient_diffusion_and_specular_light(const Camera * const camera) {
 	SDL_Rect lock = { (int)(cs->dim.x), (int)(cs->dim.y), (int)(cs->dim.w), (int)(cs->dim.h) };
 
 	void *pixels = NULL;
@@ -232,34 +361,76 @@ void Scene::render_with_ambient_diffusion_and_specular_light(const Vector3 * con
 		return;
 	}
 
+	CamBasis cb = make_cam_basis(camera);
+	if (cb.focal <= 0.0) {
+		pb->unlock();
+		pb->draw();
+		return;
+	}
+
+	const double ux = cs->units_per_px_x();
+	const double uy = cs->units_per_px_y();
+	const float  cx = cs->principal_x_px();
+	const float  cy = cs->principal_y_px();
+
+	const Vector3 img_center = cb.pos + cb.fwd * cb.focal;
+
 	for (int sy = 0; sy < lock.h; ++sy) {
-		int h = lock.y + sy;
-		double y = cs->y_screen_to_space(h);
+		const double py = lock.y + sy + 0.5;
+		const double dy_units = -(py - cy) * uy;
 
 		for (int sx = 0; sx < lock.w; ++sx) {
-			int w = lock.x + sx;
-			double x = cs->x_screen_to_space(w);
+			const double px = lock.x + sx + 0.5;
+			const double dx_units = (px - cx) * ux;
 
-			Uint8 lumin = RGB_VOID;
+			// point on image plane in world
+			Vector3 P = img_center + cb.right * dx_units + cb.up * dy_units;
 
-			Vector3 point(x, y, 0);
-			const Sphere *sph = nearest_sphere(&point);
+			Vector3 ray_dir = !(P - cb.pos);
+			double hitT;
+			const Sphere *hit_sph = sphere_intersect(&hitT, cb, ray_dir);
 
-			if (sph == NULL) {
-				pb->set_pixel_gray(pixels, pitch, sx, sy, quantize(lumin, 255));
+			bool hit_plane = false;
+			if (std::abs(ray_dir.y) > 1e-3) {
+				double t = (FLOOR_Y - cb.pos.y) / ray_dir.y;
+				if (t > 1e-3 && t < hitT) {
+					hit_plane = true;
+					hit_sph = NULL;
+					hitT = t;
+				}
+			}
+
+			Uint8 lumin8 = RGB_VOID;
+
+			if (hitT == std::numeric_limits<double>::infinity()) {
+				pb->set_pixel_gray(pixels, pitch, sx, sy, lumin8);
 				continue;
 			}
 
-			Vector3 normal = sph->normal(point);
-			RenderContext ctx = { point, normal, sph, camera };
+			Vector3 hit_point  = cb.pos + ray_dir * hitT;
 
-			lumin = accum_lights(ctx);
+			if (hit_plane) {
+				const Vector3 hit_normal(0.0, 1.0, 0.0);
 
-			pb->set_pixel_gray(pixels, pitch, sx, sy, quantize(lumin, 255));
+				RenderContext ctx = { hit_point, hit_normal, NULL, &camera->pos };
+				double lumin  = accum_lights(ctx);
+				double albedo = checker_albedo(hit_point.x, hit_point.z);
+				double atten  = darken_by_distance(hitT);
+
+				double finalL = std::min(255.0, lumin * albedo * atten);
+				lumin8 = quantize((Uint8)lround(finalL), 255);
+			} else {
+				const Vector3 hit_normal = !(hit_point - hit_sph->pos);
+
+				RenderContext ctx = { hit_point, hit_normal, hit_sph, &camera->pos };
+				double lumin = accum_lights(ctx);
+				lumin8 = quantize((Uint8)round(lumin), 255);
+			}
+
+			pb->set_pixel_gray(pixels, pitch, sx, sy, lumin8);
 		}
 	}
 
 	pb->unlock();
-
 	pb->draw();
 }

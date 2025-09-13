@@ -16,14 +16,19 @@ int main() {
 
 	Axis x_axis_sphere = { 360, 30 };
 	Axis y_axis_sphere = { 320, 30 };
+	Axis z_axis_sphere = {   0, 30 };
+
 	SDL_FRect cs_rect_sphere = { 0, 0, 640, 720 };
 	CoordinateSystem *cs_sphere = new CoordinateSystem(
 		x_axis_sphere,
 		y_axis_sphere,
+		z_axis_sphere,
 		cs_rect_sphere
 	);
-	Vector3 light(-19, 14, 20);
-	Vector3 camera(0, 0, 20);
+
+	Camera camera = { Vector3(0, 5, 15), Vector3(0, -5, -10) };
+
+	Vector3 light(-19, 9, 20);
 
 	Vector3 origin1(-5, -5, -14);
 	Vector3 origin2( 5,  5,   0);
@@ -34,10 +39,12 @@ int main() {
 
 	Axis x_axis_plane = { 360, 30 };
 	Axis y_axis_plane = { 960, 30 };
+	Axis z_axis_plane = {   0, 30 };
 	SDL_FRect cs_rect_plane = { 640, 0, 640, 720 };
 	CoordinateSystem *cs_plane = new CoordinateSystem(
 		x_axis_plane,
 		y_axis_plane,
+		z_axis_plane,
 		cs_rect_plane
 	);
 	Vector2 sample(-1, -2);
@@ -85,10 +92,13 @@ int main() {
 		// Rendering
 
 		scene_sph->blit_bg(CLR_VOID);
-		scene_sph->render_with_ambient_diffusion_and_specular_light(
-			&camera
-		);
-		scene_sph->light_sources[0].rotate_xz(M_PI / 96);
+		scene_sph->render_with_ambient_diffusion_and_specular_light(&camera);
+		scene_sph->blit_light_sources(&camera, 6, true);
+		scene_sph->blit_axes_3d(&camera, 6.0);
+
+		//scene_sph->light_sources[0].rotate_xz(M_PI / 96);
+		camera.dir.rotate_xz(M_PI / 96);
+		camera.pos.rotate_xz(M_PI / 96);
 
 		scene_plane->blit_bg(CLR_WHITE);
 		scene_plane->blit_grid();

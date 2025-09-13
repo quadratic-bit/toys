@@ -6,6 +6,8 @@ public:
 	double x;
 	double y;
 
+	Vector2() : x(0), y(0) {}  // degenerate
+
 	Vector2(double xx, double yy)
 		: x(xx), y(yy) {}
 
@@ -73,6 +75,8 @@ public:
 	double y;
 	double z;
 
+	Vector3() : x(0), y(0), z(0) {}  // degenerate
+
 	Vector3(double xx, double yy, double zz)
 		: x(xx), y(yy), z(zz) {}
 
@@ -135,8 +139,18 @@ public:
 		return right * left;
 	}
 
+	// Dot product
 	double operator^(const Vector3 &right) const {
 		return x * right.x + y * right.y + z * right.z;
+	}
+
+	// Cross product
+	Vector3 operator%(const Vector3 &right) const {
+		return Vector3(
+			y * right.z - z * right.y,
+			z * right.x - x * right.z,
+			x * right.y - y * right.x
+		);
 	}
 
 	Vector3 operator!() const {

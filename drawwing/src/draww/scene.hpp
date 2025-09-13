@@ -33,18 +33,33 @@ struct RenderContext {
 	const Vector3 *camera;
 };
 
+struct CamBasis {
+	Vector3 pos;
+	Vector3 fwd;   // normalized
+	Vector3 right; // normalized
+	Vector3 up;    // normalized
+	double  focal; // focal length in world units, |camera->dir|
+};
+
+struct Camera {
+	Vector3 pos;
+	Vector3 dir;
+};
+
 class Scene {
 	CoordinateSystem *cs;
 	SDL_Renderer *renderer;
 	PixelBuffer *pb;
 
-	double shadow_factor_to_light(const Vector3 &light, const Vector3 &point, const Sphere *exclude) const;
+	bool project_point_perspective(const Vector3 &p, const Camera *camera, SDL_FPoint *out) const;
 
+	double shadow_factor_to_light(const Vector3 &light, const Vector3 &point, const Sphere *exclude) const;
 	double calculate_light(const Vector3 &light, const RenderContext &ctx) const;
 	double accum_lights(const RenderContext &ctx) const;
 
-	const Sphere *nearest_sphere(Vector3 *vec) const;
+	const Sphere *sphere_intersect(double *hit, const CamBasis &cb, const Vector3 &ray_dir) const;
 
+	bool is_occluded(const Vector3 &A, const Vector3 &B) const;
 public:
 	std::vector<Sphere> spheres;
 	std::vector<Vector3> light_sources;
@@ -65,5 +80,8 @@ public:
 
 	void draw_func(double (fn)(double));
 
-	void render_with_ambient_diffusion_and_specular_light(const Vector3 *camera);
+	void blit_axes_3d(const Camera *camera, double len_units);
+
+	void blit_light_sources(const Camera *camera, int radius_px, bool occlusion_test);
+	void render_with_ambient_diffusion_and_specular_light(const Camera *camera);
 };
