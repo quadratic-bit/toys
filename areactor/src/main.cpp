@@ -1,5 +1,6 @@
 #include "areactor/reactor.hpp"
 #include "areactor/window.hpp"
+#include <cstdio>
 
 static const int FPS = 60;
 static const Uint64 FRAME_NS = SDL_NS_PER_SECOND / FPS;
@@ -9,15 +10,19 @@ static bool is_ev_close(const SDL_Event *event) {
 		event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED;
 }
 
+#define NS_TO_SECONDS(ns) ns / (double)1000000000
+
 int main() {
 	SDL_Event ev;
 	bool running = true;
 
+	Uint64 next_frame = SDL_GetTicksNS();  // FPS management
+
 	SDL_FRect bbox = { 320, 180, 640, 360 };
-	Reactor *reactor = new Reactor(bbox);
+	Reactor *reactor = new Reactor(bbox, NS_TO_SECONDS(next_frame));
 	AReactorWindow *window = new AReactorWindow(1280, 720, reactor);
 
-	Uint64 next_frame = SDL_GetTicksNS();
+	Uint64 timestamp = next_frame;  // physcics time calculation
 
 	while (running) {
 		// FPS cap
@@ -47,11 +52,17 @@ int main() {
 
 		if (!running) break;
 
-		// Rendering
+		Uint64 _tmp = SDL_GetTicksNS();
+		Uint64 dt_ns = _tmp - timestamp;
+		timestamp = _tmp;
 
+		// Rendering
 		window->clear();
 		window->outline_reactor();
+		window->draw_particles();
 		window->present();
+
+		reactor->step_frame(NS_TO_SECONDS(timestamp), NS_TO_SECONDS(dt_ns));
 
 		// Tick management
 		next_frame += FRAME_NS;

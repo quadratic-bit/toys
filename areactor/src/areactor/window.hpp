@@ -1,20 +1,21 @@
 #pragma once
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_render.h>
 #include <SDL3_gfx/SDL3_gfxPrimitives.h>
+#include <cstdio>
 #include <stdexcept>
 
 #include "pixel_buffer.hpp"
 #include "reactor.hpp"
 
+// #EAEAEA (234, 234, 234) -- Platinum       (white)
+// #000F08 (0,   15,  8  ) -- Night          (black)
+// #348AA7 (52,  138, 167) -- Blue           (blue)
+// #AA4465 (170, 68,  101) -- Raspberry rose (red)
+// #C37D92 (195, 125, 146) -- Puce           (pink)
+
 #define RGB_BLACK 0
 #define RGB_WHITE 255
-
-#define RGB_LIGHT_GRAY 180
-#define RGB_VOID 21
-
-#define RGB_AMBIENT 26
-#define RGB_DIFFUSION 147
-#define RGB_SPECULAR 100
 
 #define CLR_MONO(v) v, v, v
 
@@ -27,6 +28,12 @@
 #define CLR_AMBIENT CLR_MONO(RGB_AMBIENT)
 #define CLR_VOID CLR_MONO(RGB_VOID)
 
+#define CLR_PLATINUM 234, 234, 234
+#define CLR_NIGHT 0, 15, 8
+#define CLR_BLUE 52, 138, 167
+#define CLR_RASPBERRY 170, 68,  101
+#define CLR_PUCE 195, 125, 146
+
 class AReactorWindow {
 	SDL_Window *window;
 	SDL_Renderer *renderer;
@@ -35,11 +42,10 @@ class AReactorWindow {
 	Reactor *reactor;
 
 	void draw_bounding_line(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2) {
-		thickLineRGBA(renderer, x1, y1, x2, y2, 4, CLR_BLACK, SDL_ALPHA_OPAQUE);
+		thickLineRGBA(renderer, x1, y1, x2, y2, 4, CLR_NIGHT, SDL_ALPHA_OPAQUE);
 	}
 
 public:
-
 	AReactorWindow(int width, int height, Reactor *rreactor) : reactor(rreactor) {
 		SDL_SetAppMetadata("Reactor", "0.1", "com.toy.areactor");
 
@@ -58,9 +64,8 @@ public:
 
 		pb = new PixelBuffer(renderer, width, height);
 
-		SDL_SetRenderDrawColor(renderer, CLR_WHITE, SDL_ALPHA_OPAQUE);
-		SDL_RenderClear(renderer);
-		SDL_RenderPresent(renderer);
+		clear();
+		present();
 	}
 
 	~AReactorWindow() {
@@ -79,8 +84,17 @@ public:
 		draw_bounding_line(x, y + h, x + w, y + h);
 	}
 
+	void draw_particles() {
+		std::vector<Slot> &active_slots = reactor->particles->active_slots;
+		for (size_t i = 0; i < active_slots.size(); ++i) {
+			Slot slot = active_slots[i];
+			Particle *p = reactor->particles->items[slot];
+			p->draw(renderer, reactor);
+		}
+	}
+
 	void clear() {
-		SDL_SetRenderDrawColor(renderer, CLR_WHITE, SDL_ALPHA_OPAQUE);
+		SDL_SetRenderDrawColor(renderer, CLR_PLATINUM, SDL_ALPHA_OPAQUE);
 		SDL_RenderClear(renderer);
 	}
 
