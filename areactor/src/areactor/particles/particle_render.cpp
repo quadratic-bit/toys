@@ -1,6 +1,6 @@
 #include <SDL3_gfx/SDL3_gfxPrimitives.h>
 #include "particle_manager.hpp"
-#include "reactor.hpp"
+#include "../reactor.hpp"
 #include "window.hpp"
 
 void ParticleCircle::draw(SDL_Renderer *renderer, Reactor *reactor) {

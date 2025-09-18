@@ -6,10 +6,10 @@
 #include <limits>
 #include <vector>
 
-#include "vectors.hpp"
-#include "particle_manager.hpp"
-#include "collision_dispatch.hpp"
-#include "event_manager.hpp"
+#include "linalg/vectors.hpp"
+#include "particles/particle_manager.hpp"
+#include "particles/collision_dispatch.hpp"
+#include "events/event_manager.hpp"
 
 static const double SMALL_RADIUS = 2.0;
 static const double TIME_EPS     = 1e-12;  // seconds

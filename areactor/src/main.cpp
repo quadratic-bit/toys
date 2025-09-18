@@ -1,6 +1,5 @@
 #include "areactor/reactor.hpp"
 #include "areactor/window.hpp"
-#include <cstdio>
 
 static const int FPS = 60;
 static const Uint64 FRAME_NS = SDL_NS_PER_SECOND / FPS;

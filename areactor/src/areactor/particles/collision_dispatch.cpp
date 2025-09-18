@@ -1,5 +1,5 @@
 #include "collision_dispatch.hpp"
-#include "reactor.hpp"
+#include "../reactor.hpp"
 
 void collide_impl(Reactor *r, ParticleCircle *A, ParticleCircle *B, Time now) {
 	const double mass_a = A->mass;

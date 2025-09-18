@@ -3,8 +3,8 @@
 #include <tr1/unordered_map>
 #include <vector>
 
-#include "vectors.hpp"
-#include "common.hpp"
+#include "../linalg/vectors.hpp"
+#include "../common.hpp"
 
 class Reactor;
 

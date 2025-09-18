@@ -1,6 +1,6 @@
-#include "collision_dispatch.hpp"
+#include "../particles/collision_dispatch.hpp"
 #include "event_manager.hpp"
-#include "reactor.hpp"
+#include "../reactor.hpp"
 
 void EventCellCross::dispatch(Reactor *r) {
 	if (!r->particles->slot_of_id.count(particle)) return;
