@@ -8,7 +8,7 @@ BUILD_DIR := build
 INC_PUBLIC := headers
 INC_SRC := src/areactor
 
-LIB_SRC := $(wildcard src/areactor/*.cpp)
+LIB_SRC := $(wildcard src/areactor/**/*.cpp)
 MAIN_SRC := src/main.cpp
 
 LIB_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(LIB_SRC))
@@ -40,7 +40,7 @@ LDFLAGS_release:= -flto
 CXXFLAGS := $(CXXFLAGS_COMMON) $(CXXFLAGS_$(MODE))
 LDFLAGS := $(LDFLAGS_$(MODE)) -Wl,-rpath,/usr/local/lib
 #LDLIBS := -lz
-LDLIBS := -L/usr/local/lib -lSDL3 -lSDL3_gfx
+LDLIBS := -L/usr/local/lib -lSDL3 -lSDL3_gfx -lSDL3_ttf
 
 DEPFLAGS := -MMD -MP
 

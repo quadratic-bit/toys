@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdio>
 #include <limits>
+#include <typeinfo>
 #include <vector>
 
 #include "linalg/vectors.hpp"
@@ -37,11 +38,26 @@ struct Stat {
 	double total_energy;
 	double avg_sqr_velocity;
 	size_t n;
+	size_t n_circle;
+	size_t n_square;
+};
+
+struct WallSeg {
+	Time t0;
+	double x0;  // x(t0)
+	double v;
+	unsigned gen;
+	WallSeg() : t0(0), x0(0), v(0), gen(1) {}
 };
 
 class Reactor {
 	EventQueue *queue;
 	ParticleID seq;
+
+	WallSeg right_wall;
+	unsigned seg_gen_left;
+	unsigned seg_gen_bottom;
+	unsigned seg_gen_top;
 
 	double next_axis_time(double pos, double vel, double cell_size, int c) const {
 		const double INF = std::numeric_limits<double>::infinity();
@@ -92,16 +108,34 @@ public:
 	ParticleManager *particles;
 	SDL_FRect bbox;
 
-	Reactor(SDL_FRect rect, Time t) : seq(0), bbox(rect) {
-		queue = new EventQueue();
-		particles = new ParticleManager(16, 9, rect.w / (double)GRID_W, rect.h / (double)GRID_H);
-		for (int i = 0; i < 2000; ++i) {
+	void add_particles(Time t, size_t n) {
+		for (size_t i = 0; i < n; ++i) {
 			Vector2 pos = Vector2::random_rect(bbox.w - SMALL_RADIUS * 2, bbox.h - SMALL_RADIUS * 2) + Vector2(SMALL_RADIUS, SMALL_RADIUS);
 			Vector2 vel = Vector2::random_radial(400, 600);
 			Particle *new_p = new ParticleCircle(particles->seq++, pos, vel, SMALL_RADIUS, 1, t);
 			particles->add(new_p);
 			reschedule_all_for(new_p->id, t);
 		}
+	}
+
+	void remove_particle() {
+		size_t n = particles->active_slots.size();
+		if (n == 0) return;
+		particles->remove(particles->items[particles->active_slots[n - 1]]->id);
+	}
+
+	Reactor(SDL_FRect rect, Time t, size_t n) : seq(0), bbox(rect) {
+		queue = new EventQueue();
+		particles = new ParticleManager(16, 9, rect.w / (double)GRID_W, rect.h / (double)GRID_H);
+
+		right_wall.t0 = t;
+		right_wall.x0 = bbox.w;
+		right_wall.v = 0.0;
+		right_wall.gen = 1;
+
+		seg_gen_left = seg_gen_bottom = seg_gen_top = 1;
+
+		add_particles(t, n);
 	}
 
 	void schedule_cell_cross(ParticleID pid, Time t) {
@@ -128,53 +162,76 @@ public:
 	}
 
 	void schedule_wall_collision(ParticleID pid, Time t) {
-		const double INF = std::numeric_limits<double>::infinity();
+		if (!particles->slot_of_id.count(pid)) return;
 
 		Slot slot = particles->slot_of_id[pid];
 		Particle *p = particles->items[slot];
 
-		const double xmin = 0.0;
-		const double xmax = bbox.w;
-		const double ymin = 0.0;
-		const double ymax = bbox.h;
+		const Vector2 x = predict_pos(p, t);
+		const Vector2 v = p->velocity;
 
-		double best_dt = INF;
+		double best_dt = std::numeric_limits<double>::infinity();
 		int best_side = Side::NONE;
+		unsigned best_seg_gen = 0;
 
 		if (p->velocity.x < 0.0) {
-			double dt = dt_to(p->position.x, p->velocity.x, xmin + p->radius);
-			if (dt >= 0.0 && dt < best_dt) {
-				best_dt = dt;
+			double gap = (0.0 + p->radius) - x.x;
+			double dt  = gap / v.x;
+			if (dt >= -1e-12 && dt < best_dt) {
+				best_dt = std::max(0.0, dt);
 				best_side = Side::LEFT;
+				best_seg_gen = wall_seg_gen(Side::LEFT);
 			}
 		}
-		if (p->velocity.x > 0.0) {
-			double dt = dt_to(p->position.x, p->velocity.x, xmax - p->radius);
-			if (dt >= 0.0 && dt < best_dt) {
-				best_dt = dt;
-				best_side = Side::RIGHT;
+
+		//if (p->velocity.x > 0.0) {
+		{
+			const int side = Side::RIGHT;
+			const double Xw = wall_pos(side, t);
+			const double w  = wall_vel(side);
+			const double face = Xw - p->radius;
+			const double gap  = face - x.x;
+			const double rel  = v.x - w;
+
+			if (gap <= 0.0) {
+				if (0.0 < best_dt) {
+					best_dt = 0.0;
+					best_side = side;
+					best_seg_gen = wall_seg_gen(side);
+				}
+			} else if (rel > 0.0) {
+				double dt = gap / rel;
+				if (dt >= -1e-12 && dt < best_dt) {
+					best_dt = std::max(0.0, dt);
+					best_side = side;
+					best_seg_gen = wall_seg_gen(side);
+				}
 			}
 		}
 		if (p->velocity.y < 0.0) {
-			double dt = dt_to(p->position.y, p->velocity.y, ymin + p->radius);
-			if (dt >= 0.0 && dt < best_dt) {
-				best_dt = dt;
+			double gap = (0.0 + p->radius) - x.y;
+			double dt = gap / v.y;
+			if (dt >= -1e-12 && dt < best_dt) {
+				best_dt = std::max(0.0, dt);
 				best_side = Side::TOP;
+				best_seg_gen = wall_seg_gen(Side::TOP);
 			}
 		}
 		if (p->velocity.y > 0.0) {
-			double dt = dt_to(p->position.y, p->velocity.y, ymax - p->radius);
-			if (dt >= 0.0 && dt < best_dt) {
-				best_dt = dt;
+			double gap = (bbox.h - p->radius) - x.y;
+			double dt  = gap / v.y;
+			if (dt >= -1e-12 && dt < best_dt) {
+				best_dt = std::max(0.0, dt);
 				best_side = Side::BOTTOM;
+				best_seg_gen = wall_seg_gen(Side::BOTTOM);
 			}
 		}
 
 		if (!std::isfinite(best_dt)) return;
 
-		Cell c = particles->grid->cell(p->position);
+		Cell c = particles->grid->cell(x);
 
-		EventParticleWall *e = new EventParticleWall(t + best_dt, p->id, p->gen, best_side, particles->grid->cell_handle(c));
+		EventParticleWall *e = new EventParticleWall(t + best_dt, p->id, p->gen, best_side, best_seg_gen, particles->grid->cell_handle(c));
 		queue->push(e);
 	}
 
@@ -215,16 +272,34 @@ public:
 		}
 	}
 
-	void bounce_off_wall(Particle *p, int side) const {
-		const double xmin = 0.0, xmax = bbox.w;
-		const double ymin = 0.0, ymax = bbox.h;
-
+	void bounce_off_wall(Particle *p, int side, Time now) const {
 		switch (side) {
-			case Side::LEFT:   { double b = xmin + p->radius; p->position.x = inext (b); p->velocity.x = -p->velocity.x; } break;
-			case Side::RIGHT:  { double b = xmax - p->radius; p->position.x = inprev(b); p->velocity.x = -p->velocity.x; } break;
-			case Side::TOP:    { double b = ymin + p->radius; p->position.y = inext (b); p->velocity.y = -p->velocity.y; } break;
-			case Side::BOTTOM: { double b = ymax - p->radius; p->position.y = inprev(b); p->velocity.y = -p->velocity.y; } break;
-			default: break;
+		case Side::LEFT: {
+			double X = 0.0;
+			double target = X + p->radius;
+			p->position.x = inext(target);
+			p->velocity.x = -p->velocity.x;
+		} break;
+		case Side::RIGHT: {
+			double X = wall_pos(Side::RIGHT, now);
+			double w = wall_vel(Side::RIGHT);
+			double target = X - p->radius;
+			p->position.x = inprev(target);
+			p->velocity.x = 2.0 * w - p->velocity.x;
+		} break;
+		case Side::TOP: {
+			double Y = 0.0;
+			double target = Y + p->radius;
+			p->position.y = inext(target);
+			p->velocity.y = -p->velocity.y;
+		} break;
+		case Side::BOTTOM: {
+			double Y = bbox.h;
+			double target = Y - p->radius;
+			p->position.y = inprev(target);
+			p->velocity.y = -p->velocity.y;
+		} break;
+		default: break;
 		}
 	}
 
@@ -290,19 +365,64 @@ public:
 				move_cell(slot, c_now);
 			}
 		}
+		bbox.w = wall_pos(Side::RIGHT, end);
 	}
 
 	Stat tally() const {
-		Stat stat = {0, 0, 0};
+		Stat stat = {0, 0, 0, 0, 0};
 		std::vector<Slot> &active_slots = particles->active_slots;
 		for (size_t i = 0; i < active_slots.size(); ++i) {
 			Slot slot = active_slots[i];
 			Particle *p = particles->items[slot];
+			if (typeid(*p) == typeid(ParticleCircle)) {
+				stat.n_circle++;
+			}
+			if (typeid(*p) == typeid(ParticleSquare)) {
+				stat.n_square++;
+			}
 			stat.total_energy += p->mass * (p->velocity ^ p->velocity) / 2;
 			stat.avg_sqr_velocity += (p->velocity ^ p->velocity);
 		}
 		stat.n = active_slots.size();
-		stat.avg_sqr_velocity /= (double)stat.n;
+		stat.avg_sqr_velocity = stat.n > 0 ? stat.avg_sqr_velocity / (double)stat.n : 0;
 		return stat;
+	}
+
+	double wall_pos(int side, Time tt) const {
+		switch (side) {
+			case Side::LEFT:   return 0.0;
+			case Side::RIGHT:  return right_wall.x0 + right_wall.v * (tt - right_wall.t0);
+			default:           return 0.0;
+		}
+	}
+
+	double wall_vel(int side) const {
+		switch (side) {
+			case Side::LEFT:   return 0.0;
+			case Side::RIGHT:  return right_wall.v;
+			default:           return 0.0;
+		}
+	}
+
+	unsigned wall_seg_gen(int side) const {
+		switch (side) {
+			case Side::LEFT:   return seg_gen_left;
+			case Side::RIGHT:  return right_wall.gen;
+			case Side::BOTTOM: return seg_gen_bottom;
+			case Side::TOP:    return seg_gen_top;
+			default:           return 1u;
+		}
+	}
+
+	void set_right_wall_velocity(Time now, double v_right) {
+		queue->push(new EventWallSegChange(now, Side::RIGHT, v_right));
+	}
+
+	void begin_right_wall_segment(double new_v, Time now) {
+		double x_now = wall_pos(Side::RIGHT, now);
+		right_wall.x0 = x_now;
+		right_wall.t0 = now;
+		right_wall.v = new_v;
+		++right_wall.gen;
 	}
 };

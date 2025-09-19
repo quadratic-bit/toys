@@ -18,7 +18,7 @@ public:
 
 	Vector2() : x(0), y(0) {}  // degenerate
 
-	Vector2(double xx, double yy)
+	explicit Vector2(double xx, double yy)
 		: x(xx), y(yy) {}
 
 	static Vector2 random_rect(double w, double h) {

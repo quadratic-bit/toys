@@ -47,12 +47,14 @@ public:
 	ParticleID particle;
 	int gen;
 	int side;
+	unsigned seg_gen;
 	CellHandle cell;
 
-	EventParticleWall(Time tt, ParticleID p, int g, int s, CellHandle c) : Event(tt) {
+	EventParticleWall(Time tt, ParticleID p, int g, int s, unsigned sg, CellHandle c) : Event(tt) {
 		particle = p;
 		gen = g;
 		side = s;
+		seg_gen = sg;
 		cell = c;
 	}
 
@@ -75,6 +77,15 @@ public:
 		cell = c;
 	}
 
+	void dispatch(Reactor *reactor);
+};
+
+class EventWallSegChange : public Event {
+public:
+	int side;
+	double new_v;
+
+	EventWallSegChange(Time tt, int s, double v) : Event(tt), side(s), new_v(v) {}
 	void dispatch(Reactor *reactor);
 };
 

@@ -25,10 +25,11 @@ void EventParticleWall::dispatch(Reactor *r) {
 	Particle *p = r->particles->items[slot];
 
 	if (p->gen != gen) return;
+	if (seg_gen != r->wall_seg_gen(side)) return;
 
 	r->advance_particle_to(p, time);
 
-	r->bounce_off_wall(p, side);
+	r->bounce_off_wall(p, side, time);
 	p->gen++;
 	r->reschedule_all_for(p->id, time);
 }
@@ -51,4 +52,17 @@ void EventParticleParticle::dispatch(Reactor *r) {
 	r->move_cell(sb, r->particles->grid->cell_index(B->position));
 
 	collide_dispatch(r, A, B, time);
+}
+
+void EventWallSegChange::dispatch(Reactor *reactor) {
+	if (side == Side::RIGHT) {
+		reactor->begin_right_wall_segment(new_v, time);
+
+		std::vector<Slot>& act = reactor->particles->active_slots;
+		for (size_t k = 0; k < act.size(); ++k) {
+			Particle* p = reactor->particles->items[ act[k] ];
+			if (!p->alive) continue;
+			reactor->schedule_wall_collision(p->id, time);
+		}
+	}
 }

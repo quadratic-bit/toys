@@ -1,5 +1,6 @@
 #pragma once
 #include <SDL3/SDL_render.h>
+#include <cstdio>
 #include <tr1/unordered_map>
 #include <vector>
 
@@ -189,7 +190,8 @@ public:
 
 	void remove(ParticleID pid) {
 		Slot slot = slot_of_id[pid];
-		bucket_erase(cell_of[slot], slot);
+		CellHandle cell = cell_of[slot];
+		bucket_erase(cell, slot);
 		active_erase(slot);
 		slot_of_id.erase(pid);
 		items[slot]->alive = false;
