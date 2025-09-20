@@ -1,14 +1,12 @@
-#include "areactor/linalg/axes.hpp"
-#include "areactor/reactor.hpp"
-#include "areactor/window.hpp"
-#include <cstdio>
 #include <sstream>
 #include <string>
 
+#include "areactor/window.hpp"
+#include "areactor/reactor.hpp"
+#include "areactor/graph.hpp"
+
 static const int FPS = 60;
 static const Uint64 FRAME_NS = SDL_NS_PER_SECOND / FPS;
-static const double T_window = 5.0; // seconds plotted
-static const double UNITS_PER_SECONDS = 1.0; // units per seconds
 
 static bool is_ev_close(const SDL_Event *event) {
 	return event->type == SDL_EVENT_QUIT ||
@@ -16,19 +14,6 @@ static bool is_ev_close(const SDL_Event *event) {
 }
 
 #define NS_TO_SECONDS(ns) ns / (double)1000000000
-
-inline void on_new_sample(RingBuffer<float> *buf, View *view, size_t sample_count, AReactorWindow *window) {
-	const double dx = (view->dim.w / view->x_axis.scale) / (FPS * T_window);
-
-	double x_latest = (double)sample_count * dx;
-
-	view->pin_to_right(x_latest);
-
-	const size_t n = buf->size;
-	const double x0_base = x_latest - (n - 1) * dx; // space x of oldest sample stored
-
-	window->draw_line_graph_stream(view, buf, x0_base, dx);
-}
 
 int main() {
 	SDL_Event ev;
@@ -40,21 +25,12 @@ int main() {
 	Reactor *reactor = new Reactor(bbox, NS_TO_SECONDS(next_frame), 2000);
 	AReactorWindow *window = new AReactorWindow(1280, 720, reactor);
 
-	Axis x_axis_energy = { 300, 10 };
-	Axis y_axis_energy = { 1000, 10 };
-	SDL_FRect cs_rect_energy = { 900, 160, 180, 180 };
-	View total_energy = View(x_axis_energy, y_axis_energy, cs_rect_energy);
-	total_energy.x_axis.scale = total_energy.dim.w / T_window * UNITS_PER_SECONDS;
-	RingBuffer<float> energyY(4096);
+	SDL_FRect cs_rect_energy = { 1000, 160, 180, 180 };
+	LineGraph total_energy = LineGraph(cs_rect_energy, 0.8, FPS, 5.0);
 
-	Axis x_axis_vel = { 500, 10 };
-	Axis y_axis_vel = { 1000, 10 };
-	SDL_FRect cs_rect_vel = { 900, 360, 180, 180 };
-	View velocity = View(x_axis_vel, y_axis_vel, cs_rect_vel);
-	velocity.x_axis.scale = velocity.dim.w / T_window * UNITS_PER_SECONDS;
-	RingBuffer<float> velocityY(4096);
+	SDL_FRect cs_rect_vel = { 1000, 360, 180, 180 };
+	LineGraph velocity = LineGraph(cs_rect_vel, 0.8, FPS, 5.0);
 
-	size_t sample_count = 0;
 	Stat stats;
 
 	int wall_speed = 0;
@@ -128,22 +104,25 @@ int main() {
 		window->draw_particles();
 
 		stats = reactor->tally();
-		sample_count++;
 
-		energyY.push((float)stats.total_energy);
-		total_energy.y_axis.scale = total_energy.dim.h / energyY.mean((int)((double)FPS * T_window)) / 2.0;
+		total_energy.append_sample(stats.total_energy);
+		total_energy.rescale_y();
+		total_energy.snap_y_scale_to_grid();
 
-		window->draw_view_grid(&total_energy, 1.0);
-		window->draw_view_axes(&total_energy);
-		on_new_sample(&energyY, &total_energy, sample_count, window);
+		total_energy.draw_view_grid(window, 1.0, "px²/s²");
+		total_energy.draw_view_axes(window->renderer);
+		total_energy.plot_stream(window->renderer);
+		total_energy.draw_axis_titles(window, "", "E");
 		window->outline(total_energy.dim, 2);
 
-		velocityY.push((float)stats.avg_sqr_velocity);
-		velocity.y_axis.scale = velocity.dim.h / velocityY.mean((int)((double)FPS * T_window)) / 2.0;
+		velocity.append_sample(stats.avg_sqr_velocity);
+		velocity.rescale_y();
+		velocity.snap_y_scale_to_grid();
 
-		window->draw_view_grid(&velocity, 1.0);
-		window->draw_view_axes(&velocity);
-		on_new_sample(&velocityY, &velocity, sample_count, window);
+		velocity.draw_view_grid(window, 1.0, "px²/s²");
+		velocity.draw_view_axes(window->renderer);
+		velocity.plot_stream(window->renderer);
+		velocity.draw_axis_titles(window, "", "<v²>");
 		window->outline(velocity.dim, 2);
 
 		std::ostringstream oss;
