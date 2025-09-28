@@ -6,10 +6,11 @@
 #include <sstream>
 #include <string>
 
-#include "ring_buffer.hpp"
-#include "linalg/vectors.hpp"
-#include "common.hpp"
-#include "window.hpp"
+#include "../ring_buffer.hpp"
+#include "../linalg/vectors.hpp"
+#include "../common.hpp"
+#include "../window.hpp"
+#include "widget.hpp"
 
 static double nice125(double x) {
 	if (x <= 0) return 0.0;
@@ -171,118 +172,59 @@ static inline int pos_mod(int a, int b) {
 	return (a % b + b) % b;
 }
 
-class LineGraph {
+class LineGraph : public HandledWidget {
 	double UNITS_PER_SECONDS;
 	int FPS;
 	double time_window_s;
 	size_t sample_count;
 	RingBuffer<double> buf;
-public:
-	Axis x_axis;
-	Axis y_axis;
-	SDL_FRect dim;
+	const char *label_y, *title;
 
-	LineGraph(SDL_FRect dims, double x_axis_shift = 0.8, int fps = 60, double time_window_s_ = 5.0)
-			: UNITS_PER_SECONDS(1.0), FPS(fps), time_window_s(time_window_s_), sample_count(0), buf(4096), dim(dims) {
-		x_axis.center = dim.y + dim.h * x_axis_shift;
-		x_axis.scale  = dim.w / time_window_s * UNITS_PER_SECONDS;
-		y_axis.center = dim.x;
-		y_axis.scale  = 1;
-	}
-
-	void pin_to_right(double x_latest) {
-		y_axis.center = dim.x + dim.w - x_latest * (double)x_axis.scale;
-	}
-
-	double x_screen_to_space(double x_screen) const {
-		return (x_screen - y_axis.center) / (double)x_axis.scale;
-	}
-
-	double y_screen_to_space(double y_screen) const {
-		return (x_axis.center - y_screen) / (double)y_axis.scale;
-	}
-
-	double x_space_to_screen(double x_space) const {
-		return y_axis.center + x_space * (double)x_axis.scale;
-	}
-
-	double y_space_to_screen(double y_space) const {
-		return x_axis.center - y_space * (double)y_axis.scale;
-	}
-
-	void space_to_screen(Vector2 *vec) const {
-		vec->x = x_space_to_screen(vec->x);
-		vec->y = y_space_to_screen(vec->y);
-	}
-
-	void screen_to_space(Vector2 *vec) const {
-		vec->x = x_screen_to_space(vec->x);
-		vec->y = y_screen_to_space(vec->y);
-	}
-
-	void append_sample(double sample) {
-		buf.push(sample);
-		sample_count++;
-
-		const double dx = (dim.w / x_axis.scale) / (FPS * time_window_s);
-
-		double x_latest = (double)sample_count * dx;
-
-		pin_to_right(x_latest);
-	}
-
-	void rescale_y(double factor = 2.0) {
-		y_axis.scale = dim.h / buf.mean((int)((double)FPS * time_window_s)) / factor;
-	}
-
-	void snap_y_scale_to_grid(double x_units = 1.0) {
+	void draw_grid(Window *window, double x_units, const char *y_unit) {
 		int x_step_px, y_step_px;
 		double y_units;
 		calc_125_scale(x_step_px, x_units, y_step_px, y_units);
 
-		y_axis.scale = (double)y_step_px / y_units;
-	}
+		SDL_SetRenderDrawColor(window->renderer, CLR_GRID, SDL_ALPHA_OPAQUE);
 
-	void plot_stream(SDL_Renderer *renderer) {
-		const double dx = (dim.w / x_axis.scale) / (FPS * time_window_s);
-		double x_latest = (double)sample_count * dx;
+		int k0 = (int)SDL_ceil((frame.y - x_axis.center) / (double)y_step_px);
+		int k1 = (int)SDL_floor((frame.y + frame.h - x_axis.center) / (double)y_step_px);
 
-		const size_t n = buf.size;
-		const double x0_base = x_latest - (n - 1) * dx; // space x of oldest sample stored
+		for (int k = k0; k <= k1; ++k) {
+			float ys = (float)(x_axis.center + k * y_step_px);
+			SDL_RenderLine(window->renderer, frame.x, ys, frame.x + frame.w, ys);
 
-		if (n < 2) return;
+			const double v = (double)k * y_units;
+			window->text_aligned(fmt_si(-v, y_unit).c_str(), frame.x - 6.0f, ys, TA_RIGHT);
+		}
 
-		const double w_space = dim.w / x_axis.scale;
-		size_t max_need = (size_t)w_space / dx + 3;  // just to be safe
-		if (max_need > n) max_need = n;
+		AutoClip clipper(window->renderer, frame);
 
-		size_t start = n - max_need;
-		double x_prev_space = x0_base + (double)start * dx;
+		k0 = (int)SDL_ceil((frame.x - y_axis.center) / (double)x_step_px);
+		k1 = (int)SDL_floor((frame.x + frame.w - y_axis.center) / (double)x_step_px);
 
-		double x0 = x_space_to_screen(x_prev_space);
-		double y0 = y_space_to_screen(buf.at(start));
+		const double t_at_yaxis = x_screen_to_space(y_axis.center);
 
-		SDL_SetRenderDrawColor(renderer, CLR_PUCE, SDL_ALPHA_OPAQUE);
-		for (size_t i = start + 1; i < n; ++i) {
-			double x1_space = x0_base + (double)i * dx;
-			double x1 = x_space_to_screen(x1_space);
-			double y1 = y_space_to_screen(buf.at(i));
+		for (int k = k0; k <= k1; ++k) {
+			float xs = (float)(y_axis.center + k * x_step_px);
+			SDL_RenderLine(window->renderer, xs, frame.y, xs, frame.y + frame.h);
 
-			double cx0 = x0, cy0 = y0, cx1 = x1, cy1 = y1;
-			if (clip_to_rect(&cx0, &cy0, &cx1, &cy1, &dim)) {
-				SDL_RenderLine(renderer, (float)cx0, (float)cy0, (float)cx1, (float)cy1);
-			}
-
-			x0 = x1; y0 = y1;
+			const double t_abs = t_at_yaxis + k * x_units;
+			window->text_aligned(fmt_seconds(t_abs).c_str(), xs, frame.y + frame.h + 10.0f, TA_CENTER);
 		}
 	}
 
-	void draw_view_axes(SDL_Renderer *renderer) {
-		float y = (float)std::min(std::max((float)x_axis.center, dim.y), dim.y + dim.h);
-		thickLineRGBA(renderer, dim.x, y, dim.x + dim.w, y, 2, CLR_NIGHT, SDL_ALPHA_OPAQUE);
+	void draw_axis_titles(Window *win, const char *x_title, const char *y_title) {
+		win->text_aligned(x_title, frame.x + frame.w * 0.5f, frame.y + frame.h + 18.0f, TA_CENTER);
+		win->text_aligned(y_title, frame.x + frame.w + 8.0f, frame.y + frame.h * 0.5f, TA_LEFT);
+	}
 
-		float x = (float)std::min(std::max((float)y_axis.center, dim.x), dim.x + dim.w);
-		thickLineRGBA(renderer, x, dim.y, x, dim.y + dim.h, 2, CLR_NIGHT, SDL_ALPHA_OPAQUE);
+	void draw_axes(SDL_Renderer *renderer) {
+		float y = (float)std::min(std::max((float)x_axis.center, frame.y), frame.y + frame.h);
+		thickLineRGBA(renderer, frame.x, y, frame.x + frame.w, y, 2, CLR_NIGHT, SDL_ALPHA_OPAQUE);
+
+		float x = (float)std::min(std::max((float)y_axis.center, frame.x), frame.x + frame.w);
+		thickLineRGBA(renderer, x, frame.y, x, frame.y + frame.h, 2, CLR_NIGHT, SDL_ALPHA_OPAQUE);
 	}
 
 	void calc_125_scale(int &x_step_px, const double &x_units, int &y_step_px, double &y_units) {
@@ -301,55 +243,134 @@ public:
 		int ye = (int)std::floor(std::log10(y_units));     // exponent
 		double ym = y_units / std::pow(10.0, (double)ye);  // mantissa
 
-		while (y_step_px < lo) {
+		int limit = 200;
+		while (y_step_px < lo && limit > 0) {
 			step_125_up(ym, ye);
 			y_units = ym * std::pow(10.0, (double)ye);
 			y_step_px = (int)SDL_round(y_units * y_axis.scale);
+			limit--;
 		}
-		while (y_step_px > hi) {
+		limit = 200;
+		while (y_step_px > hi && limit > 0) {
 			step_125_down(ym, ye);
 			y_units = ym * std::pow(10.0, (double)ye);
 			y_step_px = (int)SDL_round(y_units * y_axis.scale);
+			limit--;
 		}
 
 	}
+public:
+	Axis x_axis;
+	Axis y_axis;
+	double x_axis_shift;
 
-	void draw_view_grid(AReactorWindow *window, double x_units, const char *y_unit) {
+	LineGraph(SDL_FRect dims, Widget *parent_, const char *label_y_, const char *title_, State *st, double x_axis_shift_ = 0.8, int fps = 60, double time_window_s_ = 5.0)
+			: Widget(dims, parent_, st), HandledWidget(dims, parent_, st), UNITS_PER_SECONDS(1.0), FPS(fps), time_window_s(time_window_s_),
+			sample_count(0), buf(4096), label_y(label_y_), title(title_), x_axis_shift(x_axis_shift_) {
+		x_axis.center = frame.y + frame.h * x_axis_shift;
+		x_axis.scale  = frame.w / time_window_s * UNITS_PER_SECONDS;
+		y_axis.center = frame.x;
+		y_axis.scale  = 1;
+	}
+
+	void pin_to_right(double x_latest) {
+		y_axis.center = frame.x + frame.w - x_latest * (double)x_axis.scale;
+	}
+
+	double x_screen_to_space(double x_screen) const {
+		return (x_screen - y_axis.center) / (double)x_axis.scale;
+	}
+
+	double y_screen_to_space(double y_screen) const {
+		return (x_axis.center - y_screen) / (double)y_axis.scale;
+	}
+
+	double x_space_to_screen(double x_space) const {
+		return y_axis.center + x_space * (double)x_axis.scale;
+	}
+
+	double y_space_to_screen(double y_space) const {
+		return x_axis.center - y_space * (double)y_axis.scale;
+	}
+
+	void space_to_screen(Vec2 *vec) const {
+		vec->x = x_space_to_screen(vec->x);
+		vec->y = y_space_to_screen(vec->y);
+	}
+
+	void screen_to_space(Vec2 *vec) const {
+		vec->x = x_screen_to_space(vec->x);
+		vec->y = y_screen_to_space(vec->y);
+	}
+
+	void append_sample(double sample) {
+		buf.push(sample);
+		sample_count++;
+
+		const double dx = (frame.w / x_axis.scale) / (FPS * time_window_s);
+
+		double x_latest = (double)sample_count * dx;
+
+		pin_to_right(x_latest);
+	}
+
+	void rescale_y(double factor = 2.0) {
+		y_axis.scale = frame.h / buf.mean((int)((double)FPS * time_window_s)) / factor;
+	}
+
+	void snap_y_scale_to_grid(double x_units = 1.0) {
 		int x_step_px, y_step_px;
 		double y_units;
 		calc_125_scale(x_step_px, x_units, y_step_px, y_units);
 
-		SDL_SetRenderDrawColor(window->renderer, CLR_GRID, SDL_ALPHA_OPAQUE);
+		y_axis.scale = (double)y_step_px / y_units;
+	}
 
-		int k0 = (int)SDL_ceil((dim.y - x_axis.center) / (double)y_step_px);
-		int k1 = (int)SDL_floor((dim.y + dim.h - x_axis.center) / (double)y_step_px);
+	void plot_stream(SDL_Renderer *renderer) {
+		const double dx = (frame.w / x_axis.scale) / (FPS * time_window_s);
+		double x_latest = (double)sample_count * dx;
 
-		for (int k = k0; k <= k1; ++k) {
-			float ys = (float)(x_axis.center + k * y_step_px);
-			SDL_RenderLine(window->renderer, dim.x, ys, dim.x + dim.w, ys);
+		const size_t n = buf.size;
+		const double x0_base = x_latest - (n - 1) * dx; // space x of oldest sample stored
 
-			const double v = (double)k * y_units;
-			window->text_aligned(fmt_si(-v, y_unit).c_str(), dim.x - 6.0f, ys, TA_RIGHT);
-		}
+		if (n < 2) return;
 
-		AutoClip clipper(window->renderer, dim);
+		const double w_space = frame.w / x_axis.scale;
+		size_t max_need = (size_t)w_space / dx + 3;  // just to be safe
+		if (max_need > n) max_need = n;
 
-		k0 = (int)SDL_ceil((dim.x - y_axis.center) / (double)x_step_px);
-		k1 = (int)SDL_floor((dim.x + dim.w - y_axis.center) / (double)x_step_px);
+		size_t start = n - max_need;
+		double x_prev_space = x0_base + (double)start * dx;
 
-		const double t_at_yaxis = x_screen_to_space(y_axis.center);
+		double x0 = x_space_to_screen(x_prev_space);
+		double y0 = y_space_to_screen(buf.at(start));
 
-		for (int k = k0; k <= k1; ++k) {
-			float xs = (float)(y_axis.center + k * x_step_px);
-			SDL_RenderLine(window->renderer, xs, dim.y, xs, dim.y + dim.h);
+		SDL_SetRenderDrawColor(renderer, CLR_PUCE, SDL_ALPHA_OPAQUE);
+		for (size_t i = start + 1; i < n; ++i) {
+			double x1_space = x0_base + (double)i * dx;
+			double x1 = x_space_to_screen(x1_space);
+			double y1 = y_space_to_screen(buf.at(i));
 
-			const double t_abs = t_at_yaxis + k * x_units;
-			window->text_aligned(fmt_seconds(t_abs).c_str(), xs, dim.y + dim.h + 10.0f, TA_CENTER);
+			double cx0 = x0, cy0 = y0, cx1 = x1, cy1 = y1;
+			if (clip_to_rect(&cx0, &cy0, &cx1, &cy1, &frame)) {
+				SDL_RenderLine(renderer, (float)cx0, (float)cy0, (float)cx1, (float)cy1);
+			}
+
+			x0 = x1; y0 = y1;
 		}
 	}
 
-	void draw_axis_titles(AReactorWindow *win, const char *x_title, const char *y_title) {
-		win->text_aligned(x_title, dim.x + dim.w * 0.5f, dim.y + dim.h + 18.0f, TA_CENTER);
-		win->text_aligned(y_title, dim.x + dim.w + 8.0f, dim.y + dim.h * 0.5f, TA_LEFT);
+	void render_body(Window *window, int off_x, int off_y) {
+		window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
+		draw_grid(window, 1.0, label_y);
+		draw_axes(window->renderer);
+		plot_stream(window->renderer);
+		draw_axis_titles(window, "", title);
+		window->outline(frame, off_x, off_y, 2);
+	}
+
+	DispatchResult on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {
+		x_axis.center = frame.y + frame.h * x_axis_shift;
+		return HandledWidget::on_mouse_move(ctx, e);
 	}
 };

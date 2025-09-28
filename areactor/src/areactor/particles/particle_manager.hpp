@@ -24,8 +24,8 @@ class Particle {
 public:
 	ParticleID id;
 
-	Vector2 position;
-	Vector2 velocity;
+	Vec2 position;
+	Vec2 velocity;
 	double  radius;
 
 	double  mass;
@@ -45,7 +45,7 @@ public:
 class ParticleCircle : public Particle {
 	enum { kType = ParticleType::CIRCLE };
 public:
-	ParticleCircle(ParticleID id_, Vector2 p, Vector2 v, double r, double m, Time t)
+	ParticleCircle(ParticleID id_, Vec2 p, Vec2 v, double r, double m, Time t)
 			: Particle(id_, kType) {
 		position = p;
 		velocity = v;
@@ -60,7 +60,7 @@ public:
 class ParticleSquare : public Particle {
 	enum { kType = ParticleType::SQUARE };
 public:
-	ParticleSquare(ParticleID id_, Vector2 p, Vector2 v, double r, double m, Time t)
+	ParticleSquare(ParticleID id_, Vec2 p, Vec2 v, double r, double m, Time t)
 			: Particle(id_, kType) {
 		position = p;
 		velocity = v;
@@ -89,7 +89,7 @@ struct Grid {
 	Grid(int nx_, int ny_, double cw_, double ch_)
 		: nx(nx_), ny(ny_), cell_w(cw_), cell_h(ch_), buckets(size_t(nx_ * ny_)) {}
 
-	Cell cell(const Vector2 &pos) const {
+	Cell cell(const Vec2 &pos) const {
 		Cell c;
 		c.x = clamp((int)std::floor(pos.x / cell_w), 0, nx - 1);
 		c.y = clamp((int)std::floor(pos.y / cell_h), 0, ny - 1);
@@ -100,7 +100,7 @@ struct Grid {
 		return c.x + c.y * nx;
 	}
 
-	CellHandle cell_index(const Vector2 &pos) const {
+	CellHandle cell_index(const Vec2 &pos) const {
 		return cell_handle(cell(pos));
 	}
 };
@@ -192,9 +192,13 @@ public:
 		Slot slot = slot_of_id[pid];
 		CellHandle cell = cell_of[slot];
 		bucket_erase(cell, slot);
+
+		if (items[slot]) items[slot]->alive = false;
+
 		active_erase(slot);
 		slot_of_id.erase(pid);
-		items[slot]->alive = false;
+
+		items[slot] = NULL;
 		freelist.push_back(slot);
 	}
 };

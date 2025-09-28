@@ -8,7 +8,7 @@ BUILD_DIR := build
 INC_PUBLIC := headers
 INC_SRC := src/areactor
 
-LIB_SRC := $(wildcard src/areactor/**/*.cpp)
+LIB_SRC := $(wildcard src/areactor/**/*.cpp) src/areactor/reactor.cpp
 MAIN_SRC := src/main.cpp
 
 LIB_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(LIB_SRC))

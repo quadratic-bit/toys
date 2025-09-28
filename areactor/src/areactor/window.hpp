@@ -11,7 +11,15 @@
 
 enum TextAlign { TA_LEFT, TA_CENTER, TA_RIGHT };
 
-class AReactorWindow {
+#define DEBUG_THICKNESS   2
+#define DEBUG_ALPHA       (uint8_t)(255 * 0.5f)
+#define DEBUG_PATTERN_GAP 12.0f
+
+static inline int round_int(float v) {
+	return (int)floorf(v + 0.5f);
+}
+
+class Window {
 	SDL_Window *window;
 	TTF_TextEngine *text_engine;
 	TTF_Font *font;
@@ -26,7 +34,7 @@ class AReactorWindow {
 public:
 	SDL_Renderer *renderer;
 
-	AReactorWindow(int width, int height, Reactor *rreactor) : reactor(rreactor) {
+	Window(int width, int height, Reactor *rreactor) : reactor(rreactor) {
 		SDL_SetAppMetadata("Reactor", "0.1", "com.toy.areactor");
 
 		if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -59,29 +67,20 @@ public:
 		present();
 	}
 
-	~AReactorWindow() {
+	~Window() {
 		delete pb;
 		SDL_DestroyRenderer(renderer);
 		SDL_DestroyWindow(window);
 		SDL_Quit();
 	}
 
-	void outline(const SDL_FRect box, unsigned thick = 4) {
-		Sint16 x = box.x, y = box.y;
+	void outline(const SDL_FRect box, int off_x, int off_y, unsigned thick = 4) {
+		Sint16 x = box.x + off_x, y = box.y + off_y;
 		Sint16 w = box.w, h = box.h;
 		draw_bounding_line(x, y, x + w, y, thick);
 		draw_bounding_line(x, y, x, y + h, thick);
 		draw_bounding_line(x + w, y, x + w, y + h, thick);
 		draw_bounding_line(x, y + h, x + w, y + h, thick);
-	}
-
-	void draw_particles() {
-		std::vector<Slot> &active_slots = reactor->particles->active_slots;
-		for (size_t i = 0; i < active_slots.size(); ++i) {
-			Slot slot = active_slots[i];
-			Particle *p = reactor->particles->items[slot];
-			p->draw(renderer, reactor);
-		}
 	}
 
 	void text(const char *string, float x, float y) {
@@ -112,6 +111,91 @@ public:
 	void clear() {
 		SDL_SetRenderDrawColor(renderer, CLR_PLATINUM, SDL_ALPHA_OPAQUE);
 		SDL_RenderClear(renderer);
+	}
+
+	void clear_rect(SDL_FRect box, int off_x, int off_y, uint8_t r, uint8_t g, uint8_t b) {
+		box.x += off_x;
+		box.y += off_y;
+		SDL_SetRenderDrawColor(renderer, r, g, b, SDL_ALPHA_OPAQUE);
+		SDL_RenderFillRect(renderer, &box);
+	}
+
+	void debug_outline(const SDL_FRect box, int off_x, int off_y) {
+		if (box.w <= 0.0f || box.h <= 0.0f) return;
+
+		const float x0 = box.x + off_x;
+		const float y0 = box.y + off_y;
+		const float x1 = box.x + off_x + box.w;
+		const float y1 = box.y + off_y + box.h;
+
+		int lx0 = round_int(x0), ly0 = round_int(y0);
+		int lx1 = round_int(x1), ly1 = round_int(y1);
+
+		thickLineRGBA(renderer, lx0, ly0, lx1, ly0, DEBUG_THICKNESS, CLR_DEBUG, DEBUG_ALPHA);
+		thickLineRGBA(renderer, lx0, ly1, lx1, ly1, DEBUG_THICKNESS, CLR_DEBUG, DEBUG_ALPHA);
+		thickLineRGBA(renderer, lx0, ly0, lx0, ly1, DEBUG_THICKNESS, CLR_DEBUG, DEBUG_ALPHA);
+		thickLineRGBA(renderer, lx1, ly0, lx1, ly1, DEBUG_THICKNESS, CLR_DEBUG, DEBUG_ALPHA);
+
+		const float gap = DEBUG_PATTERN_GAP;
+		if (gap <= 0.0f) return;
+		const float dk = gap * sqrtf(2.0f);
+
+		const float kmin = x0 + y0;
+		const float kmax = x1 + y1;
+
+		float kstart = floorf(kmin / dk) * dk;
+
+		float yi, xi;
+		for (float k = kstart; k <= kmax; k += dk) {
+			std::vector<SDL_FPoint> pts;
+			pts.reserve(4);
+
+			yi = k - x0;
+			if (yi >= y0 - 1e-4f && yi <= y1 + 1e-4f) {
+				SDL_FPoint p = { x0, yi };
+				pts.push_back(p);
+			}
+
+			yi = k - x1;
+			if (yi >= y0 - 1e-4f && yi <= y1 + 1e-4f) {
+				SDL_FPoint p = { x1, yi };
+				pts.push_back(p);
+			}
+
+			xi = k - y0;
+			if (xi >= x0 - 1e-4f && xi <= x1 + 1e-4f) {
+				SDL_FPoint p = { xi, y0 };
+				pts.push_back(p);
+			}
+
+			xi = k - y1;
+			if (xi >= x0 - 1e-4f && xi <= x1 + 1e-4f) {
+				SDL_FPoint p = { xi, y1 };
+				pts.push_back(p);
+			}
+
+			if (pts.size() < 2) continue;
+
+			// find two unique points
+			SDL_FPoint a = pts[0];
+			SDL_FPoint b;
+			bool found = false;
+			for (size_t i = 1; i < pts.size(); ++i) {
+				if (fabsf(pts[i].x - a.x) > 1e-4f || fabsf(pts[i].y - a.y) > 1e-4f) {
+					b = pts[i];
+					found = true;
+					break;
+				}
+			}
+			if (!found) continue;
+
+			int ax = round_int(a.x);
+			int ay = round_int(a.y);
+			int bx = round_int(b.x);
+			int by = round_int(b.y);
+
+			thickLineRGBA(renderer, ax, ay, bx, by, DEBUG_THICKNESS, CLR_DEBUG, DEBUG_ALPHA);
+		}
 	}
 
 	void present() {

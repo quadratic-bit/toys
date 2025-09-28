@@ -1,9 +1,17 @@
+#include <SDL3/SDL_events.h>
+#include <cassert>
+#include <cstdio>
 #include <sstream>
 #include <string>
 
-#include "areactor/window.hpp"
+#include "areactor/widgets/button.hpp"
+#include "areactor/widgets/container.hpp"
+#include "areactor/widgets/graph.hpp"
 #include "areactor/reactor.hpp"
-#include "areactor/graph.hpp"
+#include "areactor/widgets/toolbox.hpp"
+#include "areactor/widgets/widget.hpp"
+#include "areactor/window.hpp"
+#include "areactor/state.hpp"
 
 static const int FPS = 60;
 static const Uint64 FRAME_NS = SDL_NS_PER_SECOND / FPS;
@@ -13,37 +21,85 @@ static bool is_ev_close(const SDL_Event *event) {
 		event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED;
 }
 
-#define NS_TO_SECONDS(ns) ns / (double)1000000000
+static void cb_add(State *st, Widget *d) {
+	(void)d;
+	st->add_to_wall_speed(+40);
+}
+
+static void cb_sub(State *st, Widget *d) {
+	(void)d;
+	st->add_to_wall_speed(-40);
+}
+
+static void cb_add_particles(State *st, Widget *d) {
+	(void)d;
+	st->reactor->add_particles(st->now, 5);
+}
+
+static void cb_delete_particles(State *st, Widget *d) {
+	(void)d;
+	st->reactor->remove_particles(5);
+}
+
+static void cb_hotter(State *st, Widget *d) {
+	(void)d;
+	st->add_to_wall_temp(Side::LEFT, +0.50);
+}
+
+static void cb_colder(State *st, Widget *d) {
+	(void)d;
+	st->add_to_wall_temp(Side::LEFT, -0.50);
+}
+
+#define NS_TO_SECONDS(ns) (double)ns / (double)1000000000
 
 int main() {
 	SDL_Event ev;
 	bool running = true;
+	State state = State();
+	SDL_FRect dim = frect(0, 0, 1280, 720);
+	WidgetContainer root(dim, NULL, &state);
+	root.parent = &root;
 
 	Uint64 next_frame = SDL_GetTicksNS();  // FPS management
 
-	SDL_FRect bbox = { 160, 160, 640, 380 };
-	Reactor *reactor = new Reactor(bbox, NS_TO_SECONDS(next_frame), 2000);
-	AReactorWindow *window = new AReactorWindow(1280, 720, reactor);
+	SDL_FRect bbox = frect(160, 160, 640, 380);
+	Reactor *reactor = new Reactor(bbox, NULL, 1000, &state);
+	state.now = NS_TO_SECONDS(next_frame);
+	state.reactor = reactor;
+	Window *window = new Window(dim.w, dim.h, reactor);
 
-	SDL_FRect cs_rect_energy = { 1000, 160, 180, 180 };
-	LineGraph total_energy = LineGraph(cs_rect_energy, 0.8, FPS, 5.0);
+	SDL_FRect cs_rect_energy = frect(1000, 140, 180, 180);
+	LineGraph kinetic = LineGraph(cs_rect_energy, NULL, "J", "E", &state, 0.8, FPS, 5.0);
 
-	SDL_FRect cs_rect_vel = { 1000, 360, 180, 180 };
-	LineGraph velocity = LineGraph(cs_rect_vel, 0.8, FPS, 5.0);
+	SDL_FRect cs_rect_vel = frect(1000, 380, 180, 180);
+	LineGraph temperature = LineGraph(cs_rect_vel, NULL, "K", "T", &state, 0.8, FPS, 5.0);
+
+	Button btn_left(frect(20, 10, 50, 25), NULL, "<-", &state, cb_sub);
+	Button btn_right(frect(80, 10, 50, 25), NULL, "->", &state, cb_add);
+
+	Button btn_cold(frect(20, 40, 50, 25), NULL, "Cold", &state, cb_colder);
+	Button btn_hot(frect(80, 40, 50, 25), NULL, "Hot",  &state, cb_hotter);
+
+	Button btn_add(frect(20, 70, 50, 25), NULL, "+", &state, cb_add_particles);
+	Button btn_remove(frect(80, 70, 50, 25), NULL, "-",  &state, cb_delete_particles);
+
+	SDL_FRect toolbox_rect = frect(10, 30, 150, 110);
+	Widget *btns[] = { &btn_left, &btn_right, &btn_cold, &btn_hot, &btn_add, &btn_remove };
+	ToolboxWidget toolbox(toolbox_rect, NULL, Widget::make_children(btns), &state);
+
+	Widget *arr[] = { reactor, &toolbox, &kinetic, &temperature };
+	root.append_children(Widget::make_children(arr));
 
 	Stat stats;
 
-	int wall_speed = 0;
-	bool wall_speed_changed = false;
-
-	bool add_particle = false;
-	bool delete_particle = false;
-
+	static Uint64 last_ticks_ns = 0;
 	while (running) {
-		 SDL_PumpEvents();
+		SDL_PumpEvents();
 		// FPS cap
 		for (;;) {
 			Uint64 now = SDL_GetTicksNS();
+			state.now = NS_TO_SECONDS(now);
 			if (now >= next_frame) break;
 
 			Uint32 timeout_ms = (next_frame - now) / SDL_NS_PER_MS;
@@ -56,21 +112,42 @@ int main() {
 						running = false;
 						break;
 					}
-					if (ev.type == SDL_EVENT_KEY_DOWN) {
-						add_particle |= (ev.key.scancode == SDL_SCANCODE_N);
-						delete_particle |= (ev.key.scancode == SDL_SCANCODE_D);
+					switch (ev.type) {
+					case SDL_EVENT_KEY_DOWN:
+						state.add_particle |= (ev.key.scancode == SDL_SCANCODE_N);
+						state.delete_particle |= (ev.key.scancode == SDL_SCANCODE_D);
 						if (ev.key.scancode == SDL_SCANCODE_RIGHT) {
-							wall_speed += 40;
-							wall_speed_changed = true;
+							state.wall_speed += 40;
+							state.wall_speed_changed = true;
 						}
 						if (ev.key.scancode == SDL_SCANCODE_LEFT) {
-							wall_speed -= 40;
-							wall_speed_changed = true;
+							state.wall_speed -= 40;
+							state.wall_speed_changed = true;
 						}
-					}
-					if (ev.type == SDL_EVENT_KEY_UP) {
-						add_particle &= !(ev.key.scancode == SDL_SCANCODE_N);
-						delete_particle &= !(ev.key.scancode == SDL_SCANCODE_D);
+						break;
+					case SDL_EVENT_KEY_UP:
+						state.add_particle &= !(ev.key.scancode == SDL_SCANCODE_N);
+						state.delete_particle &= !(ev.key.scancode == SDL_SCANCODE_D);
+						break;
+					case SDL_EVENT_MOUSE_MOTION: {
+						state.mouse.target = NULL;
+						MouseMoveEvent we(ev.motion.x, ev.motion.y);
+						DispatcherCtx ctx = DispatcherCtx::from_absolute(we.ax, we.ay);
+						root.route(ctx, &we);
+						} break;
+					case SDL_EVENT_MOUSE_BUTTON_DOWN: {
+						MouseDownEvent we(ev.button.x, ev.button.y);
+						state.mouse.state = MouseState::Dragging;
+						DispatcherCtx ctx = DispatcherCtx::from_absolute(we.ax, we.ay);
+						// TODO PERF: directly resolve relative coords and dispatch?
+						root.route(ctx, &we);
+						} break;
+					case SDL_EVENT_MOUSE_BUTTON_UP: {
+						MouseUpEvent we;
+						state.mouse.state = MouseState::Idle;
+						DispatcherCtx ctx = DispatcherCtx::from_absolute(ev.button.x, ev.button.y);
+						root.route(ctx, &we);
+						} break;
 					}
 				} while (running && SDL_PollEvent(&ev));
 			}
@@ -85,63 +162,41 @@ int main() {
 		if (!running) break;
 
 		Uint64 ticks_now = SDL_GetTicksNS();
-		Uint64 dt_ns = ticks_now - ticks_now;
+		if (last_ticks_ns == 0) last_ticks_ns = ticks_now;
+
+		Uint64 dt_ns = ticks_now - last_ticks_ns;
+		last_ticks_ns = ticks_now;
 
 		double start_s = NS_TO_SECONDS(ticks_now);
 		double dt_s    = NS_TO_SECONDS(dt_ns);
+		state.now      = start_s;
 
-		if (add_particle) reactor->add_particles(start_s, 2);
-		if (delete_particle) reactor->remove_particle();
+		if (state.add_particle) reactor->add_particles(reactor->sim_now, 2);
+		if (state.delete_particle) reactor->remove_particle();
 
-		if (wall_speed_changed) {
-			reactor->set_right_wall_velocity(start_s, wall_speed);
-			wall_speed_changed = false;
+		if (state.wall_speed_changed) {
+			reactor->set_right_wall_velocity(state.wall_speed);
+			state.wall_speed_changed = false;
 		}
 
 		// Rendering
 		window->clear();
-		window->outline(reactor->bbox);
-		window->draw_particles();
 
 		stats = reactor->tally();
 
-		total_energy.append_sample(stats.total_energy);
-		total_energy.rescale_y();
-		total_energy.snap_y_scale_to_grid();
+		kinetic.append_sample(stats.kinetic);
+		kinetic.rescale_y();
+		kinetic.snap_y_scale_to_grid();
 
-		total_energy.draw_view_grid(window, 1.0, "px²/s²");
-		total_energy.draw_view_axes(window->renderer);
-		total_energy.plot_stream(window->renderer);
-		total_energy.draw_axis_titles(window, "", "E");
-		window->outline(total_energy.dim, 2);
+		temperature.append_sample(stats.right_temperature);
+		temperature.rescale_y();
+		temperature.snap_y_scale_to_grid();
 
-		velocity.append_sample(stats.avg_sqr_velocity);
-		velocity.rescale_y();
-		velocity.snap_y_scale_to_grid();
-
-		velocity.draw_view_grid(window, 1.0, "px²/s²");
-		velocity.draw_view_axes(window->renderer);
-		velocity.plot_stream(window->renderer);
-		velocity.draw_axis_titles(window, "", "<v²>");
-		window->outline(velocity.dim, 2);
-
-		std::ostringstream oss;
-
-		oss << stats.n_circle;
-		std::string n_circles = oss.str();
-		oss.str("");
-
-		n_circles.append(" circle");
-		window->text(n_circles.c_str(), reactor->bbox.x, reactor->bbox.y + reactor->bbox.h);
-
-		oss << stats.n_square;
-		std::string n_square = oss.str();
-
-		n_square.append(" squares");
-		window->text(n_square.c_str(), reactor->bbox.x, reactor->bbox.y + reactor->bbox.h + 20);
+		root.render(window, 0, 0);
 
 		window->present();
 
+		if (dt_s > 0.050) dt_s = 0.050;
 		reactor->step_frame(start_s, dt_s);
 
 		// Tick management
