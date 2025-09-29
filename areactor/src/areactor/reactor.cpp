@@ -1,6 +1,7 @@
-#include "reactor.hpp"
-#include "window.hpp"
 #include <sstream>
+
+#include "reactor.hpp"
+#include <swuix/window/window.hpp>
 
 inline void draw_bounding_line(SDL_Renderer *renderer, Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, unsigned thick, double e) {
 	double t = std::max(0.0, std::min(1.0, (e - 1.0) * 0.8 + 0.5)); // center 1.0 at 0.5

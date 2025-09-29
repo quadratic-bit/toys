@@ -1,5 +1,5 @@
 #include "handle.hpp"
-#include "../window.hpp"
+#include "../window/window.hpp"
 #include "../state.hpp"
 
 DispatchResult Handle::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {
@@ -25,4 +25,17 @@ void Handle::adjust_width(float new_width) {
 void HandledWidget::render(Window *window, int off_x, int off_y) {
 	if (!minimized) render_body(window, off_x, off_y);
 	handle->render(window, frame.x + off_x, frame.y + off_y);
+}
+
+void HandledContainer::render(Window *window, int off_x, int off_y) {
+	HandledWidget::render(window, off_x, off_y);
+}
+
+void HandledContainer::render_body(Window *window, int off_x, int off_y) {
+	// body
+	window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
+	window->outline(frame, off_x, off_y, 2);
+
+	// children
+	WidgetContainer::render(window, off_x, off_y);
 }

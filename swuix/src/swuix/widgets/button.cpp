@@ -1,5 +1,5 @@
 #include "button.hpp"
-#include "../window.hpp"
+#include "../window/window.hpp"
 #include "../state.hpp"
 
 DispatchResult Button::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {

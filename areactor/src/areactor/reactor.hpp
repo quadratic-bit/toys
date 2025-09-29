@@ -7,12 +7,11 @@
 #include <typeinfo>
 #include <vector>
 
+#include <swuix/widgets/handle.hpp>
 #include "linalg/vectors.hpp"
 #include "particles/particle_manager.hpp"
 #include "particles/collision_dispatch.hpp"
-#include "reactor-events/event_manager.hpp"
 #include "ring_buffer.hpp"
-#include "widgets/handle.hpp"
 
 static const double SMALL_RADIUS = 2.0;
 static const double TIME_EPS     = 1e-12;  // seconds
@@ -42,12 +41,23 @@ inline double smallest(double x, double y, double z, double w){
 	return std::min(x, std::min(y, std::min(z, w)));
 }
 
+struct Side {
+	enum Enum {
+		NONE = 0,
+		LEFT,
+		RIGHT,
+		BOTTOM,
+		TOP,
+		__COUNT
+	};
+};
+
 struct Stat {
 	size_t n;
 	double total_mass;
 	double kinetic;      // thermal kinetic energy
 	double temperature;  // instantaneous T
-	Vec2   bulk_u;       // mass-weighted mean velocity
+	Vec2f   bulk_u;       // mass-weighted mean velocity
 	size_t n_circle;
 	size_t n_square;
 
@@ -137,7 +147,7 @@ class Reactor : public HandledWidget {
 					p->position.x = inprev(Xw - p->radius);
 					const double w = wall_vel(Side::RIGHT);
 					const double e = wall_gain[Side::RIGHT];
-					const Vec2 n(-1.0, 0.0);
+					const Vec2f n(-1.0, 0.0);
 					const double vn_in_rel = w - (p->velocity ^ n);
 					if (vn_in_rel > 0.0) {
 						this->right_probe.m_vn2_in_last.push(p->mass * vn_in_rel * vn_in_rel);
@@ -199,7 +209,7 @@ class Reactor : public HandledWidget {
 						Particle *B = (sb < particles->items.size()) ? particles->items[sb] : NULL;
 						if (!B || !B->alive) continue;
 						if (A->id >= B->id) continue;
-						const Vec2 d = B->position - A->position;
+						const Vec2f d = B->position - A->position;
 						const double rr = (A->radius + B->radius);
 						if ((d ^ d) <= rr * rr) {
 							collide_dispatch(this, A, B, now);
@@ -222,8 +232,8 @@ public:
 
 	void add_particles(Time t, size_t n) {
 		for (size_t i = 0; i < n; ++i) {
-			Vec2 pos = Vec2::random_rect(frame.w - SMALL_RADIUS * 2, frame.h - SMALL_RADIUS * 2) + Vec2(SMALL_RADIUS, SMALL_RADIUS);
-			Vec2 vel = Vec2::random_radial(200, 300);
+			Vec2f pos = Vec2f::random_rect(frame.w - SMALL_RADIUS * 2, frame.h - SMALL_RADIUS * 2) + Vec2f(SMALL_RADIUS, SMALL_RADIUS);
+			Vec2f vel = Vec2f::random_radial(200, 300);
 			Particle *new_p = new ParticleCircle(particles->seq++, pos, vel, SMALL_RADIUS, 1, t);
 			particles->add(new_p);
 		}
@@ -327,7 +337,7 @@ public:
 
 	Stat tally() const {
 		Stat s; s.n = 0; s.total_mass = 0.0; s.kinetic = 0.0; s.temperature = 0.0;
-		s.n_circle = 0; s.n_square = 0; s.bulk_u = Vec2(0.0, 0.0);
+		s.n_circle = 0; s.n_square = 0; s.bulk_u = Vec2f(0.0, 0.0);
 
 		// first pass: mass, momentum
 		const std::vector<Slot> &active = particles->active_slots;
@@ -351,7 +361,7 @@ public:
 		for (size_t k = 0; k < active.size(); ++k) {
 			Particle const* p = particles->items[active[k]];
 			if (!p->alive) continue;
-			Vec2 dv = p->velocity - s.bulk_u;
+			Vec2f dv = p->velocity - s.bulk_u;
 			sum_m_v2 += p->mass * (dv ^ dv);
 		}
 		s.kinetic = 0.5 * sum_m_v2;

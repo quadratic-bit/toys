@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <vector>
 
-#include "../linalg/vectors.hpp"
+#include "geometry.hpp"
 
 // forward-declare
 class Window;

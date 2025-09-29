@@ -8,6 +8,11 @@ BUILD_DIR := build
 INC_PUBLIC := headers
 INC_SRC := src/areactor
 
+# --- swuix ---
+SWUIX_DIR := ../swuix
+SWUIX_INC := $(SWUIX_DIR)/src # baaaaaaaaaaaaaaaaaaaaaaaaaaaaaad
+SWUIX_LIB := $(SWUIX_DIR)/build/libswuix.a
+
 LIB_SRC := $(wildcard src/areactor/**/*.cpp) src/areactor/reactor.cpp
 MAIN_SRC := src/main.cpp
 
@@ -24,7 +29,7 @@ CXXFLAGS_COMMON := -std=c++03 -pedantic-errors -Wall -Wextra -Werror \
 				   -Wmissing-declarations -Wmissing-field-initializers \
 				   -Wcast-align -Wwrite-strings \
 				   -Wpointer-arith -Wstrict-aliasing=2 \
-				   -I$(INC_PUBLIC) -I$(INC_SRC)
+				   -I$(INC_PUBLIC) -I$(INC_SRC) -I$(SWUIX_INC)
 
 ifeq ($(SAN),1)
 	CXXFLAGS_SAN := -fsanitize=address,undefined
@@ -35,7 +40,7 @@ CXXFLAGS_debug := -O1 -g -fstack-protector-all $(CXXFLAGS_SAN)
 LDFLAGS_debug := $(LDFLAGS_SAN)
 
 CXXFLAGS_release := -O2 -flto -fstack-protector-strong
-LDFLAGS_release:= -flto
+LDFLAGS_release := -flto
 
 CXXFLAGS := $(CXXFLAGS_COMMON) $(CXXFLAGS_$(MODE))
 LDFLAGS := $(LDFLAGS_$(MODE)) -Wl,-rpath,/usr/local/lib
@@ -44,12 +49,16 @@ LDLIBS := -L/usr/local/lib -lSDL3 -lSDL3_gfx -lSDL3_ttf
 
 DEPFLAGS := -MMD -MP
 
-.PHONY: all clean distclean test run help
+.PHONY: all clean distclean run swuix
 
-all: $(BIN_DIR)/example
+# build swuix first
+all: $(SWUIX_LIB) $(BIN_DIR)/example
 
-$(BIN_DIR)/example: $(LIB_STATIC) $(MAIN_OBJS) | $(BIN_DIR)
-	$(CXX) $(LDFLAGS) -o $@ $(MAIN_OBJS) $(LIB_STATIC) $(LDLIBS)
+$(SWUIX_LIB):
+	$(MAKE) -C $(SWUIX_DIR)
+
+$(BIN_DIR)/example: $(LIB_STATIC) $(SWUIX_LIB) $(MAIN_OBJS) | $(BIN_DIR)
+	$(CXX) $(LDFLAGS) -o $@ $(MAIN_OBJS) $(LIB_STATIC) $(SWUIX_LIB) $(LDLIBS)
 
 $(LIB_STATIC): $(LIB_OBJS) | $(BUILD_DIR)
 	$(AR) rcs $@ $(LIB_OBJS)

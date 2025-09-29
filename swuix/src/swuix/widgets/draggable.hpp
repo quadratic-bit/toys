@@ -1,5 +1,5 @@
 #pragma once
-#include "widget.hpp"
+#include "../widget.hpp"
 
 class DraggableWidget : public virtual Widget {
 protected:

@@ -5,9 +5,10 @@
 #include <SDL3_ttf/SDL_ttf.h>
 #include <cstdio>
 #include <stdexcept>
+#include <vector>
 
+#include "common.hpp"
 #include "pixel_buffer.hpp"
-#include "reactor.hpp"
 
 enum TextAlign { TA_LEFT, TA_CENTER, TA_RIGHT };
 
@@ -25,8 +26,6 @@ class Window {
 	TTF_Font *font;
 	PixelBuffer *pb;
 
-	Reactor *reactor;
-
 	void draw_bounding_line(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, unsigned thick) {
 		thickLineRGBA(renderer, x1, y1, x2, y2, thick, CLR_NIGHT, SDL_ALPHA_OPAQUE);
 	}
@@ -34,8 +33,8 @@ class Window {
 public:
 	SDL_Renderer *renderer;
 
-	Window(int width, int height, Reactor *rreactor) : reactor(rreactor) {
-		SDL_SetAppMetadata("Reactor", "0.1", "com.toy.areactor");
+	Window(int width, int height) {
+		SDL_SetAppMetadata("UI-core", "0.1", "com.toy.uicore");
 
 		if (!SDL_Init(SDL_INIT_VIDEO)) {
 			SDL_Log("Couldn't initialize SDL: %s", SDL_GetError());
@@ -43,7 +42,7 @@ public:
 		}
 
 		if (!SDL_CreateWindowAndRenderer(
-				"reactor", width, height, SDL_WindowFlags(0),
+				"ui-core", width, height, SDL_WindowFlags(0),
 				&window, &renderer
 		)) {
 			SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
@@ -74,7 +73,7 @@ public:
 		SDL_Quit();
 	}
 
-	void outline(const SDL_FRect box, int off_x, int off_y, unsigned thick = 4) {
+	void outline(const SDL_FRect box, int off_x, int off_y, unsigned thick = 2) {
 		Sint16 x = box.x + off_x, y = box.y + off_y;
 		Sint16 w = box.w, h = box.h;
 		draw_bounding_line(x, y, x + w, y, thick);

@@ -1,5 +1,5 @@
 #pragma once
-#include "widget.hpp"
+#include "../widget.hpp"
 
 class WidgetContainer : public virtual Widget {
 	std::vector<Widget*> children;

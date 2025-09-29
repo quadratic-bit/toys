@@ -1,16 +1,12 @@
 #include <SDL3/SDL_events.h>
 #include <cassert>
 #include <cstdio>
-#include <sstream>
-#include <string>
 
-#include "areactor/widgets/button.hpp"
-#include "areactor/widgets/container.hpp"
-#include "areactor/widgets/graph.hpp"
+#include <swuix/window/window.hpp>
+#include <swuix/widgets/toolbox.hpp>
+
+#include "areactor/graph.hpp"
 #include "areactor/reactor.hpp"
-#include "areactor/widgets/toolbox.hpp"
-#include "areactor/widgets/widget.hpp"
-#include "areactor/window.hpp"
 #include "areactor/state.hpp"
 
 static const int FPS = 60;
@@ -21,34 +17,34 @@ static bool is_ev_close(const SDL_Event *event) {
 		event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED;
 }
 
-static void cb_add(State *st, Widget *d) {
+static void cb_add(void *st, Widget *d) {
 	(void)d;
-	st->add_to_wall_speed(+40);
+	((ReactorState*)st)->add_to_wall_speed(+40);
 }
 
-static void cb_sub(State *st, Widget *d) {
+static void cb_sub(void *st, Widget *d) {
 	(void)d;
-	st->add_to_wall_speed(-40);
+	((ReactorState*)st)->add_to_wall_speed(-40);
 }
 
-static void cb_add_particles(State *st, Widget *d) {
+static void cb_add_particles(void *st, Widget *d) {
 	(void)d;
-	st->reactor->add_particles(st->now, 5);
+	((ReactorState*)st)->reactor->add_particles(((ReactorState*)st)->now, 5);
 }
 
-static void cb_delete_particles(State *st, Widget *d) {
+static void cb_delete_particles(void *st, Widget *d) {
 	(void)d;
-	st->reactor->remove_particles(5);
+	((ReactorState*)st)->reactor->remove_particles(5);
 }
 
-static void cb_hotter(State *st, Widget *d) {
+static void cb_hotter(void *st, Widget *d) {
 	(void)d;
-	st->add_to_wall_temp(Side::LEFT, +0.50);
+	((ReactorState*)st)->add_to_wall_temp(Side::LEFT, +0.50);
 }
 
-static void cb_colder(State *st, Widget *d) {
+static void cb_colder(void *st, Widget *d) {
 	(void)d;
-	st->add_to_wall_temp(Side::LEFT, -0.50);
+	((ReactorState*)st)->add_to_wall_temp(Side::LEFT, -0.50);
 }
 
 #define NS_TO_SECONDS(ns) (double)ns / (double)1000000000
@@ -56,7 +52,7 @@ static void cb_colder(State *st, Widget *d) {
 int main() {
 	SDL_Event ev;
 	bool running = true;
-	State state = State();
+	ReactorState state = ReactorState();
 	SDL_FRect dim = frect(0, 0, 1280, 720);
 	WidgetContainer root(dim, NULL, &state);
 	root.parent = &root;
@@ -67,7 +63,7 @@ int main() {
 	Reactor *reactor = new Reactor(bbox, NULL, 1000, &state);
 	state.now = NS_TO_SECONDS(next_frame);
 	state.reactor = reactor;
-	Window *window = new Window(dim.w, dim.h, reactor);
+	Window *window = new Window(dim.w, dim.h);
 
 	SDL_FRect cs_rect_energy = frect(1000, 140, 180, 180);
 	LineGraph kinetic = LineGraph(cs_rect_energy, NULL, "J", "E", &state, 0.8, FPS, 5.0);

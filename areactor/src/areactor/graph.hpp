@@ -6,11 +6,10 @@
 #include <sstream>
 #include <string>
 
-#include "../ring_buffer.hpp"
-#include "../linalg/vectors.hpp"
-#include "../common.hpp"
-#include "../window.hpp"
-#include "widget.hpp"
+#include <swuix/window/window.hpp>
+#include <swuix/widgets/handle.hpp>
+
+#include "ring_buffer.hpp"
 
 static double nice125(double x) {
 	if (x <= 0) return 0.0;

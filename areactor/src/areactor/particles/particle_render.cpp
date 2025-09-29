@@ -1,4 +1,6 @@
 #include <SDL3_gfx/SDL3_gfxPrimitives.h>
+#include <swuix/window/common.hpp>
+
 #include "particle_manager.hpp"
 #include "../reactor.hpp"
 

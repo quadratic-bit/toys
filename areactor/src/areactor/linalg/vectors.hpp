@@ -12,27 +12,27 @@ inline float sign(float a) {
 	return (float)(0 < a) - (float)(a < 0);
 }
 
-class Vec2 {
+class Vec2f {
 public:
 	float x;
 	float y;
 
-	Vec2() : x(0), y(0) {}  // degenerate
+	Vec2f() : x(0), y(0) {}  // degenerate
 
-	explicit Vec2(float xx, float yy)
+	explicit Vec2f(float xx, float yy)
 		: x(xx), y(yy) {}
 
-	static Vec2 random_rect(float w, float h) {
+	static Vec2f random_rect(float w, float h) {
 		assert(!std::isnan(w));
 		assert(!std::isinf(w));
 		assert(!std::isnan(h));
 		assert(!std::isinf(h));
 		assert(w >= 0.0);
 		assert(h >= 0.0);
-		return Vec2(rand01() * w, rand01() * h);
+		return Vec2f(rand01() * w, rand01() * h);
 	}
 
-	static Vec2 random_radial(float min_mag, float max_mag) {
+	static Vec2f random_radial(float min_mag, float max_mag) {
 		assert(!std::isnan(min_mag));
 		assert(!std::isinf(min_mag));
 		assert(!std::isnan(max_mag));
@@ -46,23 +46,23 @@ public:
 		float x = mag * std::cos(angle);
 		float y = mag * std::sin(angle);
 
-		return Vec2(x, y);
+		return Vec2f(x, y);
 	}
 
-	Vec2 rotate(float ang) const {
+	Vec2f rotate(float ang) const {
 		const float c = std::cos(ang), s = std::sin(ang);
-		return Vec2(c * x - s * y, s * x + c * y);
+		return Vec2f(c * x - s * y, s * x + c * y);
 	}
 
-	Vec2 perp_right() const {
-		return Vec2(y, -x);
+	Vec2f perp_right() const {
+		return Vec2f(y, -x);
 	}
 
-	Vec2 perp_left() const {
-		return Vec2(-y, x);
+	Vec2f perp_left() const {
+		return Vec2f(-y, x);
 	}
 
-	Vec2 norm_or(const Vec2 &fallback) const {
+	Vec2f norm_or(const Vec2f &fallback) const {
 		float L = length();
 		if (L == 0.0) return fallback;
 		return *this / L;
@@ -72,37 +72,37 @@ public:
 		return std::sqrt(x * x + y * y);
 	}
 
-	Vec2 operator-() const {
-		return Vec2(-x, -y);
+	Vec2f operator-() const {
+		return Vec2f(-x, -y);
 	}
 
-	Vec2 operator-(const Vec2 &other) const {
-		return Vec2(x - other.x, y - other.y);
+	Vec2f operator-(const Vec2f &other) const {
+		return Vec2f(x - other.x, y - other.y);
 	}
 
-	Vec2 operator+(const Vec2 &other) const {
-		return Vec2(x + other.x, y + other.y);
+	Vec2f operator+(const Vec2f &other) const {
+		return Vec2f(x + other.x, y + other.y);
 	}
 
-	void operator+=(const Vec2 &other) {
+	void operator+=(const Vec2f &other) {
 		x += other.x;
 		y += other.y;
 	}
 
-	Vec2 operator*(float scalar) const {
-		return Vec2(x * scalar, y * scalar);
+	Vec2f operator*(float scalar) const {
+		return Vec2f(x * scalar, y * scalar);
 	}
 
-	float operator^(const Vec2 &other) const {
+	float operator^(const Vec2f &other) const {
 		return x * other.x + y * other.y;
 	}
 
-	friend Vec2 operator*(float left, const Vec2 &right) {
+	friend Vec2f operator*(float left, const Vec2f &right) {
 		return right * left;
 	}
 
-	Vec2 operator/(float scalar) const {
-		return Vec2(x / scalar, y / scalar);
+	Vec2f operator/(float scalar) const {
+		return Vec2f(x / scalar, y / scalar);
 	}
 
 	void operator/=(float scalar) {
@@ -110,16 +110,7 @@ public:
 		this->y /= scalar;
 	}
 
-	Vec2 operator!() const {
+	Vec2f operator!() const {
 		return *this / this->length();
 	}
 };
-
-inline SDL_FRect frect(float x, float y, float w, float h) {
-	SDL_FRect r;
-	r.x = x;
-	r.y = y;
-	r.w = w;
-	r.h = h;
-	return r;
-}
