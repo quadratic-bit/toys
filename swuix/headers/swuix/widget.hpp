@@ -2,14 +2,15 @@
 #include <SDL3/SDL_rect.h>
 #include <cstdio>
 #include <cstdlib>
+#include <typeinfo>
 #include <vector>
 
-#include "geometry.hpp"
+#include <swuix/geometry.hpp>
 
 // forward-declare
 class Window;
 class Widget;
-class State;
+struct State;
 
 struct DispatcherCtx {
 	Vec2 local;
@@ -62,14 +63,26 @@ struct MouseUpEvent : public Event {
 	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
 };
 
+struct IdleEvent : public Event {
+	float dt_s;
+	IdleEvent(float dt_s_) : dt_s(dt_s_) {}
+	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
+};
+
 class Widget {
 public:
 	Widget *parent;
 	State  *state;
 	SDL_FRect frame;  // `x` and `y` are relative to `parent`
 
-	Widget(SDL_FRect frame_, Widget *parent_, State *state_) : parent(parent_), state(state_), frame(frame_) {};
-	virtual ~Widget() {}
+	Widget(SDL_FRect frame_, Widget *parent_, State *state_)
+		: parent(parent_), state(state_), frame(frame_) {};
+	virtual ~Widget() {
+		size_t n = child_count();
+		for (size_t i = 0; i < n; ++i) {
+			delete child_at(i);
+		}
+	}
 
 	template<typename T, size_t N>
 	static std::vector<T> make_children(T const (&arr)[N]) {
@@ -79,6 +92,8 @@ public:
 	virtual size_t child_count() const { return 0; }
 	virtual Widget *child_at(size_t) const { return 0; }
 	virtual bool is_leaf() const { return child_count() == 0; }
+
+	virtual const char *title() const = 0;
 
 	bool contains_point(Vec2 rel) {
 		return rel.x >= frame.x && rel.x <= frame.x + frame.w
@@ -90,6 +105,7 @@ public:
 	virtual DispatchResult on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e);
 	virtual DispatchResult on_mouse_down(DispatcherCtx ctx, const MouseDownEvent *e) { (void)e; (void)ctx; return PROPAGATE; }
 	virtual DispatchResult on_mouse_up  (DispatcherCtx ctx, const MouseUpEvent   *e) { (void)e; (void)ctx; return PROPAGATE; }
+	virtual DispatchResult on_idle      (DispatcherCtx ctx, const IdleEvent      *e) { (void)e; (void)ctx; return PROPAGATE; }
 
 	virtual DispatchResult route(DispatcherCtx ctx, Event *e) {
 		DispatcherCtx here = ctx.with_offset(frame.x, frame.y);
@@ -127,4 +143,10 @@ inline DispatchResult MouseDownEvent::deliver(DispatcherCtx ctx, Widget *w) {
 
 inline DispatchResult MouseUpEvent::deliver(DispatcherCtx ctx, Widget *w) {
 	return w->on_mouse_up(ctx, this);
+}
+
+inline DispatchResult IdleEvent::deliver(DispatcherCtx ctx, Widget *w) {
+	DispatchResult res = w->on_idle(ctx, this);
+	//printf("[ON_IDLE] (%s) %s\n", typeid(*w).name(), w->title());
+	return res;
 }

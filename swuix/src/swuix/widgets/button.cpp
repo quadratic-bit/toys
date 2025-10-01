@@ -1,6 +1,6 @@
-#include "button.hpp"
-#include "../window/window.hpp"
-#include "../state.hpp"
+#include <swuix/widgets/button.hpp>
+#include <swuix/window/window.hpp>
+#include <swuix/state.hpp>
 
 DispatchResult Button::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {
 	(void)e;

@@ -1,4 +1,4 @@
-#include "container.hpp"
+#include <swuix/widgets/container.hpp>
 
 void WidgetContainer::render(Window *window, int off_x, int off_y) {
 	const int n = (int)child_count();

@@ -1,5 +1,5 @@
-#include "widget.hpp"
-#include "state.hpp"
+#include <swuix/widget.hpp>
+#include <swuix/state.hpp>
 
 DispatchResult Widget::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {
 	(void)e;

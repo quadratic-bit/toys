@@ -1,5 +1,5 @@
 #pragma once
-#include "../widget.hpp"
+#include <swuix/widget.hpp>
 
 class WidgetContainer : public virtual Widget {
 	std::vector<Widget*> children;
@@ -7,6 +7,10 @@ public:
 	WidgetContainer(SDL_FRect f, Widget *par, State *st) : Widget(f, par, st) {}
 	WidgetContainer(SDL_FRect f, Widget *par, std::vector<Widget*> children_, State *st)
 		: Widget(f, par, st), children(children_) {}
+
+	const char *title() const {
+		return "Container";
+	}
 
 	void append_children(const std::vector<Widget*> &new_children) {
 		children.reserve(children.size() + new_children.size());

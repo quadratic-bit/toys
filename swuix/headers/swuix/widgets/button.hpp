@@ -2,7 +2,7 @@
 #include <SDL3/SDL_render.h>
 #include <SDL3_gfx/SDL3_gfxPrimitives.h>
 
-#include "../widget.hpp"
+#include <swuix/widget.hpp>
 
 static const int BTN_THICK = 1;
 
@@ -16,6 +16,10 @@ public:
 		: Widget(f, par, st), hovered(false), click_cb(on_click_), label(label_) {}
 
 	bool is_leaf() const { return true; }
+
+	const char *title() const {
+		return label;
+	}
 
 	DispatchResult on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e);
 	DispatchResult on_mouse_down(DispatcherCtx ctx, const MouseDownEvent *e);

@@ -7,8 +7,8 @@
 #include <stdexcept>
 #include <vector>
 
-#include "common.hpp"
-#include "pixel_buffer.hpp"
+#include <swuix/window/common.hpp>
+#include <swuix/window/pixel_buffer.hpp>
 
 enum TextAlign { TA_LEFT, TA_CENTER, TA_RIGHT };
 

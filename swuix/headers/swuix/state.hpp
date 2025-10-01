@@ -1,5 +1,5 @@
 #pragma once
-#include "widget.hpp"
+#include <swuix/widget.hpp>
 
 struct MouseState {
 	enum Enum {

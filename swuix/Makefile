@@ -7,8 +7,8 @@ RM ?= rm -f
 MKDIR_P ?= mkdir -p
 
 BUILD_DIR := build
-INC_PUBLIC := headers
-INC_SRC := src/swuix
+INC_PUBLIC := $(abspath headers)
+INC_SRC := $(abspath src/swuix)
 
 LIB_SRC := $(shell find src/swuix -name '*.cpp')
 LIB_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(LIB_SRC))

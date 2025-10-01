@@ -1,7 +1,7 @@
 #pragma once
-#include "draggable.hpp"
-#include "container.hpp"
-#include "button.hpp"
+#include <swuix/widgets/draggable.hpp>
+#include <swuix/widgets/container.hpp>
+#include <swuix/widgets/button.hpp>
 
 const float HANDLE_H = 20.0f;
 
@@ -97,6 +97,10 @@ public:
 
 	HandledContainer(SDL_FRect rect, Widget *parent_, std::vector<Widget*> children_, State *state_)
 			: Widget(rect, parent_, state_), HandledWidget(rect, parent_, state_), WidgetContainer(rect, parent_, children_, state_) {}
+
+	const char *title() const {
+		return "Window";
+	}
 
 	size_t child_count() const {
 		return HandledWidget::child_count() + WidgetContainer::child_count();
