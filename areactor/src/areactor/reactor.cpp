@@ -1,6 +1,7 @@
 #include <sstream>
 
 #include "reactor.hpp"
+#include "state.hpp"
 #include <swuix/window/window.hpp>
 
 inline void draw_bounding_line(SDL_Renderer *renderer, Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, unsigned thick, double e) {
@@ -66,4 +67,19 @@ void Reactor::render_body(Window *window, int off_x, int off_y) {
 
 	n_square.append(" squares");
 	window->text(n_square.c_str(), frame.x, frame.y + frame.h + 20);
+}
+
+
+DispatchResult Reactor::on_idle(DispatcherCtx ctx, const IdleEvent *e) {
+	(void)ctx;
+	ReactorState *rst = (ReactorState*)state;
+	if (rst->add_particle) add_particles(sim_now, 2);
+	if (rst->delete_particle) remove_particle();
+
+	if (rst->wall_speed_changed) {
+		set_right_wall_velocity(rst->wall_speed);
+		rst->wall_speed_changed = false;
+	}
+	step_frame(e->dt_s);
+	return PROPAGATE;
 }

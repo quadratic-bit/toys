@@ -13,8 +13,13 @@ struct ReactorState : State {
 	Reactor *reactor;
 
 	Time now;
+	bool running;
 
-	ReactorState() : wall_speed(0), wall_speed_changed(false), add_particle(false), delete_particle(false), reactor(NULL), now(0) {}
+	ReactorState()
+			: wall_speed(0), wall_speed_changed(false), add_particle(false),
+			delete_particle(false), reactor(NULL), now(0), running(true) {
+		now = NS_TO_SECONDS(SDL_GetTicksNS());
+	}
 
 	void add_to_wall_speed(int add) {
 		wall_speed += add;

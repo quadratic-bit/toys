@@ -177,7 +177,11 @@ class LineGraph : public HandledWidget {
 	double time_window_s;
 	size_t sample_count;
 	RingBuffer<double> buf;
-	const char *label_y, *title;
+	const char *label_y, *grap_title;
+
+	const char *title() const {
+		return "LineGraph";
+	}
 
 	void draw_grid(Window *window, double x_units, const char *y_unit) {
 		int x_step_px, y_step_px;
@@ -265,7 +269,7 @@ public:
 
 	LineGraph(SDL_FRect dims, Widget *parent_, const char *label_y_, const char *title_, State *st, double x_axis_shift_ = 0.8, int fps = 60, double time_window_s_ = 5.0)
 			: Widget(dims, parent_, st), HandledWidget(dims, parent_, st), UNITS_PER_SECONDS(1.0), FPS(fps), time_window_s(time_window_s_),
-			sample_count(0), buf(4096), label_y(label_y_), title(title_), x_axis_shift(x_axis_shift_) {
+			sample_count(0), buf(4096), label_y(label_y_), grap_title(title_), x_axis_shift(x_axis_shift_) {
 		x_axis.center = frame.y + frame.h * x_axis_shift;
 		x_axis.scale  = frame.w / time_window_s * UNITS_PER_SECONDS;
 		y_axis.center = frame.x;
@@ -364,7 +368,7 @@ public:
 		draw_grid(window, 1.0, label_y);
 		draw_axes(window->renderer);
 		plot_stream(window->renderer);
-		draw_axis_titles(window, "", title);
+		draw_axis_titles(window, "", grap_title);
 		window->outline(frame, off_x, off_y, 2);
 	}
 

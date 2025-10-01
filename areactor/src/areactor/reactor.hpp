@@ -2,12 +2,12 @@
 #include <SDL3/SDL_rect.h>
 #include <cassert>
 #include <cmath>
-#include <cstdio>
 #include <limits>
 #include <typeinfo>
 #include <vector>
 
 #include <swuix/widgets/handle.hpp>
+
 #include "linalg/vectors.hpp"
 #include "particles/particle_manager.hpp"
 #include "particles/collision_dispatch.hpp"
@@ -305,8 +305,7 @@ public:
 		if (hitB && p->velocity.y > 0.0) p->velocity.y = -wall_gain[Side::BOTTOM] * p->velocity.y;
 	}
 
-	void step_frame(Time start_, Time dt) {
-		(void)start_;
+	void step_frame(Time dt) {
 		const Time start = sim_now;
 		const Time end = start + dt;
 		(void)end;
@@ -413,6 +412,12 @@ public:
 		right_wall.v = new_v;
 		++right_wall.gen;
 	}
+
+	const char *title() const {
+		return "Reactor";
+	}
+
+	DispatchResult on_idle(DispatcherCtx ctx, const IdleEvent *e);
 
 	void render_body(Window *window, int off_x, int off_y);
 };

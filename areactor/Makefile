@@ -10,7 +10,7 @@ INC_SRC := src/areactor
 
 # --- swuix ---
 SWUIX_DIR := ../swuix
-SWUIX_INC := $(SWUIX_DIR)/src # baaaaaaaaaaaaaaaaaaaaaaaaaaaaaad
+SWUIX_INC := $(SWUIX_DIR)/headers
 SWUIX_LIB := $(SWUIX_DIR)/build/libswuix.a
 
 LIB_SRC := $(wildcard src/areactor/**/*.cpp) src/areactor/reactor.cpp
