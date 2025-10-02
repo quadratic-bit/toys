@@ -4,10 +4,10 @@
 #include <vector>
 
 #include <swuix/common.hpp>
+#include <swuix/window/window.hpp>
 #include <swuix/geometry.hpp>
 
 // forward-declare
-class Window;
 class Widget;
 struct State;
 

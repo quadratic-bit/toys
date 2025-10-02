@@ -22,5 +22,17 @@ public:
 	DispatchResult on_mouse_down(DispatcherCtx ctx, const MouseDownEvent *e);
 	DispatchResult on_mouse_up  (DispatcherCtx ctx, const MouseUpEvent   *e);
 
-	void render(Window *window, int off_x, int off_y);
+	void render(Window *window, int off_x, int off_y) {
+		FRect outer = frect(frame.x + off_x - BTN_THICK, frame.y + off_y - BTN_THICK,
+				frame.w + BTN_THICK * 2, frame.h + BTN_THICK * 2);
+		FRect inner = frect(frame.x + off_x + BTN_THICK, frame.y + off_y + BTN_THICK,
+				frame.w - BTN_THICK * 2, frame.h - BTN_THICK * 2);
+
+		window->draw_filled_rect_rgb(outer, CLR_BLACK);
+
+		if (hovered) window->draw_filled_rect_rgb(inner, CLR_LIGHT_GRAY);
+		else window->draw_filled_rect_rgb(inner, CLR_PLATINUM);
+
+		window->text_aligned(label, frame.x + off_x + frame.w / 2, frame.y + off_y + frame.h / 2, TA_CENTER);
+	}
 };

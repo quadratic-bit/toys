@@ -30,9 +30,16 @@ public:
 
 	DispatchResult on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e);
 
-	void adjust_width(float new_width);
+	void adjust_width(float new_width) {
+		frame.w = new_width;
+		child_at(0)->frame.x = frame.w - 20;
+	}
 
-	void render(Window *window, int off_x, int off_y);
+	void render(Window *window, int off_x, int off_y) {
+		window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
+		window->outline(frame, off_x, off_y, 2);
+		WidgetContainer::render(window, off_x, off_y);
+	}
 };
 
 class HandledWidget : public virtual Widget {
@@ -55,7 +62,10 @@ public:
 
 	virtual void render_body(Window *window, int off_x, int off_y) = 0;
 
-	void render(Window *window, int off_x, int off_y);
+	void render(Window *window, int off_x, int off_y) {
+		if (!minimized) render_body(window, off_x, off_y);
+		handle->render(window, frame.x + off_x, frame.y + off_y);
+	}
 
 	Handle *handle_widget() {
 		return handle;
@@ -105,7 +115,16 @@ public:
 		return WidgetContainer::child_at(i);
 	}
 
-	void render(Window *window, int off_x, int off_y);
+	void render(Window *window, int off_x, int off_y) {
+		HandledWidget::render(window, off_x, off_y);
+	}
 
-	void render_body(Window *window, int off_x, int off_y);
+	void render_body(Window *window, int off_x, int off_y) {
+		// body
+		window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
+		window->outline(frame, off_x, off_y, 2);
+
+		// children
+		WidgetContainer::render(window, off_x, off_y);
+	}
 };
