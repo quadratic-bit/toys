@@ -1,7 +1,7 @@
 #pragma once
 #include <SDL3/SDL_events.h>
-
 #include <cstdio>
+
 #include <swuix/widget.hpp>
 
 #include "state.hpp"
@@ -42,6 +42,8 @@ public:
 		Uint64 dt_ns = ticks_now - last_ticks_ns;
 		last_ticks_ns = ticks_now;
 		double dt_s = NS_TO_SECONDS(dt_ns);
+		const double DT_MAX = 0.1;  // 100 ms
+		if (dt_s > DT_MAX) dt_s = DT_MAX;
 		return dt_s;
 	}
 
