@@ -1,13 +1,10 @@
 #pragma once
-#include <SDL3/SDL_events.h>
-#include <cstdio>
-
 #include <swuix/widget.hpp>
-
-#include "state.hpp"
+#include <swuix/window/window.hpp>
+#include <swuix/state.hpp>
 
 class EventManager {
-	ReactorState *state;
+	State *state;
 
 	Time next_frame;
 	Time last_tick;
@@ -21,7 +18,7 @@ class EventManager {
 	inline Time frame_dur() const { return (Time)1 / (Time)FPS; }
 
 public:
-	EventManager(ReactorState *state_, int fps) : state(state_), next_frame(SDL_GetTicksNS()), FPS(fps) {
+	EventManager(State *state_, int fps) : state(state_), FPS(fps) {
 		next_frame = Window::now();
 		last_tick = next_frame;
 	}
@@ -52,7 +49,7 @@ public:
 		double dt_s = advance_frame();
 
 		IdleEvent idle_e(dt_s);
-		DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos);  // TODO: reuse old mouse
+		DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos);
 		root->route(ctx, &idle_e);
 	}
 
@@ -71,7 +68,7 @@ public:
 
 		do {
 			if (is_ev_close(&ev)) {
-				state->running = false;
+				state->exit_requested = true;
 				return true;
 			}
 			switch (ev.type) {
@@ -106,7 +103,7 @@ public:
 				root->route(ctx, &we);
 				} break;
 			}
-		} while (state->running && SDL_PollEvent(&ev));
+		} while (!state->exit_requested && SDL_PollEvent(&ev));
 		return false;
 	}
 };

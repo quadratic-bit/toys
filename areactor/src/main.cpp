@@ -3,9 +3,9 @@
 #include <cstdio>
 
 #include <swuix/window/window.hpp>
+#include <swuix/manager.hpp>
 
 #include "areactor/state.hpp"
-#include "event_manager.hpp"
 #include "widgets/desktop.hpp"
 
 static const int FPS = 60;
@@ -22,7 +22,7 @@ int main() {
 
 		while (!evmgr.exhaust_events(&root));
 
-		if (!state.running) break;
+		if (state.exit_requested) break;
 
 		evmgr.dispatch_idle(&root);
 

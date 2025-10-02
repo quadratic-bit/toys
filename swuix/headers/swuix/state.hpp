@@ -18,7 +18,8 @@ struct MouseState {
 struct State {
 	Time       now;
 	MouseState mouse;
+	bool       exit_requested;
 
-	State() : now(0), mouse() {}
+	State() : now(0), mouse(), exit_requested(false) {}
 	State(Time now_) : now(now_), mouse() {}
 };

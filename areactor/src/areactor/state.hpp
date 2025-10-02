@@ -13,13 +13,11 @@ struct ReactorState : public State {
 
 	Reactor *reactor;
 
-	bool running;
-
 	ReactorState() : State(), wall_speed(0), wall_speed_changed(false), add_particle(false),
-			delete_particle(false), reactor(NULL), running(true) {}
+			delete_particle(false), reactor(NULL) {}
 
 	ReactorState(Time now_) : State(now_), wall_speed(0), wall_speed_changed(false), add_particle(false),
-			delete_particle(false), reactor(NULL), running(true) {}
+			delete_particle(false), reactor(NULL) {}
 
 	void add_to_wall_speed(int add) {
 		wall_speed += add;
