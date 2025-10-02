@@ -84,3 +84,28 @@ DispatchResult Reactor::on_idle(DispatcherCtx ctx, const IdleEvent *e) {
 	step_frame(e->dt_s);
 	return PROPAGATE;
 }
+
+DispatchResult Reactor::on_key_down(DispatcherCtx ctx, const KeyDownEvent *e) {
+	(void)ctx;
+
+	((ReactorState*)state)->add_particle |= (e->scancode == SDL_SCANCODE_N);
+	((ReactorState*)state)->delete_particle |= (e->scancode == SDL_SCANCODE_D);
+
+	if (e->scancode == SDL_SCANCODE_RIGHT) {
+		((ReactorState*)state)->wall_speed += 40;
+		((ReactorState*)state)->wall_speed_changed = true;
+	}
+	if (e->scancode == SDL_SCANCODE_LEFT) {
+		((ReactorState*)state)->wall_speed -= 40;
+		((ReactorState*)state)->wall_speed_changed = true;
+	}
+	return PROPAGATE;
+}
+
+DispatchResult Reactor::on_key_up(DispatcherCtx ctx, const KeyUpEvent *e) {
+	(void)ctx;
+
+	((ReactorState*)state)->add_particle    &= !(e->scancode == SDL_SCANCODE_N);
+	((ReactorState*)state)->delete_particle &= !(e->scancode == SDL_SCANCODE_D);
+	return PROPAGATE;
+}

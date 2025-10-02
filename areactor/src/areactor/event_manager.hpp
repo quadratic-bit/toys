@@ -75,22 +75,16 @@ public:
 				return true;
 			}
 			switch (ev.type) {
-			case SDL_EVENT_KEY_DOWN:
-				state->add_particle |= (ev.key.scancode == SDL_SCANCODE_N);
-				state->delete_particle |= (ev.key.scancode == SDL_SCANCODE_D);
-				if (ev.key.scancode == SDL_SCANCODE_RIGHT) {
-					state->wall_speed += 40;
-					state->wall_speed_changed = true;
-				}
-				if (ev.key.scancode == SDL_SCANCODE_LEFT) {
-					state->wall_speed -= 40;
-					state->wall_speed_changed = true;
-				}
-				break;
-			case SDL_EVENT_KEY_UP:
-				state->add_particle &= !(ev.key.scancode == SDL_SCANCODE_N);
-				state->delete_particle &= !(ev.key.scancode == SDL_SCANCODE_D);
-				break;
+			case SDL_EVENT_KEY_DOWN: {
+				KeyDownEvent we(ev.key.scancode, ev.key.key, ev.key.mod, ev.key.repeat);
+				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos);
+				root->route(ctx, &we);
+				} break;
+			case SDL_EVENT_KEY_UP: {
+				KeyUpEvent we(ev.key.scancode, ev.key.key, ev.key.mod);
+				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos);
+				root->route(ctx, &we);
+				} break;
 			case SDL_EVENT_MOUSE_MOTION: {
 				state->mouse.target = NULL;
 				state->mouse.pos = Point2f(ev.motion.x, ev.motion.y);

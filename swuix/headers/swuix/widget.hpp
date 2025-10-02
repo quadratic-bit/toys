@@ -35,26 +35,45 @@ enum DispatchResult {
 
 struct Event {
 	virtual ~Event() {}
-	virtual bool is_pointer() const { return false; }
 	virtual DispatchResult deliver(DispatcherCtx ctx, Widget *w) = 0;
 };
 
-struct MouseMoveEvent : public Event {
+struct MouseMoveEvent : Event {
 	Point2f mouse_abs;
 	MouseMoveEvent(Point2f mouse_abs_) : mouse_abs(mouse_abs_) {}
-	bool is_pointer() const { return true; }
 	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
 };
 
-struct MouseDownEvent : public Event {
+struct MouseDownEvent : Event {
 	Point2f mouse_abs;
 	MouseDownEvent(Point2f mouse_abs_) : mouse_abs(mouse_abs_) {}
-	bool is_pointer() const { return true; }
 	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
 };
 
-struct MouseUpEvent : public Event {
+struct MouseUpEvent : Event {
 	MouseUpEvent() {}
+	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
+};
+
+struct KeyEvent : Event {
+	int scancode;  // platform-neutral
+	int keycode;
+	uint16_t mods;  // bitmask
+
+	KeyEvent(int scancode_, int keycode_, uint32_t mods_)
+		: scancode(scancode_), keycode(keycode_), mods(mods_) {}
+};
+
+struct KeyDownEvent : KeyEvent {
+	bool repeat;
+	KeyDownEvent(int scancode_, int keycode_, uint32_t mods_, bool repeat_)
+		: KeyEvent(scancode_, keycode_, mods_), repeat(repeat_) {}
+	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
+};
+
+struct KeyUpEvent : KeyEvent {
+	KeyUpEvent(int scancode_, int keycode_, uint32_t mods_)
+		: KeyEvent(scancode_, keycode_, mods_) {}
 	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
 };
 
@@ -97,10 +116,12 @@ public:
 
 	virtual void render(Window *window, int off_x, int off_y) = 0;
 
-	virtual DispatchResult on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e);
-	virtual DispatchResult on_mouse_down(DispatcherCtx ctx, const MouseDownEvent *e) { (void)e; (void)ctx; return PROPAGATE; }
-	virtual DispatchResult on_mouse_up  (DispatcherCtx ctx, const MouseUpEvent   *e) { (void)e; (void)ctx; return PROPAGATE; }
-	virtual DispatchResult on_idle      (DispatcherCtx ctx, const IdleEvent      *e) { (void)e; (void)ctx; return PROPAGATE; }
+	virtual DispatchResult on_mouse_move(DispatcherCtx, const MouseMoveEvent *);
+	virtual DispatchResult on_mouse_down(DispatcherCtx, const MouseDownEvent *) { return PROPAGATE; }
+	virtual DispatchResult on_mouse_up  (DispatcherCtx, const MouseUpEvent   *) { return PROPAGATE; }
+	virtual DispatchResult on_key_down  (DispatcherCtx, const KeyDownEvent   *) { return PROPAGATE; }
+	virtual DispatchResult on_key_up    (DispatcherCtx, const KeyUpEvent     *) { return PROPAGATE; }
+	virtual DispatchResult on_idle      (DispatcherCtx, const IdleEvent      *) { return PROPAGATE; }
 
 	virtual DispatchResult route(DispatcherCtx ctx, Event *e) {
 		DispatcherCtx here = ctx.with_offset(Point2f(frame.x, frame.y));
@@ -127,6 +148,14 @@ inline DispatchResult MouseDownEvent::deliver(DispatcherCtx ctx, Widget *w) {
 
 inline DispatchResult MouseUpEvent::deliver(DispatcherCtx ctx, Widget *w) {
 	return w->on_mouse_up(ctx, this);
+}
+
+inline DispatchResult KeyDownEvent::deliver(DispatcherCtx ctx, Widget *w) {
+	return w->on_key_down(ctx, this);
+}
+
+inline DispatchResult KeyUpEvent::deliver(DispatcherCtx ctx, Widget *w) {
+	return w->on_key_up(ctx, this);
 }
 
 inline DispatchResult IdleEvent::deliver(DispatcherCtx ctx, Widget *w) {
