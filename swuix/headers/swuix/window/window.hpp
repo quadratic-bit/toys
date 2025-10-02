@@ -25,10 +25,9 @@ class Window {
 	TTF_TextEngine *text_engine;
 	TTF_Font *font;
 	PixelBuffer *pb;
-
-public:
 	SDL_Renderer *renderer;
 
+public:
 	Window(int width, int height) {
 		SDL_SetAppMetadata("UI-core", "0.1", "com.toy.uicore");
 
@@ -98,6 +97,33 @@ public:
 		SDL_RenderFillRect(renderer, &rect);
 	}
 
+	// =============== MISC GRAPHICS ==============
+
+	void outline(const FRect box, int off_x, int off_y, unsigned thick = 2) {
+		int16_t x = box.x + off_x, y = box.y + off_y;
+		int16_t w = box.w, h = box.h;
+		draw_line(x, y, x + w, y, thick);
+		draw_line(x, y, x, y + h, thick);
+		draw_line(x + w, y, x + w, y + h, thick);
+		draw_line(x, y + h, x + w, y + h, thick);
+	}
+
+	// ================= CLIPPING =================
+
+	inline void clip(const FRect &rect) {
+		SDL_Rect rect_int = {
+			(int)SDL_floorf(rect.x),
+			(int)SDL_floorf(rect.y),
+			(int)SDL_ceilf (rect.w),
+			(int)SDL_ceilf (rect.h)
+		};
+		SDL_SetRenderClipRect(renderer, &rect_int);
+	}
+
+	inline void unclip() {
+		SDL_SetRenderClipRect(renderer, NULL);
+	}
+
 	// =================== TEXT ===================
 
 	void text(const char *string, float x, float y) {
@@ -124,16 +150,6 @@ public:
 		TTF_DrawRendererText(tt, x, y);
 		TTF_DestroyText(tt);
 	}
-
-	void outline(const FRect box, int off_x, int off_y, unsigned thick = 2) {
-		int16_t x = box.x + off_x, y = box.y + off_y;
-		int16_t w = box.w, h = box.h;
-		draw_line(x, y, x + w, y, thick);
-		draw_line(x, y, x, y + h, thick);
-		draw_line(x + w, y, x + w, y + h, thick);
-		draw_line(x, y + h, x + w, y + h, thick);
-	}
-
 	void clear() {
 		SDL_SetRenderDrawColor(renderer, CLR_PLATINUM, SDL_ALPHA_OPAQUE);
 		SDL_RenderClear(renderer);

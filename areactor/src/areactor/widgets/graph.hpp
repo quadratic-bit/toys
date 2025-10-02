@@ -81,26 +81,6 @@ static std::string fmt_seconds(double t) {
 	return o.str();
 }
 
-struct AutoClip {
-	SDL_Renderer *r;
-	SDL_Rect prev;
-
-	AutoClip(SDL_Renderer *rr, const SDL_FRect &f) : r(rr) {
-		SDL_GetRenderClipRect(r, &prev);
-		SDL_Rect clip = {
-			(int)SDL_floorf(f.x),
-			(int)SDL_floorf(f.y),
-			(int)SDL_ceilf (f.w),
-			(int)SDL_ceilf (f.h + 20)
-		};
-		SDL_SetRenderClipRect(r, &clip);
-	}
-
-	~AutoClip() {
-		SDL_SetRenderClipRect(r, NULL);
-	}
-};
-
 // Cohen–Sutherland algorithm (clipping lines)
 
 enum {
@@ -199,7 +179,9 @@ class LineGraph : public HandledWidget {
 			window->text_aligned(fmt_si(-v, y_unit).c_str(), frame.x - 6.0f, ys, TA_RIGHT);
 		}
 
-		AutoClip clipper(window->renderer, frame);
+		FRect extended_frame = frame;
+		extended_frame.h += 20;
+		window->clip(extended_frame);
 
 		k0 = (int)SDL_ceil((frame.x - y_axis.center) / (double)x_step_px);
 		k1 = (int)SDL_floor((frame.x + frame.w - y_axis.center) / (double)x_step_px);
@@ -213,6 +195,8 @@ class LineGraph : public HandledWidget {
 			const double t_abs = t_at_yaxis + k * x_units;
 			window->text_aligned(fmt_seconds(t_abs).c_str(), xs, frame.y + frame.h + 10.0f, TA_CENTER);
 		}
+
+		window->unclip();
 	}
 
 	void draw_axis_titles(Window *win, const char *x_title, const char *y_title) {
@@ -326,7 +310,7 @@ public:
 		y_axis.scale = (double)y_step_px / y_units;
 	}
 
-	void plot_stream(SDL_Renderer *renderer) {
+	void plot_stream(Window *window) {
 		const double dx = (frame.w / x_axis.scale) / (FPS * time_window_s);
 		double x_latest = (double)sample_count * dx;
 
@@ -345,7 +329,6 @@ public:
 		double x0 = x_space_to_screen(x_prev_space);
 		double y0 = y_space_to_screen(buf.at(start));
 
-		SDL_SetRenderDrawColor(renderer, CLR_PUCE, SDL_ALPHA_OPAQUE);
 		for (size_t i = start + 1; i < n; ++i) {
 			double x1_space = x0_base + (double)i * dx;
 			double x1 = x_space_to_screen(x1_space);
@@ -353,7 +336,7 @@ public:
 
 			double cx0 = x0, cy0 = y0, cx1 = x1, cy1 = y1;
 			if (clip_to_rect(&cx0, &cy0, &cx1, &cy1, &frame)) {
-				SDL_RenderLine(renderer, (float)cx0, (float)cy0, (float)cx1, (float)cy1);
+				window->draw_line_rgb(cx0, cy0, cx1, cy1, 1, CLR_PUCE);
 			}
 
 			x0 = x1; y0 = y1;
@@ -364,7 +347,7 @@ public:
 		window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
 		draw_grid(window, 1.0, label_y);
 		draw_axes(window);
-		plot_stream(window->renderer);
+		plot_stream(window);
 		draw_axis_titles(window, "", grap_title);
 		window->outline(frame, off_x, off_y, 2);
 	}
