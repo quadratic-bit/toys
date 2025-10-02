@@ -38,6 +38,16 @@ struct Event {
 	virtual DispatchResult deliver(DispatcherCtx ctx, Widget *w) = 0;
 };
 
+struct IdleEvent : public Event {
+	float dt_s;
+	IdleEvent(float dt_s_) : dt_s(dt_s_) {}
+	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
+};
+
+struct QuitRequestEvent : Event {
+	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
+};
+
 struct MouseMoveEvent : Event {
 	Point2f mouse_abs;
 	MouseMoveEvent(Point2f mouse_abs_) : mouse_abs(mouse_abs_) {}
@@ -77,12 +87,6 @@ struct KeyUpEvent : KeyEvent {
 	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
 };
 
-struct IdleEvent : public Event {
-	float dt_s;
-	IdleEvent(float dt_s_) : dt_s(dt_s_) {}
-	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
-};
-
 class Widget {
 public:
 	Widget *parent;
@@ -116,12 +120,13 @@ public:
 
 	virtual void render(Window *window, int off_x, int off_y) = 0;
 
-	virtual DispatchResult on_mouse_move(DispatcherCtx, const MouseMoveEvent *);
-	virtual DispatchResult on_mouse_down(DispatcherCtx, const MouseDownEvent *) { return PROPAGATE; }
-	virtual DispatchResult on_mouse_up  (DispatcherCtx, const MouseUpEvent   *) { return PROPAGATE; }
-	virtual DispatchResult on_key_down  (DispatcherCtx, const KeyDownEvent   *) { return PROPAGATE; }
-	virtual DispatchResult on_key_up    (DispatcherCtx, const KeyUpEvent     *) { return PROPAGATE; }
-	virtual DispatchResult on_idle      (DispatcherCtx, const IdleEvent      *) { return PROPAGATE; }
+	virtual DispatchResult on_mouse_move  (DispatcherCtx, const MouseMoveEvent   *);
+	virtual DispatchResult on_mouse_down  (DispatcherCtx, const MouseDownEvent   *) { return PROPAGATE; }
+	virtual DispatchResult on_mouse_up    (DispatcherCtx, const MouseUpEvent     *) { return PROPAGATE; }
+	virtual DispatchResult on_key_down    (DispatcherCtx, const KeyDownEvent     *) { return PROPAGATE; }
+	virtual DispatchResult on_key_up      (DispatcherCtx, const KeyUpEvent       *) { return PROPAGATE; }
+	virtual DispatchResult on_idle        (DispatcherCtx, const IdleEvent        *) { return PROPAGATE; }
+	virtual DispatchResult on_quit_request(DispatcherCtx, const QuitRequestEvent *) { return PROPAGATE; }
 
 	virtual DispatchResult route(DispatcherCtx ctx, Event *e) {
 		DispatcherCtx here = ctx.with_offset(Point2f(frame.x, frame.y));
@@ -162,4 +167,8 @@ inline DispatchResult IdleEvent::deliver(DispatcherCtx ctx, Widget *w) {
 	DispatchResult res = w->on_idle(ctx, this);
 	//printf("[ON_IDLE] (%s) %s\n", typeid(*w).name(), w->title());
 	return res;
+}
+
+inline DispatchResult QuitRequestEvent::deliver(DispatcherCtx ctx, Widget *w) {
+	return w->on_quit_request(ctx, this);
 }

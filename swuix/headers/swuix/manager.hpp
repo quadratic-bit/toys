@@ -67,11 +67,15 @@ public:
 		if (!SDL_WaitEventTimeout(&ev, (int32_t)timeout_ms)) return false;
 
 		do {
-			if (is_ev_close(&ev)) {
-				state->exit_requested = true;
-				return true;
-			}
 			switch (ev.type) {
+			case SDL_EVENT_QUIT:
+			case SDL_EVENT_WINDOW_CLOSE_REQUESTED: {
+				QuitRequestEvent e;
+				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos);
+				DispatchResult res = root->route(ctx, &e);
+				if (res == PROPAGATE) state->exit_requested = true;
+				return true;
+				} break;
 			case SDL_EVENT_KEY_DOWN: {
 				KeyDownEvent we(ev.key.scancode, ev.key.key, ev.key.mod, ev.key.repeat);
 				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos);
