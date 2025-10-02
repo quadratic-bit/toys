@@ -39,7 +39,7 @@ class HandledWidget : public virtual Widget {
 	Handle *handle;
 
 	DispatchResult route_minimized(DispatcherCtx ctx, Event *e) {
-		DispatcherCtx here = ctx.with_offset(frame.x, frame.y);
+		DispatcherCtx here = ctx.with_offset(Point2f(frame.x, frame.y));
 
 		// TODO: generalize
 		if (e->is_pointer()) {

@@ -69,6 +69,10 @@ public:
 		SDL_Quit();
 	}
 
+	static Time now() {
+		return (double)SDL_GetTicksNS() / (double)1e9;
+	}
+
 	// ================ PRIMITIVES ================
 
 	void draw_line_rgb(int16_t x1, int16_t y1, int16_t x2, int16_t y2, unsigned thick, uint8_t r, uint8_t g, uint8_t b) {

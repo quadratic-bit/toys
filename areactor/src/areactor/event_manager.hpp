@@ -6,13 +6,11 @@
 
 #include "state.hpp"
 
-#define NS_TO_SECONDS(ns) (double)ns / (double)1000000000
-
 class EventManager {
 	ReactorState *state;
 
-	Uint64 next_frame;
-	Uint64 last_ticks_ns;
+	Time next_frame;
+	Time last_tick;
 	int FPS;
 
 	static bool is_ev_close(const SDL_Event *event) {
@@ -20,53 +18,56 @@ class EventManager {
 			event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED;
 	}
 
-	inline Uint64 FRAME_NS() const { return SDL_NS_PER_SECOND / FPS; }
+	inline Time frame_dur() const { return (Time)1 / (Time)FPS; }
 
 public:
 	EventManager(ReactorState *state_, int fps) : state(state_), next_frame(SDL_GetTicksNS()), FPS(fps) {
-		next_frame = SDL_GetTicksNS();
-		last_ticks_ns = next_frame;
+		next_frame = Window::now();
+		last_tick = next_frame;
 	}
 
 	void prepare_events() {
-		next_frame += FRAME_NS();
-		Uint64 now = SDL_GetTicksNS();
-		if (now > next_frame + FRAME_NS()) next_frame = now;
+		next_frame += frame_dur();
+		Time now = Window::now();
+		if (now > next_frame + frame_dur()) next_frame = now;
 		SDL_PumpEvents();
 	}
 
-	double dt_seconds() {
-		Uint64 ticks_now = SDL_GetTicksNS();
-		state->now = NS_TO_SECONDS(ticks_now);
+	/*
+	 * Update the current time in state and return delta time
+	 * since the last call of this function.
+	 */
+	Time advance_frame() {
+		Time now = Window::now();
+		state->now = now;
 
-		Uint64 dt_ns = ticks_now - last_ticks_ns;
-		last_ticks_ns = ticks_now;
-		double dt_s = NS_TO_SECONDS(dt_ns);
-		const double DT_MAX = 0.1;  // 100 ms
+		Time dt_s = now - last_tick;
+		last_tick = now;
+		static const Time DT_MAX = 0.100;  // 100 ms
 		if (dt_s > DT_MAX) dt_s = DT_MAX;
 		return dt_s;
 	}
 
 	void dispatch_idle(Widget *root) {
-		double dt_s = dt_seconds();
+		double dt_s = advance_frame();
 
 		IdleEvent idle_e(dt_s);
-		DispatcherCtx ctx = DispatcherCtx::from_absolute(0, 0);  // TODO: reuse old mouse
+		DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos);  // TODO: reuse old mouse
 		root->route(ctx, &idle_e);
 	}
 
 	bool exhaust_events(Widget *root) {
 		SDL_Event ev;
 
-		Uint64 now = SDL_GetTicksNS();
-		state->now = NS_TO_SECONDS(now);
+		Time now = Window::now();
+		state->now = now;
 		if (now >= next_frame) return true;
 
-		Uint32 timeout_ms = (next_frame - now) / SDL_NS_PER_MS;
+		Time timeout_ms = (next_frame - now) * 1e3;
 
-		if (timeout_ms == 0) return true;
+		if (timeout_ms < 0) return true;
 
-		if (!SDL_WaitEventTimeout(&ev, timeout_ms)) return false;
+		if (!SDL_WaitEventTimeout(&ev, (int32_t)timeout_ms)) return false;
 
 		do {
 			if (is_ev_close(&ev)) {
@@ -92,21 +93,22 @@ public:
 				break;
 			case SDL_EVENT_MOUSE_MOTION: {
 				state->mouse.target = NULL;
-				MouseMoveEvent we(ev.motion.x, ev.motion.y);
-				DispatcherCtx ctx = DispatcherCtx::from_absolute(we.ax, we.ay);
+				state->mouse.pos = Point2f(ev.motion.x, ev.motion.y);
+				MouseMoveEvent we(state->mouse.pos);
+				DispatcherCtx ctx = DispatcherCtx::from_absolute(we.mouse_abs);
 				root->route(ctx, &we);
 				} break;
 			case SDL_EVENT_MOUSE_BUTTON_DOWN: {
-				MouseDownEvent we(ev.button.x, ev.button.y);
 				state->mouse.state = MouseState::Dragging;
-				DispatcherCtx ctx = DispatcherCtx::from_absolute(we.ax, we.ay);
+				MouseDownEvent we(state->mouse.pos);
+				DispatcherCtx ctx = DispatcherCtx::from_absolute(we.mouse_abs);
 				// TODO PERF: directly resolve relative coords and dispatch?
 				root->route(ctx, &we);
 				} break;
 			case SDL_EVENT_MOUSE_BUTTON_UP: {
 				MouseUpEvent we;
 				state->mouse.state = MouseState::Idle;
-				DispatcherCtx ctx = DispatcherCtx::from_absolute(ev.button.x, ev.button.y);
+				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos);
 				root->route(ctx, &we);
 				} break;
 			}

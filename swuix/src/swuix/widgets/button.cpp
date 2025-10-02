@@ -4,7 +4,7 @@
 
 DispatchResult Button::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {
 	(void)e;
-	bool c = contains_point(ctx.local);
+	bool c = contains_point(ctx.mouse_rel);
 	bool not_covered_or_doesnt_contain = state->mouse.target || !c;
 	if (hovered && not_covered_or_doesnt_contain) {
 		hovered = false;

@@ -12,22 +12,18 @@ class Widget;
 struct State;
 
 struct DispatcherCtx {
-	Point2f local;
-	Point2f absolute;
+	Point2f mouse_rel;
+	Point2f mouse_abs;
 
-	DispatcherCtx with_offset(float dx, float dy) const {
+	DispatcherCtx with_offset(Point2f dp) const {
 		DispatcherCtx c = *this;
-		c.local.x -= dx;
-		c.local.y -= dy;
+		c.mouse_rel -= dp;
 		return c;
 	}
 
-	static DispatcherCtx from_absolute(float ax, float ay) {
+	static DispatcherCtx from_absolute(Point2f abs) {
 		DispatcherCtx c;
-		c.absolute.x = ax;
-		c.absolute.y = ay;
-		c.local.x = ax;
-		c.local.y = ay;
+		c.mouse_abs = c.mouse_rel = abs;
 		return c;
 	}
 };
@@ -44,15 +40,15 @@ struct Event {
 };
 
 struct MouseMoveEvent : public Event {
-	float ax, ay;  // absolute
-	MouseMoveEvent(float x, float y) : ax(x), ay(y) {}
+	Point2f mouse_abs;
+	MouseMoveEvent(Point2f mouse_abs_) : mouse_abs(mouse_abs_) {}
 	bool is_pointer() const { return true; }
 	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
 };
 
 struct MouseDownEvent : public Event {
-	float ax, ay;  // absolute
-	MouseDownEvent(float x, float y) : ax(x), ay(y) {}
+	Point2f mouse_abs;
+	MouseDownEvent(Point2f mouse_abs_) : mouse_abs(mouse_abs_) {}
 	bool is_pointer() const { return true; }
 	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
 };
@@ -107,7 +103,7 @@ public:
 	virtual DispatchResult on_idle      (DispatcherCtx ctx, const IdleEvent      *e) { (void)e; (void)ctx; return PROPAGATE; }
 
 	virtual DispatchResult route(DispatcherCtx ctx, Event *e) {
-		DispatcherCtx here = ctx.with_offset(frame.x, frame.y);
+		DispatcherCtx here = ctx.with_offset(Point2f(frame.x, frame.y));
 
 		const size_t n = child_count();
 

@@ -4,8 +4,8 @@
 DispatchResult DraggableWidget::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {
 	(void)e;
 	if (state->mouse.state == MouseState::Dragging && is_dragging) {
-		frame.x = ctx.local.x - start_drag_x;
-		frame.y = ctx.local.y - start_drag_y;
+		frame.x = ctx.mouse_rel.x - start_drag_x;
+		frame.y = ctx.mouse_rel.y - start_drag_y;
 	}
         return CONSUME;
 }
@@ -14,8 +14,8 @@ DispatchResult DraggableWidget::on_mouse_down(DispatcherCtx ctx, const MouseDown
 	(void)e;
 	if (state->mouse.target == this) {
 		is_dragging = true;
-		start_drag_x = ctx.local.x;
-		start_drag_y = ctx.local.y;
+		start_drag_x = ctx.mouse_rel.x;
+		start_drag_y = ctx.mouse_rel.y;
 		return CONSUME;
 	}
 	return PROPAGATE;

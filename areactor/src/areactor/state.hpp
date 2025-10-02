@@ -4,7 +4,7 @@
 
 #include "reactor.hpp"
 
-struct ReactorState : State {
+struct ReactorState : public State {
 	int wall_speed;
 	bool wall_speed_changed;
 
@@ -13,14 +13,13 @@ struct ReactorState : State {
 
 	Reactor *reactor;
 
-	Time now;
 	bool running;
 
-	ReactorState()
-			: wall_speed(0), wall_speed_changed(false), add_particle(false),
-			delete_particle(false), reactor(NULL), now(0), running(true) {
-		now = NS_TO_SECONDS(SDL_GetTicksNS());
-	}
+	ReactorState() : State(), wall_speed(0), wall_speed_changed(false), add_particle(false),
+			delete_particle(false), reactor(NULL), running(true) {}
+
+	ReactorState(Time now_) : State(now_), wall_speed(0), wall_speed_changed(false), add_particle(false),
+			delete_particle(false), reactor(NULL), running(true) {}
 
 	void add_to_wall_speed(int add) {
 		wall_speed += add;

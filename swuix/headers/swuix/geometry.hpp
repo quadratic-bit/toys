@@ -38,4 +38,9 @@ public:
 		x += other.x;
 		y += other.y;
 	}
+
+	void operator-=(const Point2f &other) {
+		x -= other.x;
+		y -= other.y;
+	}
 };
