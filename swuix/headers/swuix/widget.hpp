@@ -107,20 +107,9 @@ public:
 
 		const size_t n = child_count();
 
-		// TODO: generalize
-		if (e->is_pointer()) {
-			for (size_t i = 0; i < n; ++i) {
-				Widget *ch = child_at(i);
-				DispatchResult r = ch->route(here, e);
-				if (r == CONSUME) {
-					return CONSUME;
-				}
-			}
-		} else {
-			for (size_t i = 0; i < n; ++i) {
-				if (child_at(i)->route(here, e) == CONSUME) {
-					return CONSUME;
-				}
+		for (size_t i = 0; i < n; ++i) {
+			if (child_at(i)->route(here, e) == CONSUME) {
+				return CONSUME;
 			}
 		}
 

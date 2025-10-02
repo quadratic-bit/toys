@@ -41,16 +41,8 @@ class HandledWidget : public virtual Widget {
 	DispatchResult route_minimized(DispatcherCtx ctx, Event *e) {
 		DispatcherCtx here = ctx.with_offset(Point2f(frame.x, frame.y));
 
-		// TODO: generalize
-		if (e->is_pointer()) {
-			DispatchResult r = handle->route(here, e);
-			if (r == CONSUME) {
-				return CONSUME;
-			}
-		} else {
-			if (handle->route(here, e) == CONSUME) {
-				return CONSUME;
-			}
+		if (handle->route(here, e) == CONSUME) {
+			return CONSUME;
 		}
 
 		return PROPAGATE;
