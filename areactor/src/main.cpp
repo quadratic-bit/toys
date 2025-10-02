@@ -9,7 +9,6 @@
 #include "widgets/desktop.hpp"
 
 static const int FPS = 60;
-static const Uint64 FRAME_NS = SDL_NS_PER_SECOND / FPS;
 
 int main() {
 	ReactorState state = ReactorState();

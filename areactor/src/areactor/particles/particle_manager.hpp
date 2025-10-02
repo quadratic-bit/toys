@@ -1,8 +1,9 @@
 #pragma once
-#include <SDL3/SDL_render.h>
 #include <cstdio>
 #include <tr1/unordered_map>
 #include <vector>
+
+#include <swuix/window/window.hpp>
 
 #include "../linalg/vectors.hpp"
 #include "../common.hpp"
@@ -37,7 +38,7 @@ public:
 		: type_id_(type_id), id(id_), mass(1.0), gen(BASE_GEN), alive(true) {}
 	virtual ~Particle() {}
 
-	virtual void draw(SDL_Renderer *renderer, Reactor *reactor) = 0;
+	virtual void draw(Window *window, Reactor *reactor) = 0;
 
 	friend void collide_dispatch(Reactor *r, Particle *a, Particle *b, Time now);
 };
@@ -54,7 +55,7 @@ public:
 		last_moved = t;
 	}
 
-	void draw(SDL_Renderer *renderer, Reactor *reactor);
+	void draw(Window *window, Reactor *reactor);
 };
 
 class ParticleSquare : public Particle {
@@ -69,7 +70,7 @@ public:
 		last_moved = t;
 	}
 
-	void draw(SDL_Renderer *renderer, Reactor *reactor);
+	void draw(Window *window, Reactor *reactor);
 };
 
 inline int clamp(int value, int min, int max) {

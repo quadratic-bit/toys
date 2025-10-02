@@ -2,7 +2,6 @@
 #include <cassert>
 #include <cmath>
 #include <cstdlib>
-#include <SDL3/SDL_rect.h>
 
 inline float rand01() {
 	return (float)(std::rand()) / RAND_MAX;

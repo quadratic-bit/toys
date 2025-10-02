@@ -37,7 +37,7 @@ static void cb_colder(void *st, Widget *d) {
 
 class ToolboxWidget : public HandledContainer {
 public:
-	ToolboxWidget(SDL_FRect rect, Widget *parent_, State *state_)
+	ToolboxWidget(FRect rect, Widget *parent_, State *state_)
 			: Widget(rect, parent_, state_), HandledContainer(rect, parent_, state_) {
 		Button *btn_left    = new Button(frect(20, 10, 50, 25), NULL, "<-",   state, cb_sub);
 		Button *btn_right   = new Button(frect(80, 10, 50, 25), NULL, "->",   state, cb_add);

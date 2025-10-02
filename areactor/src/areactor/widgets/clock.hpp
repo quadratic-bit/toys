@@ -1,5 +1,4 @@
 #pragma once
-#include <SDL3_gfx/SDL3_gfxPrimitives.h>
 #include <ctime>
 #include <iomanip>
 #include <sstream>
@@ -13,7 +12,7 @@ class Clock : public HandledWidget {
 public:
 	time_t time_now;
 
-	Clock(SDL_FRect rect, Widget *parent_, State *s)
+	Clock(FRect rect, Widget *parent_, State *s)
 			: Widget(rect, parent_, s), HandledWidget(rect, parent_, s) {
 		time(&time_now);
 	}
@@ -32,8 +31,7 @@ public:
 	void render_body(Window *window, int off_x, int off_y) {
 		window->clear_rect(frame, off_x, off_y, CLR_PLATINUM);
 		window->outline(frame, off_x, off_y, 2);
-		circleRGBA(window->renderer, frame.x + off_x + frame.w / 2, frame.y + off_y + frame.h / 2, 45, CLR_NIGHT, SDL_ALPHA_OPAQUE);
-
+		window->draw_circle_rgb(frame.x + off_x + frame.w / 2, frame.y + off_y + frame.h / 2, 45, CLR_NIGHT);
 		struct tm* local_time = localtime(&time_now);
 
 		std::ostringstream oss;
@@ -65,8 +63,8 @@ public:
 		arrow_min  += offset;
 		arrow_sec  += offset;
 
-		thickLineRGBA(window->renderer, offset.x, offset.y, arrow_hour.x, arrow_hour.y, 3, CLR_NIGHT, SDL_ALPHA_OPAQUE);
-		thickLineRGBA(window->renderer, offset.x, offset.y,  arrow_min.x,  arrow_min.y, 3, CLR_NIGHT, SDL_ALPHA_OPAQUE);
-		thickLineRGBA(window->renderer, offset.x, offset.y,  arrow_sec.x,  arrow_sec.y, 3, CLR_NIGHT, SDL_ALPHA_OPAQUE);
+		window->draw_line(offset.x, offset.y, arrow_hour.x, arrow_hour.y, 3);
+		window->draw_line(offset.x, offset.y,  arrow_min.x,  arrow_min.y, 3);
+		window->draw_line(offset.x, offset.y,  arrow_sec.x,  arrow_sec.y, 3);
 	}
 };

@@ -188,14 +188,12 @@ class LineGraph : public HandledWidget {
 		double y_units;
 		calc_125_scale(x_step_px, x_units, y_step_px, y_units);
 
-		SDL_SetRenderDrawColor(window->renderer, CLR_GRID, SDL_ALPHA_OPAQUE);
-
 		int k0 = (int)SDL_ceil((frame.y - x_axis.center) / (double)y_step_px);
 		int k1 = (int)SDL_floor((frame.y + frame.h - x_axis.center) / (double)y_step_px);
 
 		for (int k = k0; k <= k1; ++k) {
 			float ys = (float)(x_axis.center + k * y_step_px);
-			SDL_RenderLine(window->renderer, frame.x, ys, frame.x + frame.w, ys);
+			window->draw_line_rgb(frame.x, ys, frame.x + frame.w, ys, 1, CLR_GRID);
 
 			const double v = (double)k * y_units;
 			window->text_aligned(fmt_si(-v, y_unit).c_str(), frame.x - 6.0f, ys, TA_RIGHT);
@@ -210,7 +208,7 @@ class LineGraph : public HandledWidget {
 
 		for (int k = k0; k <= k1; ++k) {
 			float xs = (float)(y_axis.center + k * x_step_px);
-			SDL_RenderLine(window->renderer, xs, frame.y, xs, frame.y + frame.h);
+			window->draw_line_rgb(xs, frame.y, xs, frame.y + frame.h, 1, CLR_GRID);
 
 			const double t_abs = t_at_yaxis + k * x_units;
 			window->text_aligned(fmt_seconds(t_abs).c_str(), xs, frame.y + frame.h + 10.0f, TA_CENTER);
@@ -222,12 +220,12 @@ class LineGraph : public HandledWidget {
 		win->text_aligned(y_title, frame.x + frame.w + 8.0f, frame.y + frame.h * 0.5f, TA_LEFT);
 	}
 
-	void draw_axes(SDL_Renderer *renderer) {
+	void draw_axes(Window *window) {
 		float y = (float)std::min(std::max((float)x_axis.center, frame.y), frame.y + frame.h);
-		thickLineRGBA(renderer, frame.x, y, frame.x + frame.w, y, 2, CLR_NIGHT, SDL_ALPHA_OPAQUE);
+		window->draw_line(frame.x, y, frame.x + frame.w, y, 2);
 
 		float x = (float)std::min(std::max((float)y_axis.center, frame.x), frame.x + frame.w);
-		thickLineRGBA(renderer, x, frame.y, x, frame.y + frame.h, 2, CLR_NIGHT, SDL_ALPHA_OPAQUE);
+		window->draw_line(x, frame.y, x, frame.y + frame.h, 2);
 	}
 
 	void calc_125_scale(int &x_step_px, const double &x_units, int &y_step_px, double &y_units) {
@@ -260,7 +258,6 @@ class LineGraph : public HandledWidget {
 			y_step_px = (int)SDL_round(y_units * y_axis.scale);
 			limit--;
 		}
-
 	}
 public:
 	Axis x_axis;
@@ -296,12 +293,12 @@ public:
 		return x_axis.center - y_space * (double)y_axis.scale;
 	}
 
-	void space_to_screen(Vec2 *vec) const {
+	void space_to_screen(Point2f *vec) const {
 		vec->x = x_space_to_screen(vec->x);
 		vec->y = y_space_to_screen(vec->y);
 	}
 
-	void screen_to_space(Vec2 *vec) const {
+	void screen_to_space(Point2f *vec) const {
 		vec->x = x_screen_to_space(vec->x);
 		vec->y = y_screen_to_space(vec->y);
 	}
@@ -366,7 +363,7 @@ public:
 	void render_body(Window *window, int off_x, int off_y) {
 		window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
 		draw_grid(window, 1.0, label_y);
-		draw_axes(window->renderer);
+		draw_axes(window);
 		plot_stream(window->renderer);
 		draw_axis_titles(window, "", grap_title);
 		window->outline(frame, off_x, off_y, 2);

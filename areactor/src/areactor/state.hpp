@@ -1,7 +1,8 @@
 #pragma once
-#include "reactor.hpp"
 #include <swuix/widget.hpp>
 #include <swuix/state.hpp>
+
+#include "reactor.hpp"
 
 struct ReactorState : State {
 	int wall_speed;

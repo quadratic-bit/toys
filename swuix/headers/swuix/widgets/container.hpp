@@ -4,8 +4,8 @@
 class WidgetContainer : public virtual Widget {
 	std::vector<Widget*> children;
 public:
-	WidgetContainer(SDL_FRect f, Widget *par, State *st) : Widget(f, par, st) {}
-	WidgetContainer(SDL_FRect f, Widget *par, std::vector<Widget*> children_, State *st)
+	WidgetContainer(FRect f, Widget *par, State *st) : Widget(f, par, st) {}
+	WidgetContainer(FRect f, Widget *par, std::vector<Widget*> children_, State *st)
 		: Widget(f, par, st), children(children_) {}
 
 	const char *title() const {

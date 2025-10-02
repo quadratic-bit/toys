@@ -34,17 +34,15 @@ DispatchResult Button::on_mouse_up(DispatcherCtx ctx, const MouseUpEvent *e) {
 }
 
 void Button::render(Window *window, int off_x, int off_y) {
-	SDL_FRect outer = frect(frame.x + off_x - BTN_THICK, frame.y + off_y - BTN_THICK,
-				frame.w + BTN_THICK * 2, frame.h + BTN_THICK * 2);
-	SDL_FRect inner = frect(frame.x + off_x + BTN_THICK, frame.y + off_y + BTN_THICK,
+	FRect outer = frect(frame.x + off_x - BTN_THICK, frame.y + off_y - BTN_THICK,
+			frame.w + BTN_THICK * 2, frame.h + BTN_THICK * 2);
+	FRect inner = frect(frame.x + off_x + BTN_THICK, frame.y + off_y + BTN_THICK,
 				frame.w - BTN_THICK * 2, frame.h - BTN_THICK * 2);
 
-	SDL_SetRenderDrawColor(window->renderer, CLR_BLACK, SDL_ALPHA_OPAQUE);
-	SDL_RenderFillRect(window->renderer, &outer);
+	window->draw_filled_rect_rgb(outer, CLR_BLACK);
 
-	if (hovered) SDL_SetRenderDrawColor(window->renderer, CLR_LIGHT_GRAY, SDL_ALPHA_OPAQUE);
-	else SDL_SetRenderDrawColor(window->renderer, CLR_PLATINUM, SDL_ALPHA_OPAQUE);
-	SDL_RenderFillRect(window->renderer, &inner);
+	if (hovered) window->draw_filled_rect_rgb(inner, CLR_LIGHT_GRAY);
+	else window->draw_filled_rect_rgb(inner, CLR_PLATINUM);
 
 	window->text_aligned(label, frame.x + off_x + frame.w / 2, frame.y + off_y + frame.h / 2, TA_CENTER);
 }

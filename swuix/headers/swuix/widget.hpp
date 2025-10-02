@@ -1,10 +1,9 @@
 #pragma once
-#include <SDL3/SDL_rect.h>
 #include <cstdio>
 #include <cstdlib>
-#include <typeinfo>
 #include <vector>
 
+#include <swuix/common.hpp>
 #include <swuix/geometry.hpp>
 
 // forward-declare
@@ -13,8 +12,8 @@ class Widget;
 struct State;
 
 struct DispatcherCtx {
-	Vec2 local;
-	Vec2 absolute;
+	Point2f local;
+	Point2f absolute;
 
 	DispatcherCtx with_offset(float dx, float dy) const {
 		DispatcherCtx c = *this;
@@ -73,9 +72,9 @@ class Widget {
 public:
 	Widget *parent;
 	State  *state;
-	SDL_FRect frame;  // `x` and `y` are relative to `parent`
+	FRect   frame;  // `x` and `y` are relative to `parent`
 
-	Widget(SDL_FRect frame_, Widget *parent_, State *state_)
+	Widget(FRect frame_, Widget *parent_, State *state_)
 		: parent(parent_), state(state_), frame(frame_) {};
 	virtual ~Widget() {
 		size_t n = child_count();
@@ -95,7 +94,7 @@ public:
 
 	virtual const char *title() const = 0;
 
-	bool contains_point(Vec2 rel) {
+	bool contains_point(Point2f rel) {
 		return rel.x >= frame.x && rel.x <= frame.x + frame.w
 			&& rel.y >= frame.y && rel.y <= frame.y + frame.h;
 	}

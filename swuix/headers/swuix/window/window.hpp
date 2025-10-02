@@ -1,6 +1,5 @@
 #pragma once
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_render.h>
 #include <SDL3_gfx/SDL3_gfxPrimitives.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <cstdio>
@@ -9,6 +8,7 @@
 
 #include <swuix/window/common.hpp>
 #include <swuix/window/pixel_buffer.hpp>
+#include <swuix/common.hpp>
 
 enum TextAlign { TA_LEFT, TA_CENTER, TA_RIGHT };
 
@@ -25,10 +25,6 @@ class Window {
 	TTF_TextEngine *text_engine;
 	TTF_Font *font;
 	PixelBuffer *pb;
-
-	void draw_bounding_line(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, unsigned thick) {
-		thickLineRGBA(renderer, x1, y1, x2, y2, thick, CLR_NIGHT, SDL_ALPHA_OPAQUE);
-	}
 
 public:
 	SDL_Renderer *renderer;
@@ -73,14 +69,32 @@ public:
 		SDL_Quit();
 	}
 
-	void outline(const SDL_FRect box, int off_x, int off_y, unsigned thick = 2) {
-		Sint16 x = box.x + off_x, y = box.y + off_y;
-		Sint16 w = box.w, h = box.h;
-		draw_bounding_line(x, y, x + w, y, thick);
-		draw_bounding_line(x, y, x, y + h, thick);
-		draw_bounding_line(x + w, y, x + w, y + h, thick);
-		draw_bounding_line(x, y + h, x + w, y + h, thick);
+	// ================ PRIMITIVES ================
+
+	void draw_line_rgb(int16_t x1, int16_t y1, int16_t x2, int16_t y2, unsigned thick, uint8_t r, uint8_t g, uint8_t b) {
+		thickLineRGBA(renderer, x1, y1, x2, y2, thick, r, g, b, SDL_ALPHA_OPAQUE);
 	}
+
+	void draw_line(int16_t x1, int16_t y1, int16_t x2, int16_t y2, unsigned thick) {
+		draw_line_rgb(x1, y1, x2, y2, thick, CLR_NIGHT);
+	}
+
+	void draw_circle_rgb(float x, float y, float rad, uint8_t r, uint8_t g, uint8_t b) {
+		SDL_SetRenderDrawColor(renderer, r, g, b, SDL_ALPHA_OPAQUE);
+		circleRGBA(renderer, x, y, rad, r, g, b, SDL_ALPHA_OPAQUE);
+	}
+
+	void draw_filled_circle_rgb(float x, float y, float rad, uint8_t r, uint8_t g, uint8_t b) {
+		SDL_SetRenderDrawColor(renderer, r, g, b, SDL_ALPHA_OPAQUE);
+		filledCircleRGBA(renderer, x, y, rad, r, g, b, SDL_ALPHA_OPAQUE);
+	}
+
+	void draw_filled_rect_rgb(const FRect &rect, uint8_t r, uint8_t g, uint8_t b) {
+		SDL_SetRenderDrawColor(renderer, r, g, b, SDL_ALPHA_OPAQUE);
+		SDL_RenderFillRect(renderer, &rect);
+	}
+
+	// =================== TEXT ===================
 
 	void text(const char *string, float x, float y) {
 		TTF_Text *tt = TTF_CreateText(text_engine, font, string, strlen(string));
@@ -107,19 +121,28 @@ public:
 		TTF_DestroyText(tt);
 	}
 
+	void outline(const FRect box, int off_x, int off_y, unsigned thick = 2) {
+		int16_t x = box.x + off_x, y = box.y + off_y;
+		int16_t w = box.w, h = box.h;
+		draw_line(x, y, x + w, y, thick);
+		draw_line(x, y, x, y + h, thick);
+		draw_line(x + w, y, x + w, y + h, thick);
+		draw_line(x, y + h, x + w, y + h, thick);
+	}
+
 	void clear() {
 		SDL_SetRenderDrawColor(renderer, CLR_PLATINUM, SDL_ALPHA_OPAQUE);
 		SDL_RenderClear(renderer);
 	}
 
-	void clear_rect(SDL_FRect box, int off_x, int off_y, uint8_t r, uint8_t g, uint8_t b) {
+	void clear_rect(FRect box, int off_x, int off_y, uint8_t r, uint8_t g, uint8_t b) {
 		box.x += off_x;
 		box.y += off_y;
 		SDL_SetRenderDrawColor(renderer, r, g, b, SDL_ALPHA_OPAQUE);
 		SDL_RenderFillRect(renderer, &box);
 	}
 
-	void debug_outline(const SDL_FRect box, int off_x, int off_y) {
+	void debug_outline(const FRect box, int off_x, int off_y) {
 		if (box.w <= 0.0f || box.h <= 0.0f) return;
 
 		const float x0 = box.x + off_x;

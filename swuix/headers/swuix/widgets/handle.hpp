@@ -5,8 +5,8 @@
 
 const float HANDLE_H = 20.0f;
 
-static inline const SDL_FRect handle_box(SDL_FRect parent_box) {
-	SDL_FRect box;
+static inline const FRect handle_box(FRect parent_box) {
+	FRect box;
 	box.x = 0;
 	box.y = -HANDLE_H;
 	box.w = parent_box.w;
@@ -58,7 +58,7 @@ class HandledWidget : public virtual Widget {
 
 public:
 	bool minimized;
-	HandledWidget(SDL_FRect dim_, Widget *parent_, State *state_)
+	HandledWidget(FRect dim_, Widget *parent_, State *state_)
 		: Widget(dim_, parent_, state_), handle(new Handle(this, state_)), minimized(false) {}
 
 	virtual void render_body(Window *window, int off_x, int off_y) = 0;
@@ -92,10 +92,10 @@ static void cb_minimize(void *st, Widget *w) {
 
 class HandledContainer : public HandledWidget, public WidgetContainer {
 public:
-	HandledContainer(SDL_FRect rect, Widget *parent_, State *state_)
+	HandledContainer(FRect rect, Widget *parent_, State *state_)
 		: Widget(rect, parent_, state_), HandledWidget(rect, parent_, state_), WidgetContainer(rect, parent_, state_) {}
 
-	HandledContainer(SDL_FRect rect, Widget *parent_, std::vector<Widget*> children_, State *state_)
+	HandledContainer(FRect rect, Widget *parent_, std::vector<Widget*> children_, State *state_)
 			: Widget(rect, parent_, state_), HandledWidget(rect, parent_, state_), WidgetContainer(rect, parent_, children_, state_) {}
 
 	const char *title() const {

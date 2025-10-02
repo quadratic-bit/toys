@@ -1,10 +1,11 @@
 #include <sstream>
 
-#include "reactor.hpp"
-#include "state.hpp"
 #include <swuix/window/window.hpp>
 
-inline void draw_bounding_line(SDL_Renderer *renderer, Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, unsigned thick, double e) {
+#include "reactor.hpp"
+#include "state.hpp"
+
+inline void draw_bounding_line(Window *window, Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, unsigned thick, double e) {
 	double t = std::max(0.0, std::min(1.0, (e - 1.0) * 0.8 + 0.5)); // center 1.0 at 0.5
 
 	static const uint8_t BLUE[3]      = { CLR_BLUE };
@@ -24,15 +25,15 @@ inline void draw_bounding_line(SDL_Renderer *renderer, Sint16 x1, Sint16 y1, Sin
 		b = (uint8_t)(NIGHT[2] + (RASPBERRY[2] - NIGHT[2]) * u + 0.5);
 	}
 
-	thickLineRGBA(renderer, x1, y1, x2, y2, thick, r, g, b, SDL_ALPHA_OPAQUE);
+	window->draw_line_rgb(x1, y1, x2, y2, thick, r, g, b);
 }
 
-inline void draw_particles(SDL_Renderer *renderer, Reactor *reactor) {
+inline void draw_particles(Window *window, Reactor *reactor) {
 	std::vector<Slot> &active_slots = reactor->particles->active_slots;
 	for (size_t i = 0; i < active_slots.size(); ++i) {
 		Slot slot = active_slots[i];
 		Particle *p = reactor->particles->items[slot];
-		p->draw(renderer, reactor);
+		p->draw(window, reactor);
 	}
 }
 
@@ -43,15 +44,15 @@ void Reactor::render_body(Window *window, int off_x, int off_y) {
 	Stat stats = tally();
 
 	// outline
-	Sint16 x = frame.x, y = frame.y;
-	Sint16 w = frame.w, h = frame.h;
-	draw_bounding_line(window->renderer, x, y, x + w, y, 2, this->wall_gain[Side::TOP]);
-	draw_bounding_line(window->renderer, x, y, x, y + h, 2, this->wall_gain[Side::LEFT]);
-	draw_bounding_line(window->renderer, x + w, y, x + w, y + h, 2, this->wall_gain[Side::RIGHT]);
-	draw_bounding_line(window->renderer, x, y + h, x + w, y + h, 2, this->wall_gain[Side::BOTTOM]);
+	int16_t x = frame.x, y = frame.y;
+	int16_t w = frame.w, h = frame.h;
+	draw_bounding_line(window, x, y, x + w, y, 2, this->wall_gain[Side::TOP]);
+	draw_bounding_line(window, x, y, x, y + h, 2, this->wall_gain[Side::LEFT]);
+	draw_bounding_line(window, x + w, y, x + w, y + h, 2, this->wall_gain[Side::RIGHT]);
+	draw_bounding_line(window, x, y + h, x + w, y + h, 2, this->wall_gain[Side::BOTTOM]);
 
 	// particles
-	draw_particles(window->renderer, this);
+	draw_particles(window, this);
 
 	std::ostringstream oss;
 

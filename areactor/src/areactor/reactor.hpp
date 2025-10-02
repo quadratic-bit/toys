@@ -1,5 +1,4 @@
 #pragma once
-#include <SDL3/SDL_rect.h>
 #include <cassert>
 #include <cmath>
 #include <limits>
@@ -253,7 +252,7 @@ public:
 		}
 	}
 
-	Reactor(SDL_FRect rect, Widget *parent_, size_t n, State *s)
+	Reactor(FRect rect, Widget *parent_, size_t n, State *s)
 			: Widget(rect, parent_, s), HandledWidget(rect, parent_, s), seq(0), right_probe() {
 		particles = new ParticleManager(16, 9, rect.w / (double)GRID_W, rect.h / (double)GRID_H);
 		sim_now = 0.0;
