@@ -22,7 +22,7 @@ DispatchResult Button::on_mouse_down(DispatcherCtx ctx, const MouseDownEvent *e)
 	if (state->mouse.target != this) return PROPAGATE;
 	pressed = true;
 	state->mouse.capture = this;
-	click_cb(state, this);
+	if (action) action->apply(state, this);
         return CONSUME;
 }
 

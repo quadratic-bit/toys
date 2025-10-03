@@ -87,6 +87,11 @@ struct KeyUpEvent : KeyEvent {
 	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
 };
 
+struct Action {
+	virtual ~Action() {}
+	virtual void apply(void *, Widget *) = 0;
+};
+
 class Widget {
 public:
 	Widget *parent;
@@ -109,7 +114,6 @@ public:
 
 	virtual size_t child_count() const { return 0; }
 	virtual Widget *child_at(size_t) const { return 0; }
-	virtual bool is_leaf() const { return child_count() == 0; }
 
 	virtual const char *title() const = 0;
 

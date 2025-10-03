@@ -14,19 +14,12 @@ static inline const FRect handle_box(FRect parent_box) {
 	return box;
 }
 
-static void cb_minimize(void *st, Widget *w);
+// forward-declare
+class HandledWidget;
 
 class Handle : public DraggableWidget, public WidgetContainer {
 public:
-	Handle(Widget *parent_, State *state_)
-			: Widget(handle_box(parent_->frame), parent_, state_),
-			DraggableWidget(handle_box(parent_->frame), parent_, state_),
-			WidgetContainer(handle_box(parent_->frame), parent_, state_) {
-		static float w = 15, h = 10;
-		Button *btn_minimize = new Button(frect(frame.w - w - 5, 5, w, h), this, "-", state, cb_minimize);
-		Widget *btns[] = { btn_minimize };
-		this->append_children(make_children(btns));
-	}
+	Handle(HandledWidget *parent_, State *state_);
 
 	DispatchResult on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e);
 
@@ -86,12 +79,6 @@ public:
 	}
 };
 
-static void cb_minimize(void *st, Widget *w) {
-	(void)st;
-	HandledWidget *par = dynamic_cast<HandledWidget*>(w->parent->parent);
-	par->minimized ^= true;
-}
-
 class HandledContainer : public HandledWidget, public WidgetContainer {
 public:
 	HandledContainer(FRect rect, Widget *parent_, State *state_)
@@ -120,11 +107,6 @@ public:
 	}
 
 	void render_body(Window *window, int off_x, int off_y) {
-		// body
-		window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
-		window->outline(frame, off_x, off_y, 2);
-
-		// children
 		WidgetContainer::render(window, off_x, off_y);
 	}
 };

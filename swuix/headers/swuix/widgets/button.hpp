@@ -3,24 +3,37 @@
 
 static const int BTN_THICK = 1;
 
+class BtnCallbackAction : public Action {
+	void (*click_cb)(void*, Widget*);
+public:
+	BtnCallbackAction(void (*click_cb_)(void*, Widget*)) : click_cb(click_cb_) {}
+
+	void apply(void *state, Widget *target) {
+		if (click_cb) click_cb(state, target);
+	}
+};
+
 class Button : public Widget {
 	bool hovered;
 	bool pressed;
-	void (*click_cb)(void*, Widget*);
+	Action *action;
 	const char* label;
 public:
-	Button(FRect f, Widget *par, const char *label_, State *st, void (*on_click_)(void*, Widget*))
-		: Widget(f, par, st), hovered(false), click_cb(on_click_), label(label_) {}
+	Button(FRect f, Widget *par, const char *label_, State *st, Action *action_)
+		: Widget(f, par, st), hovered(false), action(action_), label(label_) {}
 
-	bool is_leaf() const { return true; }
+	Button(FRect f, Widget *par, const char *label_, State *st, void (*on_click_)(void*, Widget*))
+			: Widget(f, par, st), hovered(false), label(label_) {
+		action = new BtnCallbackAction(on_click_);
+	}
 
 	const char *title() const {
 		return label;
 	}
 
-	DispatchResult on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e);
-	DispatchResult on_mouse_down(DispatcherCtx ctx, const MouseDownEvent *e);
-	DispatchResult on_mouse_up  (DispatcherCtx ctx, const MouseUpEvent   *e);
+	DispatchResult on_mouse_move(DispatcherCtx, const MouseMoveEvent *);
+	DispatchResult on_mouse_down(DispatcherCtx, const MouseDownEvent *);
+	DispatchResult on_mouse_up  (DispatcherCtx, const MouseUpEvent   *);
 
 	void render(Window *window, int off_x, int off_y) {
 		FRect outer = frect(frame.x + off_x - BTN_THICK, frame.y + off_y - BTN_THICK,
