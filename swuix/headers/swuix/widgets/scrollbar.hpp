@@ -1,5 +1,4 @@
 #pragma once
-#include <cstdio>
 #include <swuix/widgets/handle.hpp>
 #include <swuix/widgets/container.hpp>
 #include <swuix/widgets/button.hpp>
@@ -30,6 +29,7 @@ public:
 	}
 
 	DispatchResult on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e);
+	DispatchResult on_mouse_down(DispatcherCtx ctx, const MouseDownEvent *e);
 
 	void render(Window *window, float off_x, float off_y);
 };

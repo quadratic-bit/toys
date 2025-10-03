@@ -47,6 +47,18 @@ DispatchResult ScrollbarSlider::on_mouse_move(DispatcherCtx ctx, const MouseMove
         return Widget::on_mouse_move(ctx, e);
 }
 
+DispatchResult ScrollbarSlider::on_mouse_down(DispatcherCtx ctx, const MouseDownEvent *e) {
+	(void)e;
+	float start_progress_px = (scrollbar->owner->viewport.y - scrollbar->owner->frame.y) / scrollbar->owner->frame.h * (scrollbar->frame.h - 2 * SCROLL_B_H);
+	if (state->mouse.target == this) {
+		is_dragging = true;
+		start_drag_x = ctx.mouse_rel.x;
+		start_drag_y = ctx.mouse_rel.y - start_progress_px;
+		return CONSUME;
+	}
+	return PROPAGATE;
+}
+
 Scrollbar::Scrollbar(ScrollableWidget *parent_, State *state_)
 		: Widget(scrollbar_box(parent_->viewport), parent_, state_),
 		WidgetContainer(scrollbar_box(parent_->viewport), parent_, state_),
