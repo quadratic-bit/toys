@@ -45,7 +45,8 @@ protected:
 
 private:
 	DispatchResult route_minimized(DispatcherCtx ctx, Event *e) {
-		DispatcherCtx here = ctx.with_offset(Point2f(frame.x, frame.y));
+		ctx.clip(clip());
+		DispatcherCtx here = ctx.with_offset(frame);
 
 		if (handle->route(here, e) == CONSUME) {
 			return CONSUME;
@@ -56,9 +57,17 @@ private:
 public:
 	bool minimized;
 	HandledWidget(FRect dim_, Widget *parent_, State *state_)
-		: Widget(dim_, parent_, state_), handle(new Handle(this, state_)), minimized(false) {}
+			: Widget(dim_, parent_, state_), handle(new Handle(this, state_)), minimized(false) {
+	}
 
 	virtual void render_body(Window *window, float off_x, float off_y) = 0;
+
+	FRect clip() const {
+		FRect handled_viewport = frame;
+		handled_viewport.y -= HANDLE_H;
+		handled_viewport.h += HANDLE_H;
+		return handled_viewport;
+	}
 
 	void render(Window *window, float off_x, float off_y) {
 		if (!minimized) render_body(window, off_x, off_y);

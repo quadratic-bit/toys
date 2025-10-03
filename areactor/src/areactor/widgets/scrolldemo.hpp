@@ -27,13 +27,14 @@ public:
 	void render_body(Window *window, float off_x, float off_y) {
 		// body
 		window->clear_rect(viewport, off_x, off_y, CLR_TIMBERWOLF);
-		window->outline(viewport, off_x, off_y, 2);
 
 		// children
 		window->clip(viewport);
 		window->text("text..", frame.x + off_x + 20, frame.y + off_y + 60);
 		TallView::render_body(window, off_x, off_y);
 		window->unclip();
+
+		window->outline(viewport, off_x, off_y, 2);
 	}
 };
 

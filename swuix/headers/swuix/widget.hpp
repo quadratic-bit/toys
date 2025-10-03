@@ -14,16 +14,25 @@ struct State;
 struct DispatcherCtx {
 	Point2f mouse_rel;
 	Point2f mouse_abs;
+	FRect   viewport;
 
-	DispatcherCtx with_offset(Point2f dp) const {
+	void clip(FRect frame) {
+		viewport = intersect(viewport, frame);
+	}
+
+	DispatcherCtx with_offset(FRect frame) const {
 		DispatcherCtx c = *this;
-		c.mouse_rel -= dp;
+		c.mouse_rel.x -= frame.x;
+		c.mouse_rel.y -= frame.y;
+		c.viewport.x -= frame.x;
+		c.viewport.y -= frame.y;
 		return c;
 	}
 
-	static DispatcherCtx from_absolute(Point2f abs) {
+	static DispatcherCtx from_absolute(Point2f abs, FRect clip) {
 		DispatcherCtx c;
 		c.mouse_abs = c.mouse_rel = abs;
+		c.viewport = clip;
 		return c;
 	}
 };
@@ -66,7 +75,7 @@ struct MouseUpEvent : Event {
 };
 
 struct KeyEvent : Event {
-	int scancode;  // platform-neutral
+	int scancode;   // platform-neutral
 	int keycode;
 	uint16_t mods;  // bitmask
 
@@ -115,14 +124,17 @@ public:
 	virtual size_t child_count() const { return 0; }
 	virtual Widget *child_at(size_t) const { return 0; }
 
+	virtual FRect clip() const { return frame; }
 	virtual void set_frame(FRect new_frame) { frame = new_frame; }
 	virtual void layout() {}
 
 	virtual const char *title() const = 0;
 
-	virtual bool contains_point(Point2f rel) const {
-		return rel.x >= frame.x && rel.x <= frame.x + frame.w
-			&& rel.y >= frame.y && rel.y <= frame.y + frame.h;
+	virtual bool contains_point(DispatcherCtx ctx) const {
+		Point2f rel = ctx.mouse_rel;
+		FRect view = ctx.viewport;
+		return rel.x >= view.x && rel.x <= view.x + view.w
+			&& rel.y >= view.y && rel.y <= view.y + view.h;
 	}
 
 	virtual void render(Window *window, float off_x, float off_y) = 0;
@@ -136,7 +148,8 @@ public:
 	virtual DispatchResult on_quit_request(DispatcherCtx, const QuitRequestEvent *) { return PROPAGATE; }
 
 	virtual DispatchResult route(DispatcherCtx ctx, Event *e) {
-		DispatcherCtx here = ctx.with_offset(Point2f(frame.x, frame.y));
+		ctx.clip(clip());
+		DispatcherCtx here = ctx.with_offset(frame);
 
 		const size_t n = child_count();
 

@@ -67,6 +67,8 @@ public:
 
 	virtual void render_body(Window *window, float off_x, float off_y) = 0;
 
+	FRect clip() const { return viewport; }
+
 	void set_frame(FRect new_frame) {
 		float ydiff = viewport.y - frame.y;
 		float xdiff = viewport.x - frame.x;
@@ -83,12 +85,6 @@ public:
 
 	Scrollbar *scrollbar_widget() {
 		return scrollbar;
-	}
-
-	bool contains_point(Point2f rel) const {
-		bool res = rel.x >= viewport.x && rel.x <= viewport.x + viewport.w
-			&& rel.y >= viewport.y && rel.y <= viewport.y + viewport.h;
-		return res;
 	}
 
 	void scroll_up() {
@@ -164,6 +160,13 @@ public:
 		return "Tall View";
 	}
 
+	FRect clip() const {
+		FRect h_viewport = viewport;
+		h_viewport.y -= HANDLE_H;
+		h_viewport.h += HANDLE_H;
+		return h_viewport;
+	}
+
 	void layout() {
 		float progress_px = viewport.y - frame.y;
 		handle->frame.y = progress_px - HANDLE_H;
@@ -186,10 +189,6 @@ public:
 	}
 
 	void render(Window *window, float off_x, float off_y) {
-		FRect clip_rect = viewport;
-		clip_rect.y -= HANDLE_H;
-		clip_rect.h += 2 * HANDLE_H;
-
 		if (!minimized) {
 			render_body(window, off_x, off_y);
 			scrollbar->render(window, frame.x + off_x, frame.y + off_y);

@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdio>
 #include <swuix/widget.hpp>
 #include <swuix/window/window.hpp>
 #include <swuix/state.hpp>
@@ -49,7 +50,7 @@ public:
 		double dt_s = advance_frame();
 
 		IdleEvent idle_e(dt_s);
-		DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos);
+		DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
 		root->route(ctx, &idle_e);
 	}
 
@@ -71,39 +72,39 @@ public:
 			case SDL_EVENT_QUIT:
 			case SDL_EVENT_WINDOW_CLOSE_REQUESTED: {
 				QuitRequestEvent e;
-				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos);
+				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
 				DispatchResult res = root->route(ctx, &e);
 				if (res == PROPAGATE) state->exit_requested = true;
 				return true;
 				} break;
 			case SDL_EVENT_KEY_DOWN: {
 				KeyDownEvent we(ev.key.scancode, ev.key.key, ev.key.mod, ev.key.repeat);
-				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos);
+				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
 				root->route(ctx, &we);
 				} break;
 			case SDL_EVENT_KEY_UP: {
 				KeyUpEvent we(ev.key.scancode, ev.key.key, ev.key.mod);
-				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos);
+				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
 				root->route(ctx, &we);
 				} break;
 			case SDL_EVENT_MOUSE_MOTION: {
 				state->mouse.target = NULL;
 				state->mouse.pos = Point2f(ev.motion.x, ev.motion.y);
 				MouseMoveEvent we(state->mouse.pos);
-				DispatcherCtx ctx = DispatcherCtx::from_absolute(we.mouse_abs);
+				DispatcherCtx ctx = DispatcherCtx::from_absolute(we.mouse_abs, root->frame);
 				root->route(ctx, &we);
 				} break;
 			case SDL_EVENT_MOUSE_BUTTON_DOWN: {
 				state->mouse.state = MouseState::Dragging;
 				MouseDownEvent we(state->mouse.pos);
-				DispatcherCtx ctx = DispatcherCtx::from_absolute(we.mouse_abs);
+				DispatcherCtx ctx = DispatcherCtx::from_absolute(we.mouse_abs, root->frame);
 				// TODO PERF: directly resolve relative coords and dispatch?
 				root->route(ctx, &we);
 				} break;
 			case SDL_EVENT_MOUSE_BUTTON_UP: {
 				MouseUpEvent we;
 				state->mouse.state = MouseState::Idle;
-				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos);
+				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
 				root->route(ctx, &we);
 				} break;
 			}

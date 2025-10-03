@@ -1,4 +1,3 @@
-#include <cstdio>
 #include <swuix/widgets/draggable.hpp>
 #include <swuix/widgets/scrollbar.hpp>
 #include <swuix/window/window.hpp>
