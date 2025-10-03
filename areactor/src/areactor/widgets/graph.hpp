@@ -343,7 +343,7 @@ public:
 		}
 	}
 
-	void render_body(Window *window, int off_x, int off_y) {
+	void render_body(Window *window, float off_x, float off_y) {
 		window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
 		draw_grid(window, 1.0, label_y);
 		draw_axes(window);

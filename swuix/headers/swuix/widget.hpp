@@ -115,14 +115,17 @@ public:
 	virtual size_t child_count() const { return 0; }
 	virtual Widget *child_at(size_t) const { return 0; }
 
+	virtual void set_frame(FRect new_frame) { frame = new_frame; }
+	virtual void layout() {}
+
 	virtual const char *title() const = 0;
 
-	bool contains_point(Point2f rel) {
+	virtual bool contains_point(Point2f rel) const {
 		return rel.x >= frame.x && rel.x <= frame.x + frame.w
 			&& rel.y >= frame.y && rel.y <= frame.y + frame.h;
 	}
 
-	virtual void render(Window *window, int off_x, int off_y) = 0;
+	virtual void render(Window *window, float off_x, float off_y) = 0;
 
 	virtual DispatchResult on_mouse_move  (DispatcherCtx, const MouseMoveEvent   *);
 	virtual DispatchResult on_mouse_down  (DispatcherCtx, const MouseDownEvent   *) { return PROPAGATE; }

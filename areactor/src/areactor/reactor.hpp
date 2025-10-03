@@ -420,5 +420,5 @@ public:
 	DispatchResult on_key_down(DispatcherCtx, const KeyDownEvent *);
 	DispatchResult on_key_up  (DispatcherCtx, const KeyUpEvent   *);
 
-	void render_body(Window *window, int off_x, int off_y);
+	void render_body(Window *window, float off_x, float off_y);
 };

@@ -56,7 +56,7 @@ public:
 		return "Toolbox";
 	}
 
-	void render_body(Window *window, int off_x, int off_y) {
+	void render_body(Window *window, float off_x, float off_y) {
 		// body
 		window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
 		window->outline(frame, off_x, off_y, 2);

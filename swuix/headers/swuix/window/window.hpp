@@ -99,7 +99,7 @@ public:
 
 	// =============== MISC GRAPHICS ==============
 
-	void outline(const FRect box, int off_x, int off_y, unsigned thick = 2) {
+	void outline(const FRect box, float off_x, float off_y, unsigned thick = 2) {
 		int16_t x = box.x + off_x, y = box.y + off_y;
 		int16_t w = box.w, h = box.h;
 		draw_line(x, y, x + w, y, thick);
@@ -155,14 +155,14 @@ public:
 		SDL_RenderClear(renderer);
 	}
 
-	void clear_rect(FRect box, int off_x, int off_y, uint8_t r, uint8_t g, uint8_t b) {
+	void clear_rect(FRect box, float off_x, float off_y, uint8_t r, uint8_t g, uint8_t b) {
 		box.x += off_x;
 		box.y += off_y;
 		SDL_SetRenderDrawColor(renderer, r, g, b, SDL_ALPHA_OPAQUE);
 		SDL_RenderFillRect(renderer, &box);
 	}
 
-	void debug_outline(const FRect box, int off_x, int off_y) {
+	void debug_outline(const FRect box, float off_x, float off_y) {
 		if (box.w <= 0.0f || box.h <= 0.0f) return;
 
 		const float x0 = box.x + off_x;

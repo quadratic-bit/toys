@@ -32,7 +32,7 @@ public:
 		child_at(0)->frame.x = frame.w - 20;
 	}
 
-	void render(Window *window, int off_x, int off_y) {
+	void render(Window *window, float off_x, float off_y) {
 		window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
 		window->outline(frame, off_x, off_y, 2);
 		WidgetContainer::render(window, off_x, off_y);
@@ -40,8 +40,10 @@ public:
 };
 
 class HandledWidget : public virtual Widget {
+protected:
 	Handle *handle;
 
+private:
 	DispatchResult route_minimized(DispatcherCtx ctx, Event *e) {
 		DispatcherCtx here = ctx.with_offset(Point2f(frame.x, frame.y));
 
@@ -51,15 +53,14 @@ class HandledWidget : public virtual Widget {
 
 		return PROPAGATE;
 	}
-
 public:
 	bool minimized;
 	HandledWidget(FRect dim_, Widget *parent_, State *state_)
 		: Widget(dim_, parent_, state_), handle(new Handle(this, state_)), minimized(false) {}
 
-	virtual void render_body(Window *window, int off_x, int off_y) = 0;
+	virtual void render_body(Window *window, float off_x, float off_y) = 0;
 
-	void render(Window *window, int off_x, int off_y) {
+	void render(Window *window, float off_x, float off_y) {
 		if (!minimized) render_body(window, off_x, off_y);
 		handle->render(window, frame.x + off_x, frame.y + off_y);
 	}
@@ -92,11 +93,11 @@ public:
 			: Widget(rect, parent_, state_), HandledWidget(rect, parent_, state_), WidgetContainer(rect, parent_, children_, state_) {}
 
 	const char *title() const {
-		return "Window";
+		return "View";
 	}
 
 	size_t child_count() const {
-		return HandledWidget::child_count() + WidgetContainer::child_count();
+		return WidgetContainer::child_count() + 1;
 	}
 
 	Widget *child_at(size_t i) const {
@@ -106,11 +107,11 @@ public:
 		return WidgetContainer::child_at(i);
 	}
 
-	void render(Window *window, int off_x, int off_y) {
+	void render(Window *window, float off_x, float off_y) {
 		HandledWidget::render(window, off_x, off_y);
 	}
 
-	void render_body(Window *window, int off_x, int off_y) {
+	void render_body(Window *window, float off_x, float off_y) {
 		WidgetContainer::render(window, off_x, off_y);
 	}
 };

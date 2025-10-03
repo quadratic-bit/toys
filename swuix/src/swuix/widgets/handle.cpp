@@ -25,8 +25,10 @@ Handle::Handle(HandledWidget *parent_, State *state_)
 DispatchResult Handle::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {
 	(void)e;
 	if (state->mouse.state == MouseState::Dragging && is_dragging) {
-		parent->frame.x += ctx.mouse_rel.x - start_drag_x;
-		parent->frame.y += ctx.mouse_rel.y - start_drag_y;
+		FRect new_frame = parent->frame;
+		new_frame.x += ctx.mouse_rel.x - start_drag_x;
+		new_frame.y += ctx.mouse_rel.y - start_drag_y;
+		parent->set_frame(new_frame);
 	}
 	return Widget::on_mouse_move(ctx, e);
 }

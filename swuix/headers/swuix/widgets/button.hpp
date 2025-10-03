@@ -35,7 +35,7 @@ public:
 	DispatchResult on_mouse_down(DispatcherCtx, const MouseDownEvent *);
 	DispatchResult on_mouse_up  (DispatcherCtx, const MouseUpEvent   *);
 
-	void render(Window *window, int off_x, int off_y) {
+	void render(Window *window, float off_x, float off_y) {
 		FRect outer = frect(frame.x + off_x - BTN_THICK, frame.y + off_y - BTN_THICK,
 				frame.w + BTN_THICK * 2, frame.h + BTN_THICK * 2);
 		FRect inner = frect(frame.x + off_x + BTN_THICK, frame.y + off_y + BTN_THICK,
