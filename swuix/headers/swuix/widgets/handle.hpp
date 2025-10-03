@@ -23,6 +23,10 @@ public:
 
 	DispatchResult on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e);
 
+	const char *title() const {
+		return "Handle";
+	}
+
 	void adjust_width(float new_width) {
 		frame.w = new_width;
 		child_at(0)->frame.x = frame.w - 20;
