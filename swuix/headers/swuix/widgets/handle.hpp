@@ -35,6 +35,7 @@ public:
 	void render(Window *window, float off_x, float off_y) {
 		window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
 		window->outline(frame, off_x, off_y, 2);
+		window->text(parent->title(), frame.x + off_x + 3, frame.y + off_y + 1);
 		WidgetContainer::render(window, off_x, off_y);
 	}
 };

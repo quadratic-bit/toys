@@ -21,7 +21,7 @@ public:
 	}
 
 	const char *title() const {
-		return "ScrollDemo";
+		return "Scroll";
 	}
 
 	void render_body(Window *window, float off_x, float off_y) {
