@@ -26,6 +26,9 @@ public:
 			: Widget(f, par, st), hovered(false), label(label_) {
 		action = new BtnCallbackAction(on_click_);
 	}
+	~Button() {
+		delete action;
+	}
 
 	const char *title() const {
 		return label;

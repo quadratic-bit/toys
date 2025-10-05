@@ -63,6 +63,8 @@ public:
 
 	~Window() {
 		delete pb;
+		TTF_CloseFont(font);
+		TTF_Quit();
 		SDL_DestroyRenderer(renderer);
 		SDL_DestroyWindow(window);
 		SDL_Quit();
