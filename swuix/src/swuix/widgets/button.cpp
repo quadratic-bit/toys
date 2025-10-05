@@ -30,5 +30,6 @@ DispatchResult Button::on_mouse_up(DispatcherCtx ctx, const MouseUpEvent *e) {
 	(void)e;
 	(void)ctx;
 	if (pressed) pressed = false;
+	if (state->mouse.capture == this) state->mouse.capture = NULL;
 	return PROPAGATE;
 }

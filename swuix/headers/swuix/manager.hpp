@@ -104,17 +104,28 @@ public:
 				state->mouse.pos = Point2f(ev.button.x, ev.button.y);
 				ensure_latest_mouse_pos(state->mouse.pos, root);
 				MouseDownEvent we(state->mouse.pos);
-				DispatcherCtx ctx = DispatcherCtx::from_absolute(we.mouse_abs, root->frame);
-				// TODO PERF: directly resolve relative coords and dispatch?
-				root->route(ctx, &we);
+				if (state->mouse.capture) {
+					Widget *capturer = state->mouse.capture;
+					DispatcherCtx ctx = capturer->resolve_capture_context();
+					capturer->route(ctx, &we);
+				} else {
+					DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
+					root->route(ctx, &we);
+				}
 				} break;
 			case SDL_EVENT_MOUSE_BUTTON_UP: {
 				state->mouse.state = MouseState::Idle;
 				state->mouse.pos = Point2f(ev.button.x, ev.button.y);
 				ensure_latest_mouse_pos(state->mouse.pos, root);
 				MouseUpEvent we;
-				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
-				root->route(ctx, &we);
+				if (state->mouse.capture) {
+					Widget *capturer = state->mouse.capture;
+					DispatcherCtx ctx = capturer->resolve_capture_context();
+					capturer->route(ctx, &we);
+				} else {
+					DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
+					root->route(ctx, &we);
+				}
 				} break;
 			}
 		} while (!state->exit_requested && SDL_PollEvent(&ev));

@@ -160,6 +160,8 @@ public:
 
 		return e->deliver(ctx, this);
 	}
+
+	DispatcherCtx resolve_capture_context() const;
 };
 
 inline DispatchResult MouseMoveEvent::deliver(DispatcherCtx ctx, Widget *w) {
