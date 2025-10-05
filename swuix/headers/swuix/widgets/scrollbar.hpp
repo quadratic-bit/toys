@@ -3,9 +3,8 @@
 #include <swuix/widgets/container.hpp>
 #include <swuix/widgets/button.hpp>
 
-const float SCROLLBAR_W     = 10.0f;
-const float SCROLL_B_H      = 10.0f;
-const float SCROLL_DELTA_PX = 20.0f;
+const float SCROLLBAR_W = 10.0f;
+const float SCROLL_B_H  = 10.0f;
 
 static inline const FRect scrollbar_box(FRect parent_box) {
 	FRect box;
@@ -39,12 +38,19 @@ class ScrollableWidget;  // forward-declare
 class Scrollbar : public WidgetContainer {
 public:
 	ScrollableWidget *owner;
+	ScrollbarSlider *slider;
 
 	Scrollbar(ScrollableWidget *parent_, State *state_);
 
 	const char *title() const {
 		return "Scrollbar";
 	}
+
+	float scroll_height() {
+		return frame.h - 2 * SCROLL_B_H;
+	}
+
+	float scroll_progress();
 
 	void render(Window *window, float off_x, float off_y) {
 		window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
@@ -67,7 +73,11 @@ public:
 
 	virtual void render_body(Window *window, float off_x, float off_y) = 0;
 
-	FRect clip() const { return viewport; }
+	FRect get_viewport() const { return viewport; }
+
+	float content_progress() const {
+		return viewport.y - frame.y;
+	}
 
 	void set_frame(FRect new_frame) {
 		float ydiff = viewport.y - frame.y;
@@ -87,19 +97,8 @@ public:
 		return scrollbar;
 	}
 
-	void scroll_up() {
-		float available = viewport.y - frame.y;
-		if (available <= 0) return;
-		if (available <= SCROLL_DELTA_PX) frame.y = viewport.y;
-		else frame.y += SCROLL_DELTA_PX;
-		layout();
-	}
-
-	void scroll_down() {
-		float available = (frame.y + frame.h) - (viewport.y + viewport.h);
-		if (available <= 0) return;
-		if (available <= SCROLL_DELTA_PX) frame.y = viewport.y + viewport.h - frame.h;
-		else frame.y -= SCROLL_DELTA_PX;
+	void scroll_y(float dy) {
+		frame.y = clamp(frame.y + dy, viewport.y + viewport.h - frame.h, viewport.y);
 		layout();
 	}
 
@@ -160,7 +159,7 @@ public:
 		return "Tall View";
 	}
 
-	FRect clip() const {
+	FRect get_viewport() const {
 		FRect h_viewport = viewport;
 		h_viewport.y -= HANDLE_H;
 		h_viewport.h += HANDLE_H;
@@ -168,11 +167,10 @@ public:
 	}
 
 	void layout() {
-		float progress_px = viewport.y - frame.y;
+		float progress_px = content_progress();
 		handle->frame.y = progress_px - HANDLE_H;
-		scrollbar->frame.y = viewport.y - frame.y;
-		float progress_per = progress_px / frame.h;
-		scrollbar->child_at(0)->frame.y = SCROLL_B_H + progress_per * (scrollbar->frame.h - 2 * SCROLL_B_H);
+		scrollbar->frame.y = progress_px;
+		scrollbar->slider->frame.y = SCROLL_B_H + scrollbar->scroll_progress();
 	}
 
 	size_t child_count() const {

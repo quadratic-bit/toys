@@ -118,7 +118,7 @@ public:
 	virtual size_t child_count() const { return 0; }
 	virtual Widget *child_at(size_t) const { return 0; }
 
-	virtual FRect clip() const { return frame; }
+	virtual FRect get_viewport() const { return frame; }
 	virtual void set_frame(FRect new_frame) { frame = new_frame; }
 	virtual void layout() {}
 
@@ -142,7 +142,7 @@ public:
 	virtual DispatchResult on_quit_request(DispatcherCtx, const QuitRequestEvent *) { return PROPAGATE; }
 
 	virtual DispatchResult route(DispatcherCtx ctx, Event *e) {
-		ctx.clip(clip());
+		ctx.clip(get_viewport());
 		DispatcherCtx here = ctx.with_offset(frame);
 
 		const size_t n = child_count();

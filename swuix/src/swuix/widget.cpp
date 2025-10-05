@@ -30,8 +30,7 @@ static DispatcherCtx _build_capture_context(const Widget *w, const Point2f &abs)
 	// ctx is currently in w->parent's coordinate space
 	DispatcherCtx ctx = _build_capture_context(w->parent, abs);
 
-	// Parent's clip is expressed in its parent-space; ctx is in that same space.
-	ctx.clip(w->parent->clip());
+	ctx.clip(w->parent->get_viewport());
 
 	ctx = ctx.with_offset(w->parent->frame);
 	return ctx;
@@ -39,6 +38,6 @@ static DispatcherCtx _build_capture_context(const Widget *w, const Point2f &abs)
 
 DispatcherCtx Widget::resolve_capture_context() const {
 	DispatcherCtx ctx = _build_capture_context(this, state->mouse.pos);
-	ctx.clip(this->clip());
+	ctx.clip(this->get_viewport());
 	return ctx;
 }

@@ -25,6 +25,10 @@ inline FRect intersect(const FRect &a, const FRect &b) {
 	return frect(left, top, cross_width, cross_height);
 }
 
+inline float clamp(float value, float lower, float upper) {
+	return std::min(std::max(value, lower), upper);
+}
+
 class Point2f {
 public:
 	float x;

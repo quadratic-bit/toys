@@ -45,7 +45,7 @@ protected:
 
 private:
 	DispatchResult route_minimized(DispatcherCtx ctx, Event *e) {
-		ctx.clip(clip());
+		ctx.clip(get_viewport());
 		DispatcherCtx here = ctx.with_offset(frame);
 
 		if (handle->route(here, e) == CONSUME) {
@@ -62,7 +62,7 @@ public:
 
 	virtual void render_body(Window *window, float off_x, float off_y) = 0;
 
-	FRect clip() const {
+	FRect get_viewport() const {
 		FRect handled_viewport = frame;
 		handled_viewport.y -= HANDLE_H;
 		handled_viewport.h += HANDLE_H;
