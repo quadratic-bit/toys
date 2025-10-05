@@ -17,7 +17,7 @@ Handle::Handle(HandledWidget *parent_, State *state_)
 		DraggableWidget(handle_box(parent_->frame), parent_, state_),
 		WidgetContainer(handle_box(parent_->frame), parent_, state_) {
 	static float w = 15, h = 10;
-	Button *btn_minimize = new Button(frect(frame.w - w - 5, 5, w, h), this, "-", state, new ToggleMinimize(parent_));
+	btn_minimize = new Button(frect(frame.w - w - 5, 5, w, h), this, "-", state, new ToggleMinimize(parent_));
 	Widget *btns[] = { btn_minimize };
 	this->append_children(make_children(btns));
 }

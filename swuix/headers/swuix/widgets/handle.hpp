@@ -18,18 +18,18 @@ static inline const FRect handle_box(FRect parent_box) {
 class HandledWidget;
 
 class Handle : public DraggableWidget, public WidgetContainer {
+	Button *btn_minimize;
 public:
 	Handle(HandledWidget *parent_, State *state_);
 
 	DispatchResult on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e);
 
-	const char *title() const {
-		return "Handle";
+	void layout() {
+		btn_minimize->frame.x = frame.w - 20;
 	}
 
-	void adjust_width(float new_width) {
-		frame.w = new_width;
-		child_at(0)->frame.x = frame.w - 20;
+	const char *title() const {
+		return "Handle";
 	}
 
 	void render(Window *window, float off_x, float off_y) {
@@ -72,6 +72,11 @@ public:
 	void render(Window *window, float off_x, float off_y) {
 		if (!minimized) render_body(window, off_x, off_y);
 		handle->render(window, frame.x + off_x, frame.y + off_y);
+	}
+
+	void layout() {
+		handle->frame.w = frame.w;
+		handle->layout();
 	}
 
 	Handle *handle_widget() {

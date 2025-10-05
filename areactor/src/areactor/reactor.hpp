@@ -315,7 +315,7 @@ public:
 			const Time t_sub_start = sim_now;
 			const Time t_sub_end   = sim_now + h;
 			frame.w = wall_pos(Side::RIGHT, t_sub_start);
-			handle_widget()->adjust_width(frame.w);
+			layout();
 
 			integrate_positions(t_sub_start, h);
 			handle_walls(t_sub_end);
@@ -330,7 +330,7 @@ public:
 		}
 
 		frame.w = wall_pos(Side::RIGHT, sim_now);
-		handle_widget()->adjust_width(frame.w);
+		layout();
 	}
 
 	Stat tally() const {
