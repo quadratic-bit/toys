@@ -108,12 +108,7 @@ public:
 
 	Widget(FRect frame_, Widget *parent_, State *state_)
 		: parent(parent_), state(state_), frame(frame_) {};
-	virtual ~Widget() {
-		size_t n = child_count();
-		for (size_t i = 0; i < n; ++i) {
-			delete child_at(i);
-		}
-	}
+	virtual ~Widget();
 
 	template<typename T, size_t N>
 	static std::vector<T> make_children(T const (&arr)[N]) {

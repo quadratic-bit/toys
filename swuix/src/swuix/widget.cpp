@@ -1,6 +1,19 @@
 #include <swuix/widget.hpp>
 #include <swuix/state.hpp>
 
+Widget::~Widget() {
+	size_t n = child_count();
+	for (size_t i = 0; i < n; ++i) {
+		delete child_at(i);
+	}
+	if (state->mouse.target == this) {
+		state->mouse.target = NULL;
+	}
+	if (state->mouse.capture == this) {
+		state->mouse.capture = NULL;
+	}
+}
+
 DispatchResult Widget::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {
 	(void)e;
 	if (!state->mouse.target && contains_point(ctx)) {
