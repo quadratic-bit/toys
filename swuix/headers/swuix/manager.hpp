@@ -25,6 +25,7 @@ class EventManager {
 		MouseMoveEvent we(abs);
 		DispatcherCtx ctx = DispatcherCtx::from_absolute(abs, root->frame);
 		root->route(ctx, &we);
+		if (!state->mouse.target) state->mouse.target = root;
 	}
 
 public:
