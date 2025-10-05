@@ -2,7 +2,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3_gfx/SDL3_gfxPrimitives.h>
 #include <SDL3_ttf/SDL_ttf.h>
-#include <cstdio>
+
 #include <stdexcept>
 #include <vector>
 

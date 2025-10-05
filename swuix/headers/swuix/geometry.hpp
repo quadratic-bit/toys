@@ -56,4 +56,8 @@ public:
 		x -= other.x;
 		y -= other.y;
 	}
+
+	bool operator==(const Point2f &other) {
+		return x == other.x && y == other.y;
+	}
 };

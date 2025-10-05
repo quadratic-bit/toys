@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdio>
+#include <swuix/geometry.hpp>
 #include <swuix/widget.hpp>
 #include <swuix/window/window.hpp>
 #include <swuix/state.hpp>
@@ -17,6 +17,15 @@ class EventManager {
 	}
 
 	inline Time frame_dur() const { return (Time)1 / (Time)FPS; }
+
+	void ensure_latest_mouse_pos(Point2f abs, Widget *root) {
+		if (state->mouse.pos == abs) return;
+		state->mouse.target = NULL;
+		state->mouse.pos = abs;
+		MouseMoveEvent we(abs);
+		DispatcherCtx ctx = DispatcherCtx::from_absolute(abs, root->frame);
+		root->route(ctx, &we);
+	}
 
 public:
 	EventManager(State *state_, int fps) : state(state_), FPS(fps) {
@@ -87,23 +96,23 @@ public:
 				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
 				root->route(ctx, &we);
 				} break;
-			case SDL_EVENT_MOUSE_MOTION: {
-				state->mouse.target = NULL;
-				state->mouse.pos = Point2f(ev.motion.x, ev.motion.y);
-				MouseMoveEvent we(state->mouse.pos);
-				DispatcherCtx ctx = DispatcherCtx::from_absolute(we.mouse_abs, root->frame);
-				root->route(ctx, &we);
-				} break;
+			case SDL_EVENT_MOUSE_MOTION:
+				ensure_latest_mouse_pos(Point2f(ev.motion.x, ev.motion.y), root);
+				break;
 			case SDL_EVENT_MOUSE_BUTTON_DOWN: {
 				state->mouse.state = MouseState::Dragging;
+				state->mouse.pos = Point2f(ev.button.x, ev.button.y);
+				ensure_latest_mouse_pos(state->mouse.pos, root);
 				MouseDownEvent we(state->mouse.pos);
 				DispatcherCtx ctx = DispatcherCtx::from_absolute(we.mouse_abs, root->frame);
 				// TODO PERF: directly resolve relative coords and dispatch?
 				root->route(ctx, &we);
 				} break;
 			case SDL_EVENT_MOUSE_BUTTON_UP: {
-				MouseUpEvent we;
 				state->mouse.state = MouseState::Idle;
+				state->mouse.pos = Point2f(ev.button.x, ev.button.y);
+				ensure_latest_mouse_pos(state->mouse.pos, root);
+				MouseUpEvent we;
 				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
 				root->route(ctx, &we);
 				} break;
