@@ -16,6 +16,8 @@ enum TextAlign { TA_LEFT, TA_CENTER, TA_RIGHT };
 #define DEBUG_ALPHA       (uint8_t)(255 * 0.5f)
 #define DEBUG_PATTERN_GAP 12.0f
 
+typedef SDL_Texture *SwuixTexture;
+
 static inline int round_int(float v) {
 	return (int)floorf(v + 0.5f);
 }
@@ -68,6 +70,26 @@ public:
 		SDL_DestroyRenderer(renderer);
 		SDL_DestroyWindow(window);
 		SDL_Quit();
+	}
+
+	SwuixTexture create_texture(int w, int h) {
+		SwuixTexture tex = SDL_CreateTexture(
+			renderer,
+			SDL_PIXELFORMAT_RGBA32,
+			SDL_TEXTUREACCESS_STREAMING,
+			w, h
+		);
+		if (tex) SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_NONE);
+		return tex;
+	}
+
+	void destroy_texture(SwuixTexture *tex) {
+		SDL_DestroyTexture(*tex);
+		*tex = NULL;
+	}
+
+	void render_texture(SwuixTexture tex, FRect *dest) {
+		SDL_RenderTexture(renderer, tex, NULL, dest);
 	}
 
 	static Time now() {
