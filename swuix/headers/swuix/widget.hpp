@@ -47,8 +47,11 @@ struct Event {
 };
 
 struct IdleEvent : public Event {
-	float dt_s;
-	IdleEvent(float dt_s_) : dt_s(dt_s_) {}
+	Time dt_s;
+	Time budget_s;
+	Time  deadline;
+	IdleEvent(Time dt_s_, Time budget_s_, Time deadline_)
+		: dt_s(dt_s_), budget_s(budget_s_), deadline(deadline_) {}
 	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
 };
 
@@ -180,9 +183,7 @@ inline DispatchResult KeyUpEvent::deliver(DispatcherCtx ctx, Widget *w) {
 }
 
 inline DispatchResult IdleEvent::deliver(DispatcherCtx ctx, Widget *w) {
-	DispatchResult res = w->on_idle(ctx, this);
-	//printf("[ON_IDLE] (%s) %s\n", typeid(*w).name(), w->title());
-	return res;
+	return w->on_idle(ctx, this);
 }
 
 inline DispatchResult QuitRequestEvent::deliver(DispatcherCtx ctx, Widget *w) {

@@ -20,11 +20,11 @@ int main() {
 	for (;;) {
 		evmgr.prepare_events();
 
-		while (!evmgr.exhaust_events(&root));
+		while (!evmgr.exhaust_events(&root)) {
+			evmgr.dispatch_idle(&root);
+		}
 
 		if (state.exit_requested) break;
-
-		evmgr.dispatch_idle(&root);
 
 		root.render(window, 0, 0);
 	}
