@@ -49,7 +49,7 @@ private:
 		ctx.clip(get_viewport());
 		DispatcherCtx here = ctx.with_offset(frame);
 
-		if (handle->route(here, e) == CONSUME) {
+		if (handle->broadcast(here, e) == CONSUME) {
 			return CONSUME;
 		}
 
@@ -93,9 +93,9 @@ public:
 		return handle;
 	}
 
-	DispatchResult route(DispatcherCtx ctx, Event *e) {
+	DispatchResult broadcast(DispatcherCtx ctx, Event *e) {
 		if (minimized) return route_minimized(ctx, e);
-		return Widget::route(ctx, e);
+		return Widget::broadcast(ctx, e);
 	}
 };
 

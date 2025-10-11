@@ -52,6 +52,7 @@ struct IdleEvent : public Event {
 	Time  deadline;
 	IdleEvent(Time dt_s_, Time budget_s_, Time deadline_)
 		: dt_s(dt_s_), budget_s(budget_s_), deadline(deadline_) {}
+
 	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
 };
 
@@ -62,17 +63,20 @@ struct QuitRequestEvent : Event {
 struct MouseMoveEvent : Event {
 	Point2f mouse_abs;
 	MouseMoveEvent(Point2f mouse_abs_) : mouse_abs(mouse_abs_) {}
+
 	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
 };
 
 struct MouseDownEvent : Event {
 	Point2f mouse_abs;
 	MouseDownEvent(Point2f mouse_abs_) : mouse_abs(mouse_abs_) {}
+
 	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
 };
 
 struct MouseUpEvent : Event {
 	MouseUpEvent() {}
+
 	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
 };
 
@@ -89,12 +93,14 @@ struct KeyDownEvent : KeyEvent {
 	bool repeat;
 	KeyDownEvent(int scancode_, int keycode_, uint32_t mods_, bool repeat_)
 		: KeyEvent(scancode_, keycode_, mods_), repeat(repeat_) {}
+
 	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
 };
 
 struct KeyUpEvent : KeyEvent {
 	KeyUpEvent(int scancode_, int keycode_, uint32_t mods_)
 		: KeyEvent(scancode_, keycode_, mods_) {}
+
 	DispatchResult deliver(DispatcherCtx ctx, Widget *w);
 };
 
@@ -111,6 +117,7 @@ public:
 
 	Widget(FRect frame_, Widget *parent_, State *state_)
 		: parent(parent_), state(state_), frame(frame_) {};
+
 	virtual ~Widget();
 
 	template<typename T, size_t N>
@@ -144,14 +151,14 @@ public:
 	virtual DispatchResult on_idle        (DispatcherCtx, const IdleEvent        *) { return PROPAGATE; }
 	virtual DispatchResult on_quit_request(DispatcherCtx, const QuitRequestEvent *) { return PROPAGATE; }
 
-	virtual DispatchResult route(DispatcherCtx ctx, Event *e) {
+	virtual DispatchResult broadcast(DispatcherCtx ctx, Event *e) {
 		ctx.clip(get_viewport());
 		DispatcherCtx here = ctx.with_offset(frame);
 
 		const size_t n = child_count();
 
 		for (size_t i = 0; i < n; ++i) {
-			if (child_at(i)->route(here, e) == CONSUME) {
+			if (child_at(i)->broadcast(here, e) == CONSUME) {
 				return CONSUME;
 			}
 		}

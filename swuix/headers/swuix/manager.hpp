@@ -24,7 +24,7 @@ class EventManager {
 		state->mouse.pos = abs;
 		MouseMoveEvent we(abs);
 		DispatcherCtx ctx = DispatcherCtx::from_absolute(abs, root->frame);
-		root->route(ctx, &we);
+		root->broadcast(ctx, &we);
 		if (!state->mouse.target) state->mouse.target = root;
 	}
 
@@ -81,7 +81,7 @@ public:
 		DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
 		IdleEvent idle_e(dt_s, remaining_s, deadline);
 
-		root->route(ctx, &idle_e);
+		root->broadcast(ctx, &idle_e);
 	}
 
 	bool handle_event(const SDL_Event &ev, Widget *root) {
@@ -90,19 +90,19 @@ public:
 		case SDL_EVENT_WINDOW_CLOSE_REQUESTED: {
 			QuitRequestEvent e;
 			DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
-			DispatchResult res = root->route(ctx, &e);
+			DispatchResult res = root->broadcast(ctx, &e);
 			if (res == PROPAGATE) state->exit_requested = true;
 			return true;
 			} break;
 		case SDL_EVENT_KEY_DOWN: {
 			KeyDownEvent we(ev.key.scancode, ev.key.key, ev.key.mod, ev.key.repeat);
 			DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
-			root->route(ctx, &we);
+			root->broadcast(ctx, &we);
 			} break;
 		case SDL_EVENT_KEY_UP: {
 			KeyUpEvent we(ev.key.scancode, ev.key.key, ev.key.mod);
 			DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
-			root->route(ctx, &we);
+			root->broadcast(ctx, &we);
 			} break;
 		case SDL_EVENT_MOUSE_MOTION:
 			ensure_latest_mouse_pos(Point2f(ev.motion.x, ev.motion.y), root);
@@ -115,10 +115,10 @@ public:
 			if (state->mouse.capture) {
 				Widget *capturer = state->mouse.capture;
 				DispatcherCtx ctx = capturer->resolve_capture_context();
-				capturer->route(ctx, &we);
+				capturer->broadcast(ctx, &we);
 			} else {
 				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
-				root->route(ctx, &we);
+				root->broadcast(ctx, &we);
 			}
 			} break;
 		case SDL_EVENT_MOUSE_BUTTON_UP: {
@@ -129,10 +129,10 @@ public:
 			if (state->mouse.capture) {
 				Widget *capturer = state->mouse.capture;
 				DispatcherCtx ctx = capturer->resolve_capture_context();
-				capturer->route(ctx, &we);
+				capturer->broadcast(ctx, &we);
 			} else {
 				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
-				root->route(ctx, &we);
+				root->broadcast(ctx, &we);
 			}
 			} break;
 		}
