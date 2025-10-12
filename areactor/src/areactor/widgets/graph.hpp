@@ -151,7 +151,7 @@ static inline int pos_mod(int a, int b) {
 	return (a % b + b) % b;
 }
 
-class LineGraph : public HandledWidget {
+class LineGraph : public TitledWidget {
 	double UNITS_PER_SECONDS;
 	int FPS;
 	double time_window_s;
@@ -249,7 +249,7 @@ public:
 	double x_axis_shift;
 
 	LineGraph(SDL_FRect dims, Widget *parent_, const char *label_y_, const char *title_, State *st, double x_axis_shift_ = 0.8, int fps = 60, double time_window_s_ = 5.0)
-			: Widget(dims, parent_, st), HandledWidget(dims, parent_, st), UNITS_PER_SECONDS(1.0), FPS(fps), time_window_s(time_window_s_),
+			: Widget(dims, parent_, st), TitledWidget(dims, parent_, st), UNITS_PER_SECONDS(1.0), FPS(fps), time_window_s(time_window_s_),
 			sample_count(0), buf(4096), label_y(label_y_), grap_title(title_), x_axis_shift(x_axis_shift_) {
 		x_axis.center = frame.y + frame.h * x_axis_shift;
 		x_axis.scale  = frame.w / time_window_s * UNITS_PER_SECONDS;
@@ -343,7 +343,7 @@ public:
 		}
 	}
 
-	void render_body(Window *window, float off_x, float off_y) {
+	void render(Window *window, float off_x, float off_y) {
 		window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
 		draw_grid(window, 1.0, label_y);
 		draw_axes(window);
@@ -354,6 +354,6 @@ public:
 
 	DispatchResult on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {
 		x_axis.center = frame.y + frame.h * x_axis_shift;
-		return HandledWidget::on_mouse_move(ctx, e);
+		return TitledWidget::on_mouse_move(ctx, e);
 	}
 };

@@ -37,7 +37,7 @@ inline void draw_particles(Window *window, Reactor *reactor) {
 	}
 }
 
-void Reactor::render_body(Window *window, float off_x, float off_y) {
+void Reactor::render(Window *window, float off_x, float off_y) {
 	// bg
 	window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
 

@@ -56,7 +56,7 @@ struct Stat {
 	double total_mass;
 	double kinetic;      // thermal kinetic energy
 	double temperature;  // instantaneous T
-	Vec2f   bulk_u;       // mass-weighted mean velocity
+	Vec2f  bulk_u;       // mass-weighted mean velocity
 	size_t n_circle;
 	size_t n_square;
 
@@ -74,7 +74,7 @@ struct WallSeg {
 	WallSeg() : t0(0), x0(0), v(0), gen(1) {}
 };
 
-class Reactor : public HandledWidget {
+class Reactor : public TitledWidget {
 	ParticleID seq;
 
 	WallSeg right_wall;
@@ -253,7 +253,7 @@ public:
 	}
 
 	Reactor(FRect rect, Widget *parent_, size_t n, State *s)
-			: Widget(rect, parent_, s), HandledWidget(rect, parent_, s), seq(0), right_probe() {
+			: Widget(rect, parent_, s), TitledWidget(rect, parent_, s), seq(0), right_probe() {
 		particles = new ParticleManager(16, 9, rect.w / (double)GRID_W, rect.h / (double)GRID_H);
 		sim_now = 0.0;
 
@@ -315,7 +315,7 @@ public:
 			const Time t_sub_start = sim_now;
 			const Time t_sub_end   = sim_now + h;
 			frame.w = wall_pos(Side::RIGHT, t_sub_start);
-			layout();
+			refresh_layout();
 
 			integrate_positions(t_sub_start, h);
 			handle_walls(t_sub_end);
@@ -330,7 +330,7 @@ public:
 		}
 
 		frame.w = wall_pos(Side::RIGHT, sim_now);
-		layout();
+		refresh_layout();
 	}
 
 	Stat tally() const {
@@ -420,5 +420,5 @@ public:
 	DispatchResult on_key_down(DispatcherCtx, const KeyDownEvent *);
 	DispatchResult on_key_up  (DispatcherCtx, const KeyUpEvent   *);
 
-	void render_body(Window *window, float off_x, float off_y);
+	void render(Window *window, float off_x, float off_y);
 };

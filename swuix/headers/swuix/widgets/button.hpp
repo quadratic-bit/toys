@@ -1,6 +1,11 @@
 #pragma once
 #include <swuix/widget.hpp>
 
+struct Action {
+	virtual ~Action() {}
+	virtual void apply(void *, Widget *) = 0;
+};
+
 static const int BTN_THICK = 1;
 
 class BtnCallbackAction : public Action {
@@ -26,12 +31,23 @@ public:
 			: Widget(f, par, st), hovered(false), label(label_) {
 		action = new BtnCallbackAction(on_click_);
 	}
+
+	Button(FRect f, Widget *par, const char *label_, State *st)
+			: Widget(f, par, st), hovered(false), label(label_) {
+		action = new BtnCallbackAction(NULL);
+	}
+
 	~Button() {
 		delete action;
 	}
 
 	const char *title() const {
 		return label;
+	}
+
+	void set_action(Action *a) {
+		delete action;
+		action = a;
 	}
 
 	DispatchResult on_mouse_move(DispatcherCtx, const MouseMoveEvent *);

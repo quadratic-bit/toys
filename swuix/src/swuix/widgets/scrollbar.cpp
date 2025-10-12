@@ -41,9 +41,9 @@ DispatchResult ScrollbarSlider::on_mouse_move(DispatcherCtx ctx, const MouseMove
 			parent->frame.h - SCROLL_B_H - frame.h
 		) - SCROLL_B_H;
 		float progress_per = progress_px / scrollbar->scroll_height();
-		float offset_parent_px = scrollbar->owner->frame.h * progress_per;
-		scrollbar->owner->frame.y = scrollbar->owner->viewport.y - offset_parent_px;
-		scrollbar->owner->layout();
+		float offset_parent_px = scrollbar->host->frame.h * progress_per;
+		scrollbar->host->frame.y = scrollbar->host->viewport.y - offset_parent_px;
+		scrollbar->host->refresh_layout();
 	}
         return Widget::on_mouse_move(ctx, e);
 }
@@ -59,19 +59,36 @@ DispatchResult ScrollbarSlider::on_mouse_down(DispatcherCtx ctx, const MouseDown
 	return PROPAGATE;
 }
 
-Scrollbar::Scrollbar(ScrollableWidget *parent_, State *state_)
-		: Widget(scrollbar_box(parent_->viewport), parent_, state_),
-		WidgetContainer(scrollbar_box(parent_->viewport), parent_, state_),
-		owner(parent_) {
+Scrollbar::Scrollbar(State *state_)
+		: Widget(scrollbar_box_zero(), NULL, state_),
+		Control(scrollbar_box_zero(), NULL, state_),
+		WidgetContainer(scrollbar_box_zero(), NULL, state_), host(NULL) {
 	static float h = SCROLL_B_H;
-	Button *btn_up   = new Button(frect(0, 0,           SCROLLBAR_W, h), this, "ʌ", state, new ScrollUp  (parent_));
-	Button *btn_down = new Button(frect(0, frame.h - h, SCROLLBAR_W, h), this, "v", state, new ScrollDown(parent_));
-	float slider_h = scroll_height() * (parent_->viewport.h / parent_->frame.h);
-	slider = new ScrollbarSlider(frect(0, h, SCROLLBAR_W, slider_h), this, state);
-	Widget *btns[] = { slider, btn_up, btn_down };
+
+	slider = new ScrollbarSlider(frect(0, h, SCROLLBAR_W, 0), this, state);
+
+	Widget *btns[] = { slider };
+	this->append_children(make_children(btns));
+}
+
+void Scrollbar::attach_to(ControlledWidget *host_) {
+	ScrollableWidget *scrollable = dynamic_cast<ScrollableWidget*>(host_);
+	if (!scrollable) throw new TraitCastError("host_ must be scrollable");
+	host = scrollable;
+	host_->attach(this);
+
+	frame = scrollbar_box(host_->frame);
+
+	static float h = SCROLL_B_H;
+	Button *btn_up   = new Button(frect(0, 0,           SCROLLBAR_W, h), this, "ʌ", state, new ScrollUp  (host));
+	Button *btn_down = new Button(frect(0, frame.h - h, SCROLLBAR_W, h), this, "v", state, new ScrollDown(host));
+
+	slider->frame.h = scroll_height() * (host->viewport.h / host->frame.h);
+
+	Widget *btns[] = { btn_up, btn_down };
 	this->append_children(make_children(btns));
 }
 
 float Scrollbar::scroll_progress() {
-	return owner->content_progress() / owner->frame.h * scroll_height();
+	return host->content_progress() / host->frame.h * scroll_height();
 }

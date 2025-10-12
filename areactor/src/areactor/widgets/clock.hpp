@@ -8,12 +8,12 @@
 
 #include "linalg/vectors.hpp"
 
-class Clock : public HandledWidget {
+class Clock : public TitledWidget {
 public:
 	time_t time_now;
 
 	Clock(FRect rect, Widget *parent_, State *s)
-			: Widget(rect, parent_, s), HandledWidget(rect, parent_, s) {
+			: Widget(rect, parent_, s), TitledWidget(rect, parent_, s) {
 		time(&time_now);
 	}
 
@@ -28,7 +28,7 @@ public:
 		return PROPAGATE;
 	}
 
-	void render_body(Window *window, float off_x, float off_y) {
+	void render(Window *window, float off_x, float off_y) {
 		window->clear_rect(frame, off_x, off_y, CLR_PLATINUM);
 		window->outline(frame, off_x, off_y, 2);
 		window->draw_circle_rgb(frame.x + off_x + frame.w / 2, frame.y + off_y + frame.h / 2, 45, CLR_NIGHT);

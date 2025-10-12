@@ -35,10 +35,10 @@ static void cb_colder(void *st, Widget *d) {
 }
 
 
-class ToolboxWidget : public HandledContainer {
+class ToolboxWidget : public TitledContainer {
 public:
 	ToolboxWidget(FRect rect, Widget *parent_, State *state_)
-			: Widget(rect, parent_, state_), HandledContainer(rect, parent_, state_) {
+			: Widget(rect, parent_, state_), TitledContainer(rect, parent_, state_) {
 		Button *btn_left    = new Button(frect(20, 10, 50, 25), NULL, "<-",   state, cb_sub);
 		Button *btn_right   = new Button(frect(80, 10, 50, 25), NULL, "->",   state, cb_add);
 
@@ -56,13 +56,10 @@ public:
 		return "Toolbox";
 	}
 
-	void render_body(Window *window, float off_x, float off_y) {
+	void render(Window *window, float off_x, float off_y) {
 		// body
 		window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
 		window->outline(frame, off_x, off_y, 2);
-
-		// children
-		HandledContainer::render_body(window, off_x, off_y);
 	}
 };
 

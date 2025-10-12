@@ -19,7 +19,8 @@ struct State {
 	Time       now;
 	MouseState mouse;
 	bool       exit_requested;
+	Window     *window;
 
-	State() : now(0), mouse(), exit_requested(false) {}
-	State(Time now_) : now(now_), mouse() {}
+	State(Window *window_) : now(0), mouse(), exit_requested(false), window(window_) {}
+	State(Time now_, Window *window_) : now(now_), mouse(), exit_requested(false), window(window_) {}
 };

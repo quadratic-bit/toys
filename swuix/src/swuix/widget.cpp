@@ -2,10 +2,6 @@
 #include <swuix/state.hpp>
 
 Widget::~Widget() {
-	size_t n = child_count();
-	for (size_t i = 0; i < n; ++i) {
-		delete child_at(i);
-	}
 	if (state->mouse.target == this) {
 		state->mouse.target = NULL;
 	}
@@ -16,19 +12,19 @@ Widget::~Widget() {
 
 DispatchResult Widget::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {
 	(void)e;
-	if (!state->mouse.target && contains_point(ctx)) {
+	if (!state->mouse.target && contains_mouse(ctx)) {
 		state->mouse.target = this;
 	}
 	return PROPAGATE;
 }
 
-static DispatcherCtx _build_capture_context(const Widget *w, const Point2f &abs) {
+static DispatcherCtx _build_context(const Widget *w, const Point2f &abs, Window *window) {
 	if (w->parent == w) {
-		return DispatcherCtx::from_absolute(abs, w->frame);
+		return DispatcherCtx::from_absolute(abs, w->frame, window);
 	}
 
 	// ctx is currently in w->parent's coordinate space
-	DispatcherCtx ctx = _build_capture_context(w->parent, abs);
+	DispatcherCtx ctx = _build_context(w->parent, abs, window);
 
 	ctx.clip(w->parent->get_viewport());
 
@@ -36,8 +32,8 @@ static DispatcherCtx _build_capture_context(const Widget *w, const Point2f &abs)
 	return ctx;
 }
 
-DispatcherCtx Widget::resolve_capture_context() const {
-	DispatcherCtx ctx = _build_capture_context(this, state->mouse.pos);
+DispatcherCtx Widget::resolve_context(Window *w) const {
+	DispatcherCtx ctx = _build_context(this, state->mouse.pos, w);
 	ctx.clip(this->get_viewport());
 	return ctx;
 }

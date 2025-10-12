@@ -13,10 +13,10 @@ struct ReactorState : public State {
 
 	Reactor *reactor;
 
-	ReactorState() : State(), wall_speed(0), wall_speed_changed(false), add_particle(false),
+	ReactorState(Window *w) : State(w), wall_speed(0), wall_speed_changed(false), add_particle(false),
 			delete_particle(false), reactor(NULL) {}
 
-	ReactorState(Time now_) : State(now_), wall_speed(0), wall_speed_changed(false), add_particle(false),
+	ReactorState(Window *w, Time now_) : State(now_, w), wall_speed(0), wall_speed_changed(false), add_particle(false),
 			delete_particle(false), reactor(NULL) {}
 
 	void add_to_wall_speed(int add) {

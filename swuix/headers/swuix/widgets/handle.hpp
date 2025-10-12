@@ -1,4 +1,5 @@
 #pragma once
+#include <swuix/widgets/controlled.hpp>
 #include <swuix/widgets/draggable.hpp>
 #include <swuix/widgets/container.hpp>
 #include <swuix/widgets/button.hpp>
@@ -7,126 +8,97 @@ const float HANDLE_H = 20.0f;
 
 static inline const FRect handle_box(FRect parent_box) {
 	FRect box;
-	box.x = 0;
+	box.x = 0.0f;
 	box.y = -HANDLE_H;
 	box.w = parent_box.w;
 	box.h = HANDLE_H;
 	return box;
 }
 
-// forward-declare
-class HandledWidget;
+static inline const FRect handle_box_zero() {
+	FRect box;
+	box.x = 0.0f;
+	box.y = -HANDLE_H;
+	box.w = 0.0f;
+	box.h = HANDLE_H;
+	return box;
+}
 
-class Handle : public DraggableWidget, public WidgetContainer {
+class MinimizableWidget; // forward-declare
+
+class TitleBar : public Control, public DraggableWidget, public WidgetContainer {
 	Button *btn_minimize;
+	MinimizableWidget *host;
+
 public:
-	Handle(HandledWidget *parent_, State *state_);
+	TitleBar(State *state_);
 
 	DispatchResult on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e);
 
-	void layout() {
-		btn_minimize->frame.x = frame.w - 20;
-	}
+	DispatchResult on_layout(DispatcherCtx, const LayoutEvent *);
+
+	void attach_to(ControlledWidget *host_);
 
 	const char *title() const {
-		return "Handle";
+		return "Title bar";
 	}
 
-	void render(Window *window, float off_x, float off_y) {
-		window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
-		window->outline(frame, off_x, off_y, 2);
-		window->text(parent->title(), frame.x + off_x + 3, frame.y + off_y + 1);
-		WidgetContainer::render(window, off_x, off_y);
-	}
+	void render(Window *window, float off_x, float off_y);
 };
 
-class HandledWidget : public virtual Widget {
-protected:
-	Handle *handle;
-
-private:
-	DispatchResult route_minimized(DispatcherCtx ctx, Event *e) {
-		ctx.clip(get_viewport());
-		DispatcherCtx here = ctx.with_offset(frame);
-
-		if (handle->broadcast(here, e) == CONSUME) {
-			return CONSUME;
-		}
-
-		return PROPAGATE;
-	}
+class MinimizableWidget : public virtual Widget {
 public:
 	bool minimized;
-	HandledWidget(FRect dim_, Widget *parent_, State *state_)
-			: Widget(dim_, parent_, state_), handle(new Handle(this, state_)), minimized(false) {
+	MinimizableWidget(FRect dim_, Widget *parent_, State *state_)
+			: Widget(dim_, parent_, state_), minimized(false) {
 	}
 
-	virtual void render_body(Window *window, float off_x, float off_y) = 0;
-
-	FRect get_viewport() const {
-		FRect handled_viewport = frame;
-		handled_viewport.y -= HANDLE_H;
-		handled_viewport.h += HANDLE_H;
-		return handled_viewport;
+	DispatchResult on_render(DispatcherCtx ctx, const RenderEvent *e) {
+		if (minimized) return PROPAGATE;
+		return Widget::on_render(ctx, e);
 	}
 
-	void render(Window *window, float off_x, float off_y) {
-		if (!minimized) render_body(window, off_x, off_y);
-		handle->render(window, frame.x + off_x, frame.y + off_y);
-	}
-
-	void layout() {
-		handle->frame.w = frame.w;
-		handle->layout();
-	}
-
-	Handle *handle_widget() {
-		return handle;
-	}
-	
-	size_t child_count() const {
-		return 1;
-	}
-
-	Widget *child_at(size_t i) const {
-		assert(i == 0);
-		return handle;
-	}
-
-	DispatchResult broadcast(DispatcherCtx ctx, Event *e) {
-		if (minimized) return route_minimized(ctx, e);
-		return Widget::broadcast(ctx, e);
+	DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
+		if (minimized) return PROPAGATE;
+		return Widget::broadcast(ctx, e, reversed);
 	}
 };
 
-class HandledContainer : public HandledWidget, public WidgetContainer {
-public:
-	HandledContainer(FRect rect, Widget *parent_, State *state_)
-		: Widget(rect, parent_, state_), HandledWidget(rect, parent_, state_), WidgetContainer(rect, parent_, state_) {}
+class TitledWidget : public MinimizableWidget, public ControlledWidget {
+	TitleBar *titlebar;
 
-	HandledContainer(FRect rect, Widget *parent_, std::vector<Widget*> children_, State *state_)
-			: Widget(rect, parent_, state_), HandledWidget(rect, parent_, state_), WidgetContainer(rect, parent_, children_, state_) {}
+public:
+	TitledWidget(FRect content_frame_, Widget *parent_, State *state_)
+			: Widget(content_frame_, parent_, state_),
+			MinimizableWidget(content_frame_, parent_, state_),
+			ControlledWidget(content_frame_, parent_, state_) {
+		titlebar = new TitleBar(state_);
+		titlebar->attach_to(this);
+	}
+
+	DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
+		if (minimized) return PROPAGATE;
+		return ControlledWidget::broadcast(ctx, e, reversed);
+	}
 
 	const char *title() const {
-		return "View";
+		return "Titled widget";
+	}
+};
+
+class TitledContainer : public MinimizableWidget, public ControlledContainer {
+public:
+	TitledContainer(FRect content_frame_, Widget *parent_, State *state_)
+			: Widget(content_frame_, parent_, state_),
+			MinimizableWidget(content_frame_, parent_, state_),
+			ControlledContainer(content_frame_, parent_, state_) {}
+
+	DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
+		if (minimized) return PROPAGATE;
+		return ControlledContainer::broadcast(ctx, e, reversed);
 	}
 
-	size_t child_count() const {
-		return WidgetContainer::child_count() + 1;
-	}
-
-	Widget *child_at(size_t i) const {
-		if (i == child_count() - 1) {
-			return HandledWidget::child_at(0);
-		}
-		return WidgetContainer::child_at(i);
-	}
-
-	void render(Window *window, float off_x, float off_y) {
-		HandledWidget::render(window, off_x, off_y);
-	}
-
-	void render_body(Window *window, float off_x, float off_y) {
-		WidgetContainer::render(window, off_x, off_y);
+	const char *title() const {
+		return "Titled container";
 	}
 };

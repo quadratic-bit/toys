@@ -23,7 +23,7 @@ class EventManager {
 		state->mouse.target = NULL;
 		state->mouse.pos = abs;
 		MouseMoveEvent we(abs);
-		DispatcherCtx ctx = DispatcherCtx::from_absolute(abs, root->frame);
+		DispatcherCtx ctx = DispatcherCtx::from_absolute(abs, root->frame, state->window);
 		root->broadcast(ctx, &we);
 		if (!state->mouse.target) state->mouse.target = root;
 	}
@@ -34,6 +34,14 @@ public:
 		const Time now = Window::now();
 		last_tick = now;
 		next_frame = now + f;
+	}
+
+	void render(Widget *root) {
+		state->window->clear();
+		RenderEvent e;
+		DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame, state->window);
+		root->broadcast(ctx, &e, true);
+		state->window->present();
 	}
 
 	void prepare_events() {
@@ -78,7 +86,7 @@ public:
 
 		const Time deadline = next_frame - SAFETY_MARGIN_S;
 
-		DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
+		DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame, state->window);
 		IdleEvent idle_e(dt_s, remaining_s, deadline);
 
 		root->broadcast(ctx, &idle_e);
@@ -89,19 +97,19 @@ public:
 		case SDL_EVENT_QUIT:
 		case SDL_EVENT_WINDOW_CLOSE_REQUESTED: {
 			QuitRequestEvent e;
-			DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
+			DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame, state->window);
 			DispatchResult res = root->broadcast(ctx, &e);
 			if (res == PROPAGATE) state->exit_requested = true;
 			return true;
 			} break;
 		case SDL_EVENT_KEY_DOWN: {
 			KeyDownEvent we(ev.key.scancode, ev.key.key, ev.key.mod, ev.key.repeat);
-			DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
+			DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame, state->window);
 			root->broadcast(ctx, &we);
 			} break;
 		case SDL_EVENT_KEY_UP: {
 			KeyUpEvent we(ev.key.scancode, ev.key.key, ev.key.mod);
-			DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
+			DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame, state->window);
 			root->broadcast(ctx, &we);
 			} break;
 		case SDL_EVENT_MOUSE_MOTION:
@@ -114,10 +122,10 @@ public:
 			MouseDownEvent we(state->mouse.pos);
 			if (state->mouse.capture) {
 				Widget *capturer = state->mouse.capture;
-				DispatcherCtx ctx = capturer->resolve_capture_context();
+				DispatcherCtx ctx = capturer->resolve_context(state->window);
 				capturer->broadcast(ctx, &we);
 			} else {
-				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
+				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame, state->window);
 				root->broadcast(ctx, &we);
 			}
 			} break;
@@ -128,10 +136,10 @@ public:
 			MouseUpEvent we;
 			if (state->mouse.capture) {
 				Widget *capturer = state->mouse.capture;
-				DispatcherCtx ctx = capturer->resolve_capture_context();
+				DispatcherCtx ctx = capturer->resolve_context(state->window);
 				capturer->broadcast(ctx, &we);
 			} else {
-				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame);
+				DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame, state->window);
 				root->broadcast(ctx, &we);
 			}
 			} break;

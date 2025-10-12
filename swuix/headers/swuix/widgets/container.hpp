@@ -2,6 +2,7 @@
 #include <swuix/widget.hpp>
 
 class WidgetContainer : public virtual Widget {
+protected:
 	std::vector<Widget*> children;
 public:
 	WidgetContainer(FRect f, Widget *par, State *st) : Widget(f, par, st) {}
@@ -21,19 +22,29 @@ public:
 		}
 	}
 
-	size_t child_count() const {
-		return children.size();
-	}
+	DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
+		ctx.clip(get_viewport());
 
-	Widget *child_at(size_t i) const {
-		return children[i];
-	}
+		DispatcherCtx local_ctx = ctx.with_offset(frame);
 
-	void render(Window *window, float off_x, float off_y) {
-		const int n = (int)child_count();
-		for (int i = n - 1; i >= 0; --i) {
-			Widget *ch = child_at(i);
-			ch->render(window, frame.x + off_x, frame.y + off_y);
+		if (reversed) {
+			if (e->deliver(ctx, this) == CONSUME) return CONSUME;
+
+			for (int i = (int)children.size() - 1; i >= 0; --i) {
+				if (children[i]->broadcast(local_ctx, e) == CONSUME) {
+					return CONSUME;
+				}
+			}
+
+			return PROPAGATE;
 		}
+
+		for (size_t i = 0; i < children.size(); ++i) {
+			if (children[i]->broadcast(local_ctx, e) == CONSUME) {
+				return CONSUME;
+			}
+		}
+
+		return e->deliver(ctx, this);
 	}
 };
