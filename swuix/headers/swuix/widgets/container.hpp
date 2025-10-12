@@ -31,7 +31,7 @@ public:
 			if (e->deliver(ctx, this) == CONSUME) return CONSUME;
 
 			for (int i = (int)children.size() - 1; i >= 0; --i) {
-				if (children[i]->broadcast(local_ctx, e) == CONSUME) {
+				if (children[i]->broadcast(local_ctx, e, true) == CONSUME) {
 					return CONSUME;
 				}
 			}

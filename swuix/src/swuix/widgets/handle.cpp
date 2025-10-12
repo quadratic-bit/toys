@@ -50,6 +50,7 @@ void TitleBar::attach_to(ControlledWidget *host_) {
 	host_->attach(this);
 	btn_minimize->set_action(new ToggleMinimize(host));
 	frame = handle_box(host_->frame);
+	host_->refresh_layout();
 }
 
 void TitleBar::render(Window *window, float off_x, float off_y) {

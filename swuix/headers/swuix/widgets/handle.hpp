@@ -50,8 +50,7 @@ class MinimizableWidget : public virtual Widget {
 public:
 	bool minimized;
 	MinimizableWidget(FRect dim_, Widget *parent_, State *state_)
-			: Widget(dim_, parent_, state_), minimized(false) {
-	}
+			: Widget(dim_, parent_, state_), minimized(false) {}
 
 	DispatchResult on_render(DispatcherCtx ctx, const RenderEvent *e) {
 		if (minimized) return PROPAGATE;
@@ -77,8 +76,22 @@ public:
 	}
 
 	DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
-		if (minimized) return PROPAGATE;
-		return ControlledWidget::broadcast(ctx, e, reversed);
+		ctx.clip(get_viewport());
+		DispatcherCtx local_ctx = ctx.with_offset(frame);
+
+		if (!minimized) {
+			return ControlledWidget::broadcast(ctx, e, reversed);
+		}
+
+		if (reversed) {
+			for (int i = (int)controls.size() - 1; i >= 0; --i)
+				if (controls[i]->broadcast(local_ctx, e, true) == CONSUME) return CONSUME;
+			return PROPAGATE;
+		} else {
+			for (size_t i = 0; i < controls.size(); ++i)
+				if (controls[i]->broadcast(local_ctx, e) == CONSUME) return CONSUME;
+			return PROPAGATE;
+		}
 	}
 
 	const char *title() const {
@@ -87,15 +100,34 @@ public:
 };
 
 class TitledContainer : public MinimizableWidget, public ControlledContainer {
+	TitleBar *titlebar;
+
 public:
 	TitledContainer(FRect content_frame_, Widget *parent_, State *state_)
 			: Widget(content_frame_, parent_, state_),
 			MinimizableWidget(content_frame_, parent_, state_),
-			ControlledContainer(content_frame_, parent_, state_) {}
+			ControlledContainer(content_frame_, parent_, state_) {
+		titlebar = new TitleBar(state_);
+		titlebar->attach_to(this);
+	}
 
 	DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
-		if (minimized) return PROPAGATE;
-		return ControlledContainer::broadcast(ctx, e, reversed);
+		ctx.clip(get_viewport());
+		DispatcherCtx local_ctx = ctx.with_offset(frame);
+
+		if (!minimized) {
+			return ControlledContainer::broadcast(ctx, e, reversed);
+		}
+
+		if (reversed) {
+			for (int i = (int)controls.size() - 1; i >= 0; --i)
+				if (controls[i]->broadcast(local_ctx, e, true) == CONSUME) return CONSUME;
+			return PROPAGATE;
+		} else {
+			for (size_t i = 0; i < controls.size(); ++i)
+				if (controls[i]->broadcast(local_ctx, e) == CONSUME) return CONSUME;
+			return PROPAGATE;
+		}
 	}
 
 	const char *title() const {

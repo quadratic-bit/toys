@@ -125,7 +125,7 @@ public:
 	FRect   frame;  // `x` and `y` are relative to `parent`
 
 	Widget(FRect frame_, Widget *parent_, State *state_)
-		: parent(parent_), state(state_), frame(frame_) {};
+		: parent(parent_ ? parent_ : this), state(state_), frame(frame_) {};
 
 	virtual ~Widget();
 
@@ -144,6 +144,10 @@ public:
 		FRect view = ctx.viewport;
 		return rel.x >= view.x && rel.x <= view.x + view.w
 			&& rel.y >= view.y && rel.y <= view.y + view.h;
+		// FIXME
+		//Point2f rel = ctx.mouse_rel;
+		//return rel.x >= frame.x && rel.x <= frame.x + frame.w
+		//	&& rel.y >= frame.y && rel.y <= frame.y + frame.h;
 	}
 
 	virtual void render(Window *window, float off_x, float off_y) = 0;

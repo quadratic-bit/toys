@@ -83,8 +83,6 @@ void Scrollbar::attach_to(ControlledWidget *host_) {
 	Button *btn_up   = new Button(frect(0, 0,           SCROLLBAR_W, h), this, "ʌ", state, new ScrollUp  (host));
 	Button *btn_down = new Button(frect(0, frame.h - h, SCROLLBAR_W, h), this, "v", state, new ScrollDown(host));
 
-	slider->frame.h = scroll_height() * (host->viewport.h / host->frame.h);
-
 	Widget *btns[] = { btn_up, btn_down };
 	this->append_children(make_children(btns));
 }

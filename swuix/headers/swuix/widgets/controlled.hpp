@@ -14,10 +14,6 @@ public:
 	Control(FRect f, Widget *par, State *st) : Widget(f, par, st) {}
 
 	virtual void attach_to(ControlledWidget *host) = 0;
-
-	const char *title() const {
-		return "Control";
-	}
 };
 
 class ControlledWidget : public virtual Widget {
@@ -45,7 +41,7 @@ public:
 			if (e->deliver(ctx, this) == CONSUME) return CONSUME;
 
 			for (int i = (int)controls.size() - 1; i >= 0; --i) {
-				if (controls[i]->broadcast(local_ctx, e) == CONSUME) {
+				if (controls[i]->broadcast(local_ctx, e, true) == CONSUME) {
 					return CONSUME;
 				}
 			}
@@ -83,13 +79,13 @@ public:
 			if (e->deliver(ctx, this) == CONSUME) return CONSUME;
 
 			for (int i = (int)children.size() - 1; i >= 0; --i) {
-				if (children[i]->broadcast(local_ctx, e) == CONSUME) {
+				if (children[i]->broadcast(local_ctx, e, true) == CONSUME) {
 					return CONSUME;
 				}
 			}
 
 			for (int i = (int)controls.size() - 1; i >= 0; --i) {
-				if (controls[i]->broadcast(local_ctx, e) == CONSUME) {
+				if (controls[i]->broadcast(local_ctx, e, true) == CONSUME) {
 					return CONSUME;
 				}
 			}
@@ -97,14 +93,14 @@ public:
 			return PROPAGATE;
 		}
 
-		for (size_t i = 0; i < children.size(); ++i) {
-			if (children[i]->broadcast(local_ctx, e) == CONSUME) {
+		for (size_t i = 0; i < controls.size(); ++i) {
+			if (controls[i]->broadcast(local_ctx, e) == CONSUME) {
 				return CONSUME;
 			}
 		}
 
-		for (size_t i = 0; i < controls.size(); ++i) {
-			if (controls[i]->broadcast(local_ctx, e) == CONSUME) {
+		for (size_t i = 0; i < children.size(); ++i) {
+			if (children[i]->broadcast(local_ctx, e) == CONSUME) {
 				return CONSUME;
 			}
 		}

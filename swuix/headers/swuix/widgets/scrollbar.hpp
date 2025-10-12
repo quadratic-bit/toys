@@ -68,6 +68,16 @@ public:
 		//WidgetContainer::render(window, off_x, off_y);
 		window->outline(frame, off_x, off_y, 2);
 	}
+
+	DispatchResult on_layout(DispatcherCtx, const LayoutEvent *) {
+		if (children.size() < 3) return PROPAGATE;
+		static float h = SCROLL_B_H;
+		Widget *btn_up   = children[1];
+		Widget *btn_down = children[2];
+		btn_up->frame.y = 0;
+		btn_down->frame.y = frame.h - h;
+		return PROPAGATE;
+	}
 };
 
 class ScrollableWidget : public virtual Widget {
@@ -110,23 +120,37 @@ public:
 		titlebar = new TitleBar(state_);
 		scrollbar = new Scrollbar(state_);
 
-		titlebar->attach_to(this);
+		// NOTE: don't change the order of the following two lines!
+		// The line `titlebar->attach_to(...)` calls layout, which
+		// depends on the scrollbar's host, which is not set until
+		// scrollbar is attached
 		scrollbar->attach_to(this);
+		titlebar->attach_to(this);
 	}
 
 	DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
-		if (minimized) return PROPAGATE;
-		return ControlledContainer::broadcast(ctx, e, reversed);
+		ctx.clip(get_viewport());
+		DispatcherCtx local_ctx = ctx.with_offset(frame);
+
+		if (!minimized) {
+			return ControlledContainer::broadcast(ctx, e, reversed);
+		}
+
+		return titlebar->broadcast(local_ctx, e, reversed);
 	}
 
 	const char *title() const {
 		return "Tall view";
 	}
 
-	void layout() {
+	DispatchResult on_layout(DispatcherCtx, const LayoutEvent *) {
 		float progress_px = content_progress();
 		titlebar->frame.y = progress_px - HANDLE_H;
 		scrollbar->frame.y = progress_px;
+		scrollbar->frame.h = viewport.h;
+		scrollbar->slider->frame.h = scrollbar->scroll_height() * (viewport.h / frame.h);
 		scrollbar->slider->frame.y = SCROLL_B_H + scrollbar->scroll_progress();
+		scrollbar->refresh_layout();
+		return PROPAGATE;
 	}
 };
