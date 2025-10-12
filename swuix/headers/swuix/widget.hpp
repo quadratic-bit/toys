@@ -16,12 +16,31 @@ struct DispatcherCtx {
 	FRect   viewport;
 	Window *window;
 
-	void clip(FRect frame) {
-		viewport = intersect(viewport, frame);
+	FRect prev_clip;
+
+	~DispatcherCtx() {
+		if (window) window->clip(transform(prev_clip));
 	}
 
-	Point2f offset() {
+	void set_viewport(FRect frame) {
+		viewport = frame;
+		if (window) window->clip(transform(viewport));
+	}
+
+	void clip(FRect frame) {
+		viewport = intersect(viewport, frame);
+		if (window) window->clip(transform(viewport));
+	}
+
+	Point2f offset() const {
 		return mouse_abs - mouse_rel;
+	}
+
+	FRect transform(FRect rect) const {
+		Point2f off = offset();
+		rect.x += off.x;
+		rect.y += off.y;
+		return rect;
 	}
 
 	DispatcherCtx with_offset(FRect frame) const {
@@ -30,13 +49,15 @@ struct DispatcherCtx {
 		c.mouse_rel.y -= frame.y;
 		c.viewport.x -= frame.x;
 		c.viewport.y -= frame.y;
+		c.prev_clip.x -= frame.x;
+		c.prev_clip.y -= frame.y;
 		return c;
 	}
 
 	static DispatcherCtx from_absolute(Point2f abs, FRect clip, Window *window) {
 		DispatcherCtx c;
 		c.mouse_abs = c.mouse_rel = abs;
-		c.viewport = clip;
+		c.viewport = c.prev_clip = clip;
 		c.window = window;
 		return c;
 	}
@@ -134,7 +155,14 @@ public:
 		return std::vector<T>(arr, arr + N);
 	}
 
-	virtual FRect get_viewport() const { return frame; }
+	virtual FRect get_viewport() const {
+		FRect v = frame;
+		v.x -= 1;
+		v.y -= 1;
+		v.w += 2;
+		v.h += 2;
+		return v;
+	}
 	virtual void set_frame(FRect new_frame) { frame = new_frame; }
 
 	virtual const char *title() const = 0;
@@ -144,10 +172,6 @@ public:
 		FRect view = ctx.viewport;
 		return rel.x >= view.x && rel.x <= view.x + view.w
 			&& rel.y >= view.y && rel.y <= view.y + view.h;
-		// FIXME
-		//Point2f rel = ctx.mouse_rel;
-		//return rel.x >= frame.x && rel.x <= frame.x + frame.w
-		//	&& rel.y >= frame.y && rel.y <= frame.y + frame.h;
 	}
 
 	virtual void render(Window *window, float off_x, float off_y) = 0;

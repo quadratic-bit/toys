@@ -33,12 +33,16 @@ public:
 	}
 
 	DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
-		ctx.clip(get_viewport());
-
-		DispatcherCtx local_ctx = ctx.with_offset(frame);
+		DispatcherCtx local_ctx;
 
 		if (reversed) {
+			FRect prev_rect = ctx.viewport;
+			ctx.clip(get_viewport());
+
 			if (e->deliver(ctx, this) == CONSUME) return CONSUME;
+
+			ctx.set_viewport(prev_rect);
+			local_ctx = ctx.with_offset(frame);
 
 			for (int i = (int)controls.size() - 1; i >= 0; --i) {
 				if (controls[i]->broadcast(local_ctx, e, true) == CONSUME) {
@@ -49,11 +53,15 @@ public:
 			return PROPAGATE;
 		}
 
+		local_ctx = ctx.with_offset(frame);
+
 		for (size_t i = 0; i < controls.size(); ++i) {
 			if (controls[i]->broadcast(local_ctx, e) == CONSUME) {
 				return CONSUME;
 			}
 		}
+
+		ctx.clip(get_viewport());
 
 		return e->deliver(ctx, this);
 	}
@@ -71,18 +79,24 @@ public:
 	}
 
 	DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
-		ctx.clip(get_viewport());
-
-		DispatcherCtx local_ctx = ctx.with_offset(frame);
+		DispatcherCtx local_ctx;
 
 		if (reversed) {
+			FRect prev_rect = ctx.viewport;
+			ctx.clip(get_viewport());
+
 			if (e->deliver(ctx, this) == CONSUME) return CONSUME;
+
+			local_ctx = ctx.with_offset(frame);
 
 			for (int i = (int)children.size() - 1; i >= 0; --i) {
 				if (children[i]->broadcast(local_ctx, e, true) == CONSUME) {
 					return CONSUME;
 				}
 			}
+
+			ctx.set_viewport(prev_rect);
+			local_ctx = ctx.with_offset(frame);
 
 			for (int i = (int)controls.size() - 1; i >= 0; --i) {
 				if (controls[i]->broadcast(local_ctx, e, true) == CONSUME) {
@@ -93,11 +107,16 @@ public:
 			return PROPAGATE;
 		}
 
+		local_ctx = ctx.with_offset(frame);
+
 		for (size_t i = 0; i < controls.size(); ++i) {
 			if (controls[i]->broadcast(local_ctx, e) == CONSUME) {
 				return CONSUME;
 			}
 		}
+
+		ctx.clip(get_viewport());
+		local_ctx = ctx.with_offset(frame);
 
 		for (size_t i = 0; i < children.size(); ++i) {
 			if (children[i]->broadcast(local_ctx, e) == CONSUME) {

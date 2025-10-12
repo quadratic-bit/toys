@@ -1,5 +1,4 @@
 #include <cstddef>
-#include <cstdio>
 #include <swuix/widgets/handle.hpp>
 #include <swuix/widgets/controlled.hpp>
 #include <swuix/window/window.hpp>
@@ -57,5 +56,4 @@ void TitleBar::render(Window *window, float off_x, float off_y) {
 	window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
 	window->outline(frame, off_x, off_y, 2);
 	window->text(host->title(), frame.x + off_x + 3, frame.y + off_y + 1);
-	//WidgetContainer::render(window, off_x, off_y);
 }

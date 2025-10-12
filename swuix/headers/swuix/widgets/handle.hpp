@@ -76,12 +76,11 @@ public:
 	}
 
 	DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
-		ctx.clip(get_viewport());
-		DispatcherCtx local_ctx = ctx.with_offset(frame);
-
 		if (!minimized) {
 			return ControlledWidget::broadcast(ctx, e, reversed);
 		}
+
+		DispatcherCtx local_ctx = ctx.with_offset(frame);
 
 		if (reversed) {
 			for (int i = (int)controls.size() - 1; i >= 0; --i)
@@ -112,12 +111,11 @@ public:
 	}
 
 	DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
-		ctx.clip(get_viewport());
-		DispatcherCtx local_ctx = ctx.with_offset(frame);
-
 		if (!minimized) {
 			return ControlledContainer::broadcast(ctx, e, reversed);
 		}
+
+		DispatcherCtx local_ctx = ctx.with_offset(frame);
 
 		if (reversed) {
 			for (int i = (int)controls.size() - 1; i >= 0; --i)

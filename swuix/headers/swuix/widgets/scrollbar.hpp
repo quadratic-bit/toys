@@ -65,7 +65,6 @@ public:
 
 	void render(Window *window, float off_x, float off_y) {
 		window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
-		//WidgetContainer::render(window, off_x, off_y);
 		window->outline(frame, off_x, off_y, 2);
 	}
 
@@ -129,12 +128,11 @@ public:
 	}
 
 	DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
-		ctx.clip(get_viewport());
-		DispatcherCtx local_ctx = ctx.with_offset(frame);
-
 		if (!minimized) {
 			return ControlledContainer::broadcast(ctx, e, reversed);
 		}
+
+		DispatcherCtx local_ctx = ctx.with_offset(frame);
 
 		return titlebar->broadcast(local_ctx, e, reversed);
 	}
