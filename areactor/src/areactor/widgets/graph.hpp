@@ -179,7 +179,7 @@ class LineGraph : public TitledWidget {
 			window->text_aligned(fmt_si(-v, y_unit).c_str(), frame.x - 6.0f, ys, TA_RIGHT);
 		}
 
-		FRect extended_frame = frame;
+		Rect2F extended_frame = frame;
 		extended_frame.h += 20;
 		window->clip(extended_frame);
 
@@ -277,12 +277,12 @@ public:
 		return x_axis.center - y_space * (double)y_axis.scale;
 	}
 
-	void space_to_screen(Point2f *vec) const {
+	void space_to_screen(Rect2F *vec) const {
 		vec->x = x_space_to_screen(vec->x);
 		vec->y = y_space_to_screen(vec->y);
 	}
 
-	void screen_to_space(Point2f *vec) const {
+	void screen_to_space(Rect2F *vec) const {
 		vec->x = x_screen_to_space(vec->x);
 		vec->y = y_screen_to_space(vec->y);
 	}

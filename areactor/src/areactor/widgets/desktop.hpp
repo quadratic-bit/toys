@@ -12,7 +12,7 @@ class Desktop : public WidgetContainer {
 public:
 	Reactor *reactor;
 
-	Desktop(FRect frame_, Widget *parent_, int fps, State *state_)
+	Desktop(Rect2F frame_, Widget *parent_, int fps, State *state_)
 			: Widget(frame_, parent_, state_), WidgetContainer(frame_, parent_, state_) {
 
 		LineGraph     *kinetic     = new KineticGraph(frect(1000, 140, 180, 180), NULL, "J", "E", state, 0.8, fps, 5.0);

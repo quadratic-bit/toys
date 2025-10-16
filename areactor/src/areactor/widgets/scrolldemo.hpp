@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdio>
 #include <swuix/widgets/scrollbar.hpp>
 #include <swuix/window/window.hpp>
 
@@ -11,7 +12,7 @@ static void cb_nothing(void *st, Widget *d) {
 
 class ScrollDemo : public TallView {
 public:
-	ScrollDemo(FRect rect, FRect clip, Widget *parent_, State *state_)
+	ScrollDemo(Rect2F rect, Rect2F clip, Widget *parent_, State *state_)
 			: Widget(rect, parent_, state_), TallView(rect, clip, parent_, state_) {
 		Button *btn_nothing  = new Button(frect(20, 10, 50, 25), NULL, "btn1", state, cb_nothing);
 		Button *btn_nothing2 = new Button(frect(20, 110, 50, 25), NULL, "btn2", state, cb_nothing);
@@ -37,4 +38,3 @@ public:
 		window->outline(viewport, off_x, off_y, 2);
 	}
 };
-
