@@ -4,126 +4,126 @@
 
 class TraitCastError : public std::runtime_error {
 public:
-	explicit TraitCastError(const std::string &message) : std::runtime_error(message) {}
+    explicit TraitCastError(const std::string &message) : std::runtime_error(message) {}
 };
 
 class ControlledWidget;  // forward-declare
 
 class Control : public virtual Widget {
 public:
-	Control(FRect f, Widget *par, State *st) : Widget(f, par, st) {}
+    Control(Rect2F f, Widget *par, State *st) : Widget(f, par, st) {}
 
-	virtual void attach_to(ControlledWidget *host) = 0;
+    virtual void attach_to(ControlledWidget *host) = 0;
 };
 
 class ControlledWidget : public virtual Widget {
 protected:
-	std::vector<Control*> controls;
+    std::vector<Control*> controls;
 
 public:
-	ControlledWidget(FRect f, Widget *par, State *st) : Widget(f, par, st) {}
+    ControlledWidget(Rect2F f, Widget *par, State *st) : Widget(f, par, st) {}
 
-	const char *title() const {
-		return "Controlled widget";
-	}
+    const char *title() const {
+        return "Controlled widget";
+    }
 
-	void attach(Control *control) {
-		controls.push_back(control);
-		control->parent = this;
-	}
+    void attach(Control *control) {
+        controls.push_back(control);
+        control->parent = this;
+    }
 
-	DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
-		DispatcherCtx local_ctx;
+    DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
+        DispatcherCtx local_ctx;
 
-		if (reversed) {
-			FRect prev_rect = ctx.viewport;
-			ctx.clip(get_viewport());
+        if (reversed) {
+            Rect2F prev_rect = ctx.viewport;
+            ctx.clip(get_viewport());
 
-			if (e->deliver(ctx, this) == CONSUME) return CONSUME;
+            if (e->deliver(ctx, this) == CONSUME) return CONSUME;
 
-			ctx.set_viewport(prev_rect);
-			local_ctx = ctx.with_offset(frame);
+            ctx.set_viewport(prev_rect);
+            local_ctx = ctx.with_offset(frame);
 
-			for (int i = (int)controls.size() - 1; i >= 0; --i) {
-				if (controls[i]->broadcast(local_ctx, e, true) == CONSUME) {
-					return CONSUME;
-				}
-			}
+            for (int i = (int)controls.size() - 1; i >= 0; --i) {
+                if (controls[i]->broadcast(local_ctx, e, true) == CONSUME) {
+                    return CONSUME;
+                }
+            }
 
-			return PROPAGATE;
-		}
+            return PROPAGATE;
+        }
 
-		local_ctx = ctx.with_offset(frame);
+        local_ctx = ctx.with_offset(frame);
 
-		for (size_t i = 0; i < controls.size(); ++i) {
-			if (controls[i]->broadcast(local_ctx, e) == CONSUME) {
-				return CONSUME;
-			}
-		}
+        for (size_t i = 0; i < controls.size(); ++i) {
+            if (controls[i]->broadcast(local_ctx, e) == CONSUME) {
+                return CONSUME;
+            }
+        }
 
-		ctx.clip(get_viewport());
+        ctx.clip(get_viewport());
 
-		return e->deliver(ctx, this);
-	}
+        return e->deliver(ctx, this);
+    }
 };
 
 class ControlledContainer : public ControlledWidget, public WidgetContainer {
 public:
-	ControlledContainer(FRect f, Widget *par, State *st)
-		: Widget(f, par, st), ControlledWidget(f, par, st), WidgetContainer(f, par, st) {}
-	ControlledContainer(FRect f, Widget *par, std::vector<Widget*> children_, State *st)
-		: Widget(f, par, st), ControlledWidget(f, par, st), WidgetContainer(f, par, children_, st) {}
+    ControlledContainer(Rect2F f, Widget *par, State *st)
+        : Widget(f, par, st), ControlledWidget(f, par, st), WidgetContainer(f, par, st) {}
+    ControlledContainer(Rect2F f, Widget *par, std::vector<Widget*> children_, State *st)
+        : Widget(f, par, st), ControlledWidget(f, par, st), WidgetContainer(f, par, children_, st) {}
 
-	const char *title() const {
-		return "Controlled container";
-	}
+    const char *title() const {
+        return "Controlled container";
+    }
 
-	DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
-		DispatcherCtx local_ctx;
+    DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
+        DispatcherCtx local_ctx;
 
-		if (reversed) {
-			FRect prev_rect = ctx.viewport;
-			ctx.clip(get_viewport());
+        if (reversed) {
+            Rect2F prev_rect = ctx.viewport;
+            ctx.clip(get_viewport());
 
-			if (e->deliver(ctx, this) == CONSUME) return CONSUME;
+            if (e->deliver(ctx, this) == CONSUME) return CONSUME;
 
-			local_ctx = ctx.with_offset(frame);
+            local_ctx = ctx.with_offset(frame);
 
-			for (int i = (int)children.size() - 1; i >= 0; --i) {
-				if (children[i]->broadcast(local_ctx, e, true) == CONSUME) {
-					return CONSUME;
-				}
-			}
+            for (int i = (int)children.size() - 1; i >= 0; --i) {
+                if (children[i]->broadcast(local_ctx, e, true) == CONSUME) {
+                    return CONSUME;
+                }
+            }
 
-			ctx.set_viewport(prev_rect);
-			local_ctx = ctx.with_offset(frame);
+            ctx.set_viewport(prev_rect);
+            local_ctx = ctx.with_offset(frame);
 
-			for (int i = (int)controls.size() - 1; i >= 0; --i) {
-				if (controls[i]->broadcast(local_ctx, e, true) == CONSUME) {
-					return CONSUME;
-				}
-			}
+            for (int i = (int)controls.size() - 1; i >= 0; --i) {
+                if (controls[i]->broadcast(local_ctx, e, true) == CONSUME) {
+                    return CONSUME;
+                }
+            }
 
-			return PROPAGATE;
-		}
+            return PROPAGATE;
+        }
 
-		local_ctx = ctx.with_offset(frame);
+        local_ctx = ctx.with_offset(frame);
 
-		for (size_t i = 0; i < controls.size(); ++i) {
-			if (controls[i]->broadcast(local_ctx, e) == CONSUME) {
-				return CONSUME;
-			}
-		}
+        for (size_t i = 0; i < controls.size(); ++i) {
+            if (controls[i]->broadcast(local_ctx, e) == CONSUME) {
+                return CONSUME;
+            }
+        }
 
-		ctx.clip(get_viewport());
-		local_ctx = ctx.with_offset(frame);
+        ctx.clip(get_viewport());
+        local_ctx = ctx.with_offset(frame);
 
-		for (size_t i = 0; i < children.size(); ++i) {
-			if (children[i]->broadcast(local_ctx, e) == CONSUME) {
-				return CONSUME;
-			}
-		}
+        for (size_t i = 0; i < children.size(); ++i) {
+            if (children[i]->broadcast(local_ctx, e) == CONSUME) {
+                return CONSUME;
+            }
+        }
 
-		return e->deliver(ctx, this);
-	}
+        return e->deliver(ctx, this);
+    }
 };
