@@ -13,11 +13,13 @@ static const int FPS = 60;
 #define MS(s) ((s) * (double)1000)
 
 int main() {
-	State state = State();
+    Rect2F bbox = frect(0, 0, 1280, 720);
+	Window *window = new Window(bbox.w, bbox.h);
+
+	State state = State(window);
 	EventManager evmgr(&state, FPS);
 
-	Desktop root(frect(0, 0, 1280, 720), NULL, &state);
-	Window *window = new Window(root.frame.w, root.frame.h);
+	Desktop root(bbox, NULL, &state);
 
 	for (;;) {
 		evmgr.prepare_events();
@@ -28,7 +30,7 @@ int main() {
 
 		if (state.exit_requested) break;
 
-		root.render(window, 0, 0);
+        evmgr.render(&root);
 	}
 
 	delete window;

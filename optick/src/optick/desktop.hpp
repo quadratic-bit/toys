@@ -8,7 +8,7 @@
 
 class Desktop : public WidgetContainer {
 public:
-	Desktop(FRect frame_, Widget *parent_, State *state_)
+	Desktop(Rect2F frame_, Widget *parent_, State *state_)
 			: Widget(frame_, parent_, state_), WidgetContainer(frame_, parent_, state_) {
 
 		Renderer *renderer = new Renderer(frect(180, 180, 640, 380), NULL, state);
@@ -22,9 +22,7 @@ public:
 		return "Desktop";
 	}
 
-	void render(Window *window, float off_x, float off_y) {
-		window->clear();
-		WidgetContainer::render(window, off_x, off_y);
-		window->present();
+	void render(Window *, float, float) {
+		//window->clear();
 	}
 };

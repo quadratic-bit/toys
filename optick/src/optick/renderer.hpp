@@ -53,7 +53,7 @@ static inline Scene make_demo_scene() {
 	return scn;
 }
 
-class Renderer : public HandledWidget {
+class Renderer : public TitledWidget {
 	SwuixTexture front_buffer;
 	SwuixTexture back_buffer;
 
@@ -94,8 +94,8 @@ class Renderer : public HandledWidget {
 		eps = 1e-4;
 
 		// Build camera from size (not position)
-		cam.pos    = Vector3(0, 0,  2.5);
-		cam.target = Vector3(0, 0, -1);
+		cam.pos    = Vector3(0, 2,  2.5);
+		cam.target = Vector3(0, 1, -1);
 		cam.up     = Vector3(0, 1,  0);
 		cam.vfov   = 45.0;
 		cam.width  = (double)view_w;
@@ -126,8 +126,8 @@ class Renderer : public HandledWidget {
 	}
 
 public:
-	Renderer(FRect rect, Widget *parent_, State *s)
-			: Widget(rect, parent_, s), HandledWidget(rect, parent_, s),
+	Renderer(Rect2F rect, Widget *parent_, State *s)
+			: Widget(rect, parent_, s), TitledWidget(rect, parent_, s),
 			front_buffer(NULL), view_w(0), view_h(0), next_x(0), next_y(0),
 			initialized(false), max_depth(5), eps(1e-4) {
 		scene = make_demo_scene();
@@ -148,7 +148,7 @@ public:
 		return "Renderer";
 	}
 
-	void render_body(Window *window, float off_x, float off_y) {
+	void render(Window *window, float off_x, float off_y) {
 		window->clear_rect(frame, off_x, off_y, 125, 12, 125);
 
 		const int viewX = (int)std::floor(frame.x + off_x);
@@ -190,7 +190,6 @@ public:
 			// check for finished
 			if (next_y >= view_h) {
 				scene.spheres[1].center.x += 0.05;
-				printf("swap!\n");
 
 				SDL_UnlockTexture(back_buffer);
 
