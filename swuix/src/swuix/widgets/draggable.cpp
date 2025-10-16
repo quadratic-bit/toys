@@ -5,8 +5,8 @@ DispatchResult DraggableWidget::on_mouse_move(DispatcherCtx ctx, const MouseMove
     (void)e;
     if (state->mouse.state == MouseState::Dragging && is_dragging) {
         Rect2F new_frame = frame;
-        new_frame.x = ctx.mouse_rel.x - start_drag_x;
-        new_frame.y = ctx.mouse_rel.y - start_drag_y;
+        new_frame.x = ctx.mouseRel.x - start_drag_x;
+        new_frame.y = ctx.mouseRel.y - start_drag_y;
         set_frame(new_frame);
     }
     return Widget::on_mouse_move(ctx, e);
@@ -16,8 +16,8 @@ DispatchResult DraggableWidget::on_mouse_down(DispatcherCtx ctx, const MouseDown
     (void)e;
     if (state->mouse.target == this) {
         is_dragging = true;
-        start_drag_x = ctx.mouse_rel.x;
-        start_drag_y = ctx.mouse_rel.y;
+        start_drag_x = ctx.mouseRel.x;
+        start_drag_y = ctx.mouseRel.y;
         return CONSUME;
     }
     return PROPAGATE;

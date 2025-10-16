@@ -39,7 +39,7 @@ DispatchResult ScrollbarSlider::on_mouse_move(DispatcherCtx ctx, const MouseMove
     (void)e;
     if (state->mouse.state == MouseState::Dragging && is_dragging) {
         float progress_px = std::min(
-            std::max(ctx.mouse_rel.y - start_drag_y + SCROLL_B_H, SCROLL_B_H),
+            std::max(ctx.mouseRel.y - start_drag_y + SCROLL_B_H, SCROLL_B_H),
             parent->frame.h - SCROLL_B_H - frame.h
         ) - SCROLL_B_H;
         float progress_per = progress_px / scrollbar->scroll_height();
@@ -54,8 +54,8 @@ DispatchResult ScrollbarSlider::on_mouse_down(DispatcherCtx ctx, const MouseDown
     (void)e;
     if (state->mouse.target == this) {
         is_dragging = true;
-        start_drag_x = ctx.mouse_rel.x;
-        start_drag_y = ctx.mouse_rel.y - scrollbar->scroll_progress();
+        start_drag_x = ctx.mouseRel.x;
+        start_drag_y = ctx.mouseRel.y - scrollbar->scroll_progress();
         return CONSUME;
     }
     return PROPAGATE;

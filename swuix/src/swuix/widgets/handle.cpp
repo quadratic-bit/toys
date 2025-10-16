@@ -29,8 +29,8 @@ DispatchResult TitleBar::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *
     (void)e;
     if (state->mouse.state == MouseState::Dragging && is_dragging) {
         Rect2F new_frame = host->frame;
-        new_frame.x += ctx.mouse_rel.x - start_drag_x;
-        new_frame.y += ctx.mouse_rel.y - start_drag_y;
+        new_frame.x += ctx.mouseRel.x - start_drag_x;
+        new_frame.y += ctx.mouseRel.y - start_drag_y;
         host->set_frame(new_frame);
     }
     return Widget::on_mouse_move(ctx, e);

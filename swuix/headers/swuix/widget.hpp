@@ -11,9 +11,9 @@ class Widget;
 struct State;
 
 struct DispatcherCtx {
-    Vec2F mouse_rel;
-    Vec2F mouse_abs;
-    Rect2F   viewport;
+    Vec2F  mouseRel;
+    Vec2F  mouseAbs;
+    Rect2F viewport;
     Window *window;
 
     Rect2F prev_clip;
@@ -33,7 +33,7 @@ struct DispatcherCtx {
     }
 
     Vec2F offset() const {
-        return mouse_abs - mouse_rel;
+        return mouseAbs - mouseRel;
     }
 
     Rect2F transform(Rect2F rect) const {
@@ -45,8 +45,8 @@ struct DispatcherCtx {
 
     DispatcherCtx with_offset(Rect2F frame) const {
         DispatcherCtx c = *this;
-        c.mouse_rel.x -= frame.x;
-        c.mouse_rel.y -= frame.y;
+        c.mouseRel.x -= frame.x;
+        c.mouseRel.y -= frame.y;
         c.viewport.x -= frame.x;
         c.viewport.y -= frame.y;
         c.prev_clip.x -= frame.x;
@@ -56,7 +56,7 @@ struct DispatcherCtx {
 
     static DispatcherCtx from_absolute(Vec2F abs, Rect2F clip, Window *window) {
         DispatcherCtx c;
-        c.mouse_abs = c.mouse_rel = abs;
+        c.mouseAbs = c.mouseRel = abs;
         c.viewport = c.prev_clip = clip;
         c.window = window;
         return c;
@@ -168,7 +168,7 @@ public:
     virtual const char *title() const = 0;
 
     virtual bool contains_mouse(DispatcherCtx ctx) const {
-        Vec2F rel = ctx.mouse_rel;
+        Vec2F rel = ctx.mouseRel;
         Rect2F view = ctx.viewport;
         return rel.x >= view.x && rel.x <= view.x + view.w
             && rel.y >= view.y && rel.y <= view.y + view.h;
