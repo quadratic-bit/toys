@@ -9,28 +9,11 @@ class EventManager {
 
     Time next_frame;
     Time last_tick;
-    int FPS;
-
-    static bool is_ev_close(const SDL_Event *event) {
-        return event->type == SDL_EVENT_QUIT ||
-            event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED;
-    }
-
-    inline Time frame_dur() const { return 1.0 / static_cast<Time>(FPS); }
-
-    void ensure_latest_mouse_pos(Vec2F abs, Widget *root) {
-        if (state->mouse.pos == abs) return;
-        state->mouse.target = NULL;
-        state->mouse.pos = abs;
-        MouseMoveEvent we(abs);
-        DispatcherCtx ctx = DispatcherCtx::from_absolute(abs, root->frame, state->window);
-        root->broadcast(ctx, &we);
-        if (!state->mouse.target) state->mouse.target = root;
-    }
+    int  FPS;
 
 public:
     EventManager(State *state_, int fps) : state(state_), FPS(fps) {
-        const Time f = frame_dur();
+        const Time f = frameDuration();
         const Time now = Window::now();
         last_tick = now;
         next_frame = now + f;
@@ -39,13 +22,13 @@ public:
     void render(Widget *root) {
         state->window->clear();
         RenderEvent e;
-        DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame, state->window);
+        DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame, state->window);
         root->broadcast(ctx, &e, true);
         state->window->present();
     }
 
-    void prepare_events() {
-        const Time f = frame_dur();
+    void prepareEvents() {
+        const Time f = frameDuration();
         next_frame += f;
         const Time now = Window::now();
 
@@ -57,25 +40,8 @@ public:
         }
     }
 
-    /*
-     * Update the current time in state and return delta time
-     * since the last call of this function.
-     */
-    Time advance_frame() {
-        const Time now = Window::now();
-        state->now = now;
-
-        Time dt_s = now - last_tick;
-        last_tick = now;
-
-        static const Time DT_MAX = 0.100;
-        if (dt_s > DT_MAX) dt_s = DT_MAX;
-        if (dt_s < 0.0) dt_s = 0.0;
-        return dt_s;
-    }
-
-    void dispatch_idle(Widget *root) {
-        const Time dt_s = advance_frame();
+    void idle(Widget *root) {
+        const Time dt_s = advanceFrame();
         const Time now = Window::now();
 
         // timer granularity
@@ -86,69 +52,14 @@ public:
 
         const Time deadline = next_frame - SAFETY_MARGIN_S;
 
-        DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame, state->window);
+        DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame, state->window);
         IdleEvent idle_e(dt_s, remaining_s, deadline);
 
         root->broadcast(ctx, &idle_e);
     }
 
-    bool handle_event(const SDL_Event &ev, Widget *root) {
-        switch (ev.type) {
-            case SDL_EVENT_QUIT:
-            case SDL_EVENT_WINDOW_CLOSE_REQUESTED: {
-                                                       QuitRequestEvent e;
-                                                       DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame, state->window);
-                                                       DispatchResult res = root->broadcast(ctx, &e);
-                                                       if (res == PROPAGATE) state->exit_requested = true;
-                                                       return true;
-                                                   } break;
-            case SDL_EVENT_KEY_DOWN: {
-                                         KeyDownEvent we(ev.key.scancode, ev.key.key, ev.key.mod, ev.key.repeat);
-                                         DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame, state->window);
-                                         root->broadcast(ctx, &we);
-                                     } break;
-            case SDL_EVENT_KEY_UP: {
-                                       KeyUpEvent we(ev.key.scancode, ev.key.key, ev.key.mod);
-                                       DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame, state->window);
-                                       root->broadcast(ctx, &we);
-                                   } break;
-            case SDL_EVENT_MOUSE_MOTION:
-                                   ensure_latest_mouse_pos(Vec2F(ev.motion.x, ev.motion.y), root);
-                                   break;
-            case SDL_EVENT_MOUSE_BUTTON_DOWN: {
-                                                  state->mouse.state = MouseState::Dragging;
-                                                  state->mouse.pos = Vec2F(ev.button.x, ev.button.y);
-                                                  ensure_latest_mouse_pos(state->mouse.pos, root);
-                                                  MouseDownEvent we(state->mouse.pos);
-                                                  if (state->mouse.capture) {
-                                                      Widget *capturer = state->mouse.capture;
-                                                      DispatcherCtx ctx = capturer->resolve_context(state->window);
-                                                      capturer->broadcast(ctx, &we);
-                                                  } else {
-                                                      DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame, state->window);
-                                                      root->broadcast(ctx, &we);
-                                                  }
-                                              } break;
-            case SDL_EVENT_MOUSE_BUTTON_UP: {
-                                                state->mouse.state = MouseState::Idle;
-                                                state->mouse.pos = Vec2F(ev.button.x, ev.button.y);
-                                                ensure_latest_mouse_pos(state->mouse.pos, root);
-                                                MouseUpEvent we;
-                                                if (state->mouse.capture) {
-                                                    Widget *capturer = state->mouse.capture;
-                                                    DispatcherCtx ctx = capturer->resolve_context(state->window);
-                                                    capturer->broadcast(ctx, &we);
-                                                } else {
-                                                    DispatcherCtx ctx = DispatcherCtx::from_absolute(state->mouse.pos, root->frame, state->window);
-                                                    root->broadcast(ctx, &we);
-                                                }
-                                            } break;
-        }
-        return state->exit_requested;
-    }
-
     /* true if deadline reached or we exit requested */
-    bool exhaust_events(Widget *root) {
+    bool exhaustEvents(Widget *root) {
         SDL_Event ev;
 
         const Time now = Window::now();
@@ -164,7 +75,7 @@ public:
 
         if (remaining_ms <= POLL_ONLY_THRESHOLD_MS) {
             while (SDL_PollEvent(&ev)) {
-                if (handle_event(ev, root)) return true;
+                if (processEvent(ev, root)) return true;
                 if (state->exit_requested) return true;
             }
             return false;
@@ -176,13 +87,111 @@ public:
             return false;
         }
 
-        if (handle_event(ev, root)) return true;
+        if (processEvent(ev, root)) return true;
 
         // drain anything else already queued
         while (SDL_PollEvent(&ev)) {
-            if (handle_event(ev, root)) return true;
+            if (processEvent(ev, root)) return true;
         }
 
         return false;
+    }
+
+private:
+    static bool isEventClose(const SDL_Event *event) {
+        return event->type == SDL_EVENT_QUIT ||
+            event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED;
+    }
+
+    inline Time frameDuration() const { return 1.0 / static_cast<Time>(FPS); }
+
+    void syncMousePos(Vec2F abs, Widget *root) {
+        if (state->mouse.pos == abs) return;
+        state->mouse.target = NULL;
+        state->mouse.pos = abs;
+        MouseMoveEvent we(abs);
+        DispatcherCtx ctx = DispatcherCtx::fromAbsolute(abs, root->frame, state->window);
+        root->broadcast(ctx, &we);
+        if (!state->mouse.target) state->mouse.target = root;
+    }
+
+    /*
+     * Update the current time in state and return delta time
+     * since the last call of this function.
+     */
+    Time advanceFrame() {
+        const Time now = Window::now();
+        state->now = now;
+
+        Time dt_s = now - last_tick;
+        last_tick = now;
+
+        static const Time DT_MAX = 0.100;
+        if (dt_s > DT_MAX) dt_s = DT_MAX;
+        if (dt_s < 0.0) dt_s = 0.0;
+        return dt_s;
+    }
+
+    bool processEvent(const SDL_Event &ev, Widget *root) {
+        switch (ev.type) {
+
+        case SDL_EVENT_QUIT:
+        case SDL_EVENT_WINDOW_CLOSE_REQUESTED: {
+            QuitRequestEvent e;
+            DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame, state->window);
+            DispatchResult res = root->broadcast(ctx, &e);
+            if (res == PROPAGATE) state->exit_requested = true;
+            return true;
+        } break;
+
+        case SDL_EVENT_KEY_DOWN: {
+            KeyDownEvent we(ev.key.scancode, ev.key.key, ev.key.mod, ev.key.repeat);
+            DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame, state->window);
+            root->broadcast(ctx, &we);
+        } break;
+
+        case SDL_EVENT_KEY_UP: {
+            KeyUpEvent we(ev.key.scancode, ev.key.key, ev.key.mod);
+            DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame, state->window);
+            root->broadcast(ctx, &we);
+        } break;
+
+        case SDL_EVENT_MOUSE_MOTION:
+            syncMousePos(Vec2F(ev.motion.x, ev.motion.y), root);
+            break;
+
+        case SDL_EVENT_MOUSE_BUTTON_DOWN: {
+            state->mouse.state = MouseState::Dragging;
+            state->mouse.pos = Vec2F(ev.button.x, ev.button.y);
+            syncMousePos(state->mouse.pos, root);
+            MouseDownEvent we(state->mouse.pos);
+            if (state->mouse.capture) {
+                Widget *capturer = state->mouse.capture;
+                DispatcherCtx ctx = capturer->resolve_context(state->window);
+                capturer->broadcast(ctx, &we);
+            } else {
+                DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame, state->window);
+                root->broadcast(ctx, &we);
+            }
+        } break;
+
+        case SDL_EVENT_MOUSE_BUTTON_UP: {
+            state->mouse.state = MouseState::Idle;
+            state->mouse.pos = Vec2F(ev.button.x, ev.button.y);
+            syncMousePos(state->mouse.pos, root);
+            MouseUpEvent we;
+            if (state->mouse.capture) {
+                Widget *capturer = state->mouse.capture;
+                DispatcherCtx ctx = capturer->resolve_context(state->window);
+                capturer->broadcast(ctx, &we);
+            } else {
+                DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame, state->window);
+                root->broadcast(ctx, &we);
+            }
+        } break;
+
+        } // switch(ev.type)
+
+        return state->exit_requested;
     }
 };

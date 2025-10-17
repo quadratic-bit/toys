@@ -19,10 +19,10 @@ int main() {
     Desktop root(bbox, NULL, FPS, &state);
 
     for (;;) {
-        evmgr.prepare_events();
+        evmgr.prepareEvents();
 
-        while (!evmgr.exhaust_events(&root)) {
-            evmgr.dispatch_idle(&root);
+        while (!evmgr.exhaustEvents(&root)) {
+            evmgr.idle(&root);
         }
 
         if (state.exit_requested) break;
