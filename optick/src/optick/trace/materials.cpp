@@ -6,7 +6,7 @@ Color MaterialReflective::sample(TraceContext ctx) const {
     Vector3 R = Vector3::reflect(ctx.ray.d, ctx.hit.norm);
     Color inc_clr = ctx.scene->trace(Ray(ctx.hit.pos + R * ctx.eps, R), ctx.depth + 1, ctx.max_depth, ctx.eps);
     // apply tint + faint base
-    return ctx.target.color * inc_clr + Color(0.02, 0.02, 0.02);
+    return ctx.target->color * inc_clr + Color(0.02, 0.02, 0.02);
 }
 
 Color MaterialRefractive::sample(TraceContext ctx) const {
@@ -16,6 +16,7 @@ Color MaterialRefractive::sample(TraceContext ctx) const {
     double etai = 1.0;  // incident medium IoR
     double etat = ior;  // transmit medium IoR
 
+    // FIXME: does this work for planes?
     Vector3 N = ctx.hit.norm;
     if (cos_incident > 0.0) {  // inside the sphere
         N = N * -1.0;
@@ -27,13 +28,13 @@ Color MaterialRefractive::sample(TraceContext ctx) const {
     Vector3 T;  // refracted direction (i.e. transmitted dir, unit)
     if (T.refract(ctx.ray.d, N, etai, etat)) {
         Color inc_clr = ctx.scene->trace(Ray(ctx.hit.pos + T * ctx.eps, T), ctx.depth + 1, ctx.max_depth, ctx.eps);
-        return ctx.target.color * inc_clr;
+        return ctx.target->color * inc_clr;
     }
     else // Total Internal Reflection
     {
         Vector3 R = Vector3::reflect(ctx.ray.d, ctx.hit.norm);
         Color inc_clr = ctx.scene->trace(Ray(ctx.hit.pos + R * ctx.eps, R), ctx.depth + 1, ctx.max_depth, ctx.eps);
-        return ctx.target.color * inc_clr;
+        return ctx.target->color * inc_clr;
     }
 }
 
@@ -58,7 +59,7 @@ Color MaterialOpaque::sample(TraceContext ctx) const {
         double ndotl = std::max(0.0, ctx.hit.norm ^ Ldir);
 
         // add diffuse contribution (albedo * kd * cos) * light
-        out += (ctx.target.color * (kd * ndotl)) * Lradiance;
+        out += (ctx.target->color * (kd * ndotl)) * Lradiance;
 
         // Blinn-Phong specular
         if (ks > 0.0) {
@@ -70,7 +71,7 @@ Color MaterialOpaque::sample(TraceContext ctx) const {
     }
 
     // constant ambient fill to avoid pure black
-    out += ctx.target.color * (0.02 * kd);
+    out += ctx.target->color * (0.02 * kd);
 
     return out;
 }

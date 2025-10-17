@@ -151,11 +151,11 @@ public:
     virtual ~Widget();
 
     template<typename T, size_t N>
-        static std::vector<T> makeChildren(T const (&arr)[N]) {
-            return std::vector<T>(arr, arr + N);
-        }
+    static std::vector<T> makeChildren(T const (&arr)[N]) {
+        return std::vector<T>(arr, arr + N);
+    }
 
-    virtual Rect2F get_viewport() const {
+    virtual Rect2F getViewport() const {
         Rect2F v = frame;
         v.x -= 1;
         v.y -= 1;
@@ -199,7 +199,7 @@ public:
 
     virtual DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reverse=false) {
         (void)reverse;
-        ctx.clip(get_viewport());
+        ctx.clip(getViewport());
         return e->deliver(ctx, this);
     }
 

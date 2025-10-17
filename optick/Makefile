@@ -39,7 +39,7 @@ endif
 CXXFLAGS_debug := -O1 -g -fstack-protector-all $(CXXFLAGS_SAN)
 LDFLAGS_debug := $(LDFLAGS_SAN)
 
-CXXFLAGS_release := -O2 -flto -fstack-protector-strong
+CXXFLAGS_release := -O3 -mavx2 -flto -fstack-protector-strong
 LDFLAGS_release := -flto
 
 CXXFLAGS := $(CXXFLAGS_COMMON) $(CXXFLAGS_$(MODE))

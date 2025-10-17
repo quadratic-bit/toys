@@ -37,7 +37,7 @@ public:
 
         if (reversed) {
             Rect2F prev_rect = ctx.viewport;
-            ctx.clip(get_viewport());
+            ctx.clip(getViewport());
 
             if (e->deliver(ctx, this) == CONSUME) return CONSUME;
 
@@ -61,7 +61,7 @@ public:
             }
         }
 
-        ctx.clip(get_viewport());
+        ctx.clip(getViewport());
 
         return e->deliver(ctx, this);
     }
@@ -83,7 +83,7 @@ public:
 
         if (reversed) {
             Rect2F prev_rect = ctx.viewport;
-            ctx.clip(get_viewport());
+            ctx.clip(getViewport());
 
             if (e->deliver(ctx, this) == CONSUME) return CONSUME;
 
@@ -115,7 +115,7 @@ public:
             }
         }
 
-        ctx.clip(get_viewport());
+        ctx.clip(getViewport());
         local_ctx = ctx.withOffset(frame);
 
         for (size_t i = 0; i < children.size(); ++i) {

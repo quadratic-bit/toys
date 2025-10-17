@@ -26,7 +26,7 @@ static DispatcherCtx _build_context(const Widget *w, const Vec2F &abs, Window *w
     // ctx is currently in w->parent's coordinate space
     DispatcherCtx ctx = _build_context(w->parent, abs, window);
 
-    ctx.clip(w->parent->get_viewport());
+    ctx.clip(w->parent->getViewport());
 
     ctx = ctx.withOffset(w->parent->frame);
     return ctx;
@@ -34,6 +34,6 @@ static DispatcherCtx _build_context(const Widget *w, const Vec2F &abs, Window *w
 
 DispatcherCtx Widget::resolve_context(Window *w) const {
     DispatcherCtx ctx = _build_context(this, state->mouse.pos, w);
-    ctx.clip(this->get_viewport());
+    ctx.clip(this->getViewport());
     return ctx;
 }

@@ -11,7 +11,7 @@ public:
     Desktop(Rect2F frame_, Widget *parent_, State *state_)
         : Widget(frame_, parent_, state_), WidgetContainer(frame_, parent_, state_) {
 
-            Renderer *renderer = new Renderer(frect(180, 180, 640, 380), NULL, state);
+            Renderer *renderer = new Renderer(frect(180, 50, 800, 600), NULL, state);
 
             Widget *arr[] = { renderer };
             this->append_children(Widget::makeChildren(arr));

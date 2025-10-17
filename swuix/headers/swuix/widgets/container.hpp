@@ -23,7 +23,7 @@ public:
     }
 
     DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
-        ctx.clip(get_viewport());
+        ctx.clip(getViewport());
 
         DispatcherCtx local_ctx = ctx.withOffset(frame);
 

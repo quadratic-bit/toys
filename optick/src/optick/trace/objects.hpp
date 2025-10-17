@@ -23,6 +23,10 @@ struct Object {
     Object(const Material *mat_) : mat(mat_) {}
     Object(const Vector3 &pos, const Color &col, const Material *m)
         : center(pos), color(col), mat(m) {}
+
+    virtual ~Object() {};
+
+    virtual bool intersect(const Ray &ray, double eps, Hit *hit) const = 0;
 };
 
 struct Sphere : public Object {
@@ -63,6 +67,35 @@ struct Sphere : public Object {
 
         hit->pos = ray.o + ray.d * t;
         hit->norm = !(hit->pos - this->center);  // outward (normalized)
+        hit->dist = t;
+        return true;
+    }
+};
+
+struct Plane : public Object {
+    Vector3 normal; // must be unit
+
+    Plane(const Material *m) : Object(m), normal(0, 1, 0) {}
+
+    Plane(const Vector3  &point_on_plane,
+          const Vector3  &n,
+          const Color    &col,
+          const Material *m)
+        : Object(point_on_plane, col, m), normal(!n) {}
+
+    bool intersect(const Ray &ray, double eps, Hit *hit) const {
+        const double denom = ray.d ^ normal;
+
+        if (std::fabs(denom) < 1e-12) return false;  // ray parallel to plane
+
+        // solve for t
+        const double t = ((this->center - ray.o) ^ normal) / denom;
+        if (t <= eps) return false;  // behind or too close
+
+        hit->pos  = ray.o + ray.d * t;
+
+        // orient the geometric normal
+        hit->norm = (denom < 0.0) ? normal : (normal * -1.0);
         hit->dist = t;
         return true;
     }

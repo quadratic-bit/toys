@@ -8,8 +8,8 @@ struct Hit {
     double  dist;     // distance along ray
     Vector3 pos;      // world-space hit position
     Vector3 norm;     // surface normal
-    int     sphere_i;     // which sphere was hit, -1 if none
-    Hit() : dist(std::numeric_limits<double>::infinity()), sphere_i(-1) {}
+    int     obj_i;    // which object was hit, -1 if none
+    Hit() : dist(std::numeric_limits<double>::infinity()), obj_i(-1) {}
 };
 
 struct Ray {

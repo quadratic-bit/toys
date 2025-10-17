@@ -10,41 +10,55 @@ static inline Scene make_demo_scene() {
     Scene scn;
 
     const MaterialOpaque *ground_plane = new MaterialOpaque(/*kd*/0.9);
-    scn.spheres.push_back(Sphere(
-                Vector3(0, -1004, 0), 1000,
-                Color(0.9, 0.9, 0.9),
-                ground_plane
-                ));
+    //scn.objects.push_back(new Sphere(
+    //    Vector3(0, -1004, 0), 1000,
+    //    Color(0.9, 0.9, 0.9),
+    //    ground_plane
+    //));
+    scn.objects.push_back(new Plane(
+        Vector3(0, -4, 0), Vector3(0, 1, 0),
+        Color(0.9, 0.9, 0.9),
+        ground_plane
+    ));
 
     const MaterialOpaque *solid = new MaterialOpaque(/*kd*/1.0, /*ks*/1.0, /*shininess*/32);
-    scn.spheres.push_back(Sphere(
-                Vector3(-1.5, -0.2, -5), 0.7,
-                Color(0.9, 0.8, 0.7),
-                solid
-                ));
+    scn.objects.push_back(new Sphere(
+        Vector3(-1.5, -0.2, -5), 0.7,
+        //Color(0.9, 0.1, 0.2),
+        Color(1, 0, 0),
+        solid
+    ));
 
     const MaterialReflective *mirror = new MaterialReflective();
-    scn.spheres.push_back(Sphere(
-                Vector3(-1.5, -0.2, -3.5), 0.8,
-                Color(0.9, 0.8, 0.7),
-                mirror
-                ));
+    scn.objects.push_back(new Sphere(
+        Vector3(-1.5, -0.2, -3.5), 0.8,
+        Color(0.9, 0.8, 0.7),
+        mirror
+    ));
+
+    const MaterialReflective *mirror2 = new MaterialReflective();
+    scn.objects.push_back(new Sphere(
+        Vector3(6, 0, -25), 10,
+        //Color(0.3, 0.3, 0.9),
+        Color(0, 1, 1),
+        mirror2
+    ));
 
     // clear-ish glass sphere
     const MaterialRefractive *glass = new MaterialRefractive(/*ior*/1.5);
-    scn.spheres.push_back(Sphere(
-                Vector3(0.2, 0.0, -2.5), 0.6,
-                Color(0.95, 1.0, 1.0),
-                glass
-                ));
+    scn.objects.push_back(new Sphere(
+        Vector3(0.2, 0.0, -2.5), 0.6,
+        Color(0.95, 1.0, 1.0),
+        glass
+    ));
 
     // lightly tinted glass (water-like ior)
     const MaterialRefractive *water_glass = new MaterialRefractive(/*ior*/1.33);
-    scn.spheres.push_back(Sphere(
-                Vector3(1.2, -0.1, -3.0), 0.7,
-                Color(0.7, 0.9, 1.0),
-                water_glass
-                ));
+    scn.objects.push_back(new Sphere(
+        Vector3(1.2, -0.1, -3.0), 0.7,
+        Color(0.7, 0.9, 1.0),
+        water_glass
+    ));
 
     // Lights
     scn.lights.push_back(PointLight(Vector3(-2, 2.5, -1.5), Color(1.0,0.95,0.9), 60.0)); // warm key
@@ -93,7 +107,8 @@ class Renderer : public TitledWidget {
         max_depth = 5;
         eps = 1e-4;
 
-        // Build camera from size (not position)
+        // build camera
+        //cam.pos    = Vector3(0, 4,  0);
         cam.pos    = Vector3(0, 2,  2.5);
         cam.target = Vector3(0, 1, -1);
         cam.up     = Vector3(0, 1,  0);
@@ -190,7 +205,7 @@ public:
 
             // check for finished
             if (next_y >= view_h) {
-                scene.spheres[1].center.x += 0.05;
+                scene.objects[1]->center.x += 0.05;
 
                 SDL_UnlockTexture(back_buffer);
 
