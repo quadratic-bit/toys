@@ -80,7 +80,7 @@ public:
             return ControlledWidget::broadcast(ctx, e, reversed);
         }
 
-        DispatcherCtx local_ctx = ctx.with_offset(frame);
+        DispatcherCtx local_ctx = ctx.withOffset(frame);
 
         if (reversed) {
             for (int i = (int)controls.size() - 1; i >= 0; --i)
@@ -115,7 +115,7 @@ public:
             return ControlledContainer::broadcast(ctx, e, reversed);
         }
 
-        DispatcherCtx local_ctx = ctx.with_offset(frame);
+        DispatcherCtx local_ctx = ctx.withOffset(frame);
 
         if (reversed) {
             for (int i = (int)controls.size() - 1; i >= 0; --i)

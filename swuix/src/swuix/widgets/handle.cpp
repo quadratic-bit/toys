@@ -22,7 +22,7 @@ TitleBar::TitleBar(State *state_)
     static float w = 15, h = 10;
     btn_minimize = new Button(frect(frame.w - w - 5, 5, w, h), this, "-", state);
     Widget *btns[] = { btn_minimize };
-    this->append_children(make_children(btns));
+    this->append_children(makeChildren(btns));
 }
 
 DispatchResult TitleBar::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {

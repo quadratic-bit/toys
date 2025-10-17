@@ -133,7 +133,7 @@ public:
             return ControlledContainer::broadcast(ctx, e, reversed);
         }
 
-        DispatcherCtx local_ctx = ctx.with_offset(frame);
+        DispatcherCtx local_ctx = ctx.withOffset(frame);
 
         return titlebar->broadcast(local_ctx, e, reversed);
     }

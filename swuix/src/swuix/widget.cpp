@@ -20,7 +20,7 @@ DispatchResult Widget::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e)
 
 static DispatcherCtx _build_context(const Widget *w, const Vec2F &abs, Window *window) {
     if (w->parent == w) {
-        return DispatcherCtx::from_absolute(abs, w->frame, window);
+        return DispatcherCtx::fromAbsolute(abs, w->frame, window);
     }
 
     // ctx is currently in w->parent's coordinate space
@@ -28,7 +28,7 @@ static DispatcherCtx _build_context(const Widget *w, const Vec2F &abs, Window *w
 
     ctx.clip(w->parent->get_viewport());
 
-    ctx = ctx.with_offset(w->parent->frame);
+    ctx = ctx.withOffset(w->parent->frame);
     return ctx;
 }
 

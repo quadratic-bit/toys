@@ -22,7 +22,7 @@ struct DispatcherCtx {
         if (window) window->clip(transform(prev_clip));
     }
 
-    void set_viewport(Rect2F frame) {
+    void setViewport(Rect2F frame) {
         viewport = frame;
         if (window) window->clip(transform(viewport));
     }
@@ -43,7 +43,7 @@ struct DispatcherCtx {
         return rect;
     }
 
-    DispatcherCtx with_offset(Rect2F frame) const {
+    DispatcherCtx withOffset(Rect2F frame) const {
         DispatcherCtx c = *this;
         c.mouseRel.x -= frame.x;
         c.mouseRel.y -= frame.y;
@@ -54,7 +54,7 @@ struct DispatcherCtx {
         return c;
     }
 
-    static DispatcherCtx from_absolute(Vec2F abs, Rect2F clip, Window *window) {
+    static DispatcherCtx fromAbsolute(Vec2F abs, Rect2F clip, Window *window) {
         DispatcherCtx c;
         c.mouseAbs = c.mouseRel = abs;
         c.viewport = c.prev_clip = clip;
@@ -151,7 +151,7 @@ public:
     virtual ~Widget();
 
     template<typename T, size_t N>
-        static std::vector<T> make_children(T const (&arr)[N]) {
+        static std::vector<T> makeChildren(T const (&arr)[N]) {
             return std::vector<T>(arr, arr + N);
         }
 

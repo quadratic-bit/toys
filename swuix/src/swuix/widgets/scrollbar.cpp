@@ -70,7 +70,7 @@ Scrollbar::Scrollbar(State *state_)
     slider = new ScrollbarSlider(frect(0, h, SCROLLBAR_W, 0), this, state);
 
     Widget *btns[] = { slider };
-    this->append_children(make_children(btns));
+    this->append_children(makeChildren(btns));
 }
 
 void Scrollbar::attach_to(ControlledWidget *host_) {
@@ -86,7 +86,7 @@ void Scrollbar::attach_to(ControlledWidget *host_) {
     Button *btn_down = new Button(frect(0, frame.h - h, SCROLLBAR_W, h), this, "v", state, new ScrollDown(host));
 
     Widget *btns[] = { btn_up, btn_down };
-    this->append_children(make_children(btns));
+    this->append_children(makeChildren(btns));
 }
 
 float Scrollbar::scroll_progress() {

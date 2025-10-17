@@ -41,8 +41,8 @@ public:
 
             if (e->deliver(ctx, this) == CONSUME) return CONSUME;
 
-            ctx.set_viewport(prev_rect);
-            local_ctx = ctx.with_offset(frame);
+            ctx.setViewport(prev_rect);
+            local_ctx = ctx.withOffset(frame);
 
             for (int i = (int)controls.size() - 1; i >= 0; --i) {
                 if (controls[i]->broadcast(local_ctx, e, true) == CONSUME) {
@@ -53,7 +53,7 @@ public:
             return PROPAGATE;
         }
 
-        local_ctx = ctx.with_offset(frame);
+        local_ctx = ctx.withOffset(frame);
 
         for (size_t i = 0; i < controls.size(); ++i) {
             if (controls[i]->broadcast(local_ctx, e) == CONSUME) {
@@ -87,7 +87,7 @@ public:
 
             if (e->deliver(ctx, this) == CONSUME) return CONSUME;
 
-            local_ctx = ctx.with_offset(frame);
+            local_ctx = ctx.withOffset(frame);
 
             for (int i = (int)children.size() - 1; i >= 0; --i) {
                 if (children[i]->broadcast(local_ctx, e, true) == CONSUME) {
@@ -95,8 +95,8 @@ public:
                 }
             }
 
-            ctx.set_viewport(prev_rect);
-            local_ctx = ctx.with_offset(frame);
+            ctx.setViewport(prev_rect);
+            local_ctx = ctx.withOffset(frame);
 
             for (int i = (int)controls.size() - 1; i >= 0; --i) {
                 if (controls[i]->broadcast(local_ctx, e, true) == CONSUME) {
@@ -107,7 +107,7 @@ public:
             return PROPAGATE;
         }
 
-        local_ctx = ctx.with_offset(frame);
+        local_ctx = ctx.withOffset(frame);
 
         for (size_t i = 0; i < controls.size(); ++i) {
             if (controls[i]->broadcast(local_ctx, e) == CONSUME) {
@@ -116,7 +116,7 @@ public:
         }
 
         ctx.clip(get_viewport());
-        local_ctx = ctx.with_offset(frame);
+        local_ctx = ctx.withOffset(frame);
 
         for (size_t i = 0; i < children.size(); ++i) {
             if (children[i]->broadcast(local_ctx, e) == CONSUME) {

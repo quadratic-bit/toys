@@ -25,7 +25,7 @@ public:
     DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
         ctx.clip(get_viewport());
 
-        DispatcherCtx local_ctx = ctx.with_offset(frame);
+        DispatcherCtx local_ctx = ctx.withOffset(frame);
 
         if (reversed) {
             if (e->deliver(ctx, this) == CONSUME) return CONSUME;

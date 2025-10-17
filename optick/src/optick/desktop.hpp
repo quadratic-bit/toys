@@ -14,7 +14,7 @@ public:
             Renderer *renderer = new Renderer(frect(180, 180, 640, 380), NULL, state);
 
             Widget *arr[] = { renderer };
-            this->append_children(Widget::make_children(arr));
+            this->append_children(Widget::makeChildren(arr));
             this->parent = this;
         }
 
