@@ -14,12 +14,12 @@ public:
     PixelBuffer(SDL_Renderer *ren, int w, int h)
         : renderer(ren), width(w), height(h) {
             texture = SDL_CreateTexture(
-                    renderer,
-                    SDL_PIXELFORMAT_RGBA32,
-                    SDL_TEXTUREACCESS_STREAMING,
-                    width,
-                    height
-                    );
+                renderer,
+                SDL_PIXELFORMAT_RGBA32,
+                SDL_TEXTUREACCESS_STREAMING,
+                width,
+                height
+            );
             if (!texture) throw std::runtime_error(SDL_GetError());
 
             details = SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGBA32);
@@ -43,17 +43,15 @@ public:
 
     void set_pixel_gray(void *base, int pitch, int x, int y, Uint8 gray) {
         // NOTE: base points to the top-left of the locked rect
-        Uint8 *row = (Uint8*)(base) + y * pitch;
-        // FIXME: cast-align
-        Uint32 *colors = (Uint32*)(void*)(row);
+        Uint8 *row = static_cast<Uint8*>(base) + y * pitch;
+        Uint32 *colors = reinterpret_cast<Uint32*>(row);
         colors[x] = grayLUT[gray];
     }
 
     void set_pixel_rgba(void *base, int pitch, int x, int y, Uint8 r, Uint8 g, Uint8 b, Uint8 a=255) {
         Uint32 px = SDL_MapRGBA(details, NULL, r, g, b, a);
-        Uint8 *row = (Uint8*)(base) + y * pitch;
-        // FIXME: cast-align
-        Uint32 *colors = (Uint32*)(void*)(row);
+        Uint8 *row = static_cast<Uint8*>(base) + y * pitch;
+        Uint32 *colors = reinterpret_cast<Uint32*>(row);
         colors[x] = px;
     }
 

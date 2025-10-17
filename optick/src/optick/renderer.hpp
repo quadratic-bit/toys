@@ -115,9 +115,10 @@ class Renderer : public TitledWidget {
                 for (int ix = 0; ix < view_w; ++ix) {
                     Ray pr = Ray::primary(cam, cb, ix, iy, view_w, view_h);
                     Color bg = scene.sample_background(pr.d);
-                    // FIXME: cast-align
-                    Uint32 *row = (Uint32*)(void*)((Uint8*)tex_pixels + iy * tex_pitch);
-                    row[ix] = SDL_MapRGBA(SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGBA32),
+
+                    Uint8 *row = static_cast<Uint8*>(tex_pixels) + iy * tex_pitch;
+                    Uint32 *colors = reinterpret_cast<Uint32*>(row);
+                    colors[ix] = SDL_MapRGBA(SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGBA32),
                             NULL, Color::encode(bg.r), Color::encode(bg.g), Color::encode(bg.b), 255);
                 }
             }
@@ -211,9 +212,9 @@ public:
             buf[idx] = c;
             pixel_bitmask[idx] = 1;
 
-            // FIXME: cast-align
-            Uint32 *row = (Uint32*)(void*)((Uint8*)tex_pixels + iy * tex_pitch);
-            row[ix] = SDL_MapRGBA(SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGBA32), NULL,
+            Uint8 *row = static_cast<Uint8*>(tex_pixels) + iy * tex_pitch;
+            Uint32 *colors = reinterpret_cast<Uint32*>(row);
+            colors[ix] = SDL_MapRGBA(SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGBA32), NULL,
                     Color::encode(c.r), Color::encode(c.g), Color::encode(c.b), 255);
 
             // scanline order
