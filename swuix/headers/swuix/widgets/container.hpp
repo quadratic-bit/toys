@@ -1,9 +1,11 @@
 #pragma once
+#include <cstdio>
 #include <swuix/widget.hpp>
 
 class WidgetContainer : public virtual Widget {
 protected:
     std::vector<Widget*> children;
+
 public:
     WidgetContainer(Rect2F f, Widget *par, State *st) : Widget(f, par, st) {}
     WidgetContainer(Rect2F f, Widget *par, std::vector<Widget*> children_, State *st)

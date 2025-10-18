@@ -1,8 +1,11 @@
 #pragma once
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_error.h>
 #include <SDL3_gfx/SDL3_gfxPrimitives.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
+#include <cassert>
+#include <cstdio>
 #include <stdexcept>
 #include <vector>
 
@@ -16,11 +19,93 @@ enum TextAlign { TA_LEFT, TA_CENTER, TA_RIGHT };
 #define DEBUG_ALPHA       (uint8_t)(255 * 0.5f)
 #define DEBUG_PATTERN_GAP 12.0f
 
-typedef SDL_Texture *SwuixTexture;
+typedef SDL_Mutex     *SwuixMutex;
+typedef SDL_Condition *SwuixCond;
+typedef SDL_Thread    *SwuixThread;
 
 static inline int round_int(float v) {
     return (int)floorf(v + 0.5f);
 }
+
+class TextureHandle {
+    friend class Texture;
+
+    void *pixels;
+    int   pitch;
+
+    TextureHandle(void *pixels_, int pitch_) : pixels(pixels_), pitch(pitch_) {}
+
+    void clear() {
+        pixels = NULL;
+        pitch = 0;
+    }
+
+public:
+    TextureHandle() : pixels(NULL), pitch(0) {}
+
+    uint32_t *get_row(int y) {
+        uint8_t *row = static_cast<uint8_t*>(pixels) + y * pitch;
+        return reinterpret_cast<uint32_t*>(row);
+    }
+};
+
+class Texture {
+    friend class Window;
+
+    SDL_Texture *tex;
+
+    Texture(SDL_Renderer *renderer, int w, int h) {
+        tex = SDL_CreateTexture(
+            renderer,
+            SDL_PIXELFORMAT_RGBA32,
+            SDL_TEXTUREACCESS_STREAMING,
+            w, h
+        );
+        assert(tex != NULL);
+        SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_NONE);
+    }
+
+    void render(SDL_Renderer *renderer, Rect2F *dest) const {
+        SDL_RenderTexture(renderer, tex, NULL, dest);
+    }
+
+    void destroy_unchecked() {
+        SDL_DestroyTexture(tex);
+        tex = NULL;
+    }
+
+    // disallow copies
+    Texture(const Texture &);  // = deleted
+    Texture &operator=(const Texture &);  // = deleted
+
+public:
+    Texture() : tex(NULL) {};
+
+    ~Texture() {
+        destroy();
+    }
+
+    void destroy() {
+        if (is_init()) destroy_unchecked();
+    }
+
+    void swap(Texture &other) {
+        std::swap(tex, other.tex);
+    }
+
+    bool is_init() {
+        return tex != NULL;
+    }
+
+    bool lock(TextureHandle *lock) {
+        return SDL_LockTexture(tex, NULL, &lock->pixels, &lock->pitch);
+    }
+
+    void unlock(TextureHandle *lock) {
+        SDL_UnlockTexture(tex);
+        lock->clear();
+    }
+};
 
 class Window {
     SDL_Window *window;
@@ -28,6 +113,7 @@ class Window {
     TTF_Font *font;
     PixelBuffer *pb;
     SDL_Renderer *renderer;
+    const SDL_PixelFormatDetails *pfmt_rgba32; // cached once
 
 public:
     Window(int width, int height) {
@@ -39,9 +125,8 @@ public:
         }
 
         if (!SDL_CreateWindowAndRenderer(
-                    "ui-core", width, height, SDL_WindowFlags(0),
-                    &window, &renderer
-                    )) {
+                "ui-core", width, height, SDL_WindowFlags(0), &window, &renderer
+        )) {
             SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
             throw std::runtime_error(SDL_GetError());
         }
@@ -58,6 +143,7 @@ public:
         }
 
         pb = new PixelBuffer(renderer, width, height);
+        pfmt_rgba32 = SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGBA32);
 
         clear();
         present();
@@ -72,29 +158,42 @@ public:
         SDL_Quit();
     }
 
-    SwuixTexture create_texture(int w, int h) {
-        SwuixTexture tex = SDL_CreateTexture(
-                renderer,
-                SDL_PIXELFORMAT_RGBA32,
-                SDL_TEXTUREACCESS_STREAMING,
-                w, h
-                );
-        if (tex) SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_NONE);
-        return tex;
-    }
-
-    void destroy_texture(SwuixTexture *tex) {
-        SDL_DestroyTexture(*tex);
-        *tex = NULL;
-    }
-
-    void render_texture(SwuixTexture tex, Rect2F *dest) {
-        SDL_RenderTexture(renderer, tex, NULL, dest);
-    }
-
     static Time now() {
         return (double)SDL_GetTicksNS() / (double)1e9;
     }
+
+    // ================= TEXTURES =================
+
+    void create_texture(Texture *out, int w, int h) {
+        Texture tmp(renderer, w, h);
+        out->swap(tmp);
+    }
+
+    void render_texture(const Texture &tex, Rect2F *dest) const {
+        tex.render(renderer, dest);
+    }
+
+    inline uint32_t map_rgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) const {
+        // NOTE: pfmt_rgba32 is never null for a valid pixel format
+        return SDL_MapRGBA(pfmt_rgba32, NULL, r, g, b, a);
+    }
+
+    // ================ THREADING =================
+
+    static SwuixMutex create_mutex()                   { return SDL_CreateMutex(); }
+    static void       destroy_mutex(SwuixMutex m)      { if (m) SDL_DestroyMutex(m); }
+    static void       lock_mutex(SwuixMutex m)         { SDL_LockMutex(m); }
+    static void       unlock_mutex(SwuixMutex m)       { SDL_UnlockMutex(m); }
+
+    static SwuixCond  create_condition()               { return SDL_CreateCondition(); }
+    static void       destroy_condition(SwuixCond c)   { if (c) SDL_DestroyCondition(c); }
+    static void       wait_condition(SwuixCond c, SwuixMutex m) { SDL_WaitCondition(c, m); }
+    static void       broadcast_condition(SwuixCond c) { SDL_BroadcastCondition(c); }
+
+    static SwuixThread create_thread(int (*fn)(void*), const char *name, void *ud) {
+        return SDL_CreateThread(fn, name, ud);
+    }
+    static void wait_thread(SwuixThread t)             { if (t) SDL_WaitThread(t, 0); }
 
     // ================ PRIMITIVES ================
 

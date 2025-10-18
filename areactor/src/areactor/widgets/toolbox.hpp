@@ -49,7 +49,7 @@ public:
 		Button *btn_remove  = new Button(frect(80, 70, 50, 25), NULL, "-",    state, cb_delete_particles);
 
 		Widget *btns[] = { btn_left, btn_right, btn_cold, btn_hot, btn_add, btn_remove };
-		this->append_children(Widget::make_children(btns));
+		this->append_children(Widget::makeChildren(btns));
 	}
 
 	const char *title() const {

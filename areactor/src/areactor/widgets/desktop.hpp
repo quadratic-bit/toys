@@ -23,7 +23,7 @@ public:
 		               reactor     = new Reactor(frect(180, 180, 640, 380), NULL, 1000, state);
 
 		Widget *arr[] = { demo, clock, toolbox, reactor, kinetic, temperature };
-		this->append_children(Widget::make_children(arr));
+		this->append_children(Widget::makeChildren(arr));
 
 		((ReactorState*)state)->reactor = reactor;
 		this->parent = this;

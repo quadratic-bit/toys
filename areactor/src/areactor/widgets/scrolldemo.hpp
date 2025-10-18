@@ -18,7 +18,7 @@ public:
 		Button *btn_nothing2 = new Button(frect(20, 110, 50, 25), NULL, "btn2", state, cb_nothing);
 
 		Widget *btns[] = { btn_nothing, btn_nothing2 };
-		this->append_children(Widget::make_children(btns));
+		this->append_children(Widget::makeChildren(btns));
 	}
 
 	const char *title() const {

@@ -7,6 +7,10 @@ inline double clampd(double value, double min, double max) {
     return std::max(min, std::min(max, value));
 }
 
+inline float rand01() {
+    return (float)(std::rand()) / RAND_MAX;
+}
+
 class Vector3 {
 public:
     double x;

@@ -1,6 +1,5 @@
 #pragma once
-#include <cstdio>
-
+#include <cassert>
 #include <swuix/widgets/handle.hpp>
 
 #include "trace/scene.hpp"
@@ -67,9 +66,11 @@ static inline Scene make_demo_scene() {
     return scn;
 }
 
+#define N_WORKERS 6
+
 class Renderer : public TitledWidget {
-    SwuixTexture front_buffer;
-    SwuixTexture back_buffer;
+    Texture front_buffer;
+    Texture back_buffer;
 
     Scene       scene;
     Camera      cam;
@@ -85,6 +86,64 @@ class Renderer : public TitledWidget {
 
     int max_depth;
     double eps;
+
+    SwuixThread workers[N_WORKERS];
+    SwuixMutex  job_mtx;
+    SwuixCond   job_cv;
+
+    bool job_stop;        // signal threads to exit
+    bool job_has_work;    // a frame is active
+    int  job_next_row;    // next row to take
+    int  job_width, job_height;
+
+    std::vector<unsigned char> row_done;     // per-row flag: 1 when row fully traced
+    std::vector<unsigned char> row_uploaded; // per-row flag: 1 when row copied to texture
+
+    static int worker_entry(void *self_void);
+
+    void start_frame_jobs() {
+        Window::lock_mutex(job_mtx);
+        job_width     = view_w;
+        job_height    = view_h;
+        job_next_row  = 0;
+        job_has_work  = true;
+
+        // reset per-row state
+        row_done.assign(view_h, 0u);
+        row_uploaded.assign(view_h, 0u);
+
+        // pixels/bits already sized in ensure_init_for_size
+
+        Window::broadcast_condition(job_cv);
+        Window::unlock_mutex(job_mtx);
+    }
+
+    void stop_workers() {
+        Window::lock_mutex(job_mtx);
+        job_stop = true;
+        Window::broadcast_condition(job_cv);
+        Window::unlock_mutex(job_mtx);
+        for (int i = 0; i < N_WORKERS; ++i) {
+            if (workers[i]) {
+                Window::wait_thread(workers[i]);
+                workers[i] = 0;
+            }
+        }
+    }
+
+    void fill_texture_with_background(Window *window, Texture *tex) {
+        TextureHandle texh;
+        if (!tex->lock(&texh)) return;
+        for (int iy = 0; iy < view_h; ++iy) {
+            uint32_t *pixels = texh.get_row(iy);
+            for (int ix = 0; ix < view_w; ++ix) {
+                Ray pr = Ray::primary(cam, cb, ix, iy, view_w, view_h);
+                Color bg = scene.sample_background(pr.d);
+                pixels[ix] = window->map_rgba(Color::encode(bg.r), Color::encode(bg.g), Color::encode(bg.b), 255);
+            }
+        }
+        tex->unlock(&texh);
+    }
 
     /**
      * Lazily (re)initialize buffers and texture if the view size changed
@@ -117,47 +176,42 @@ class Renderer : public TitledWidget {
         cam.height = (double)view_h;
         cb         = CameraBasis::make(cam);
 
+        row_done.assign(view_h, 0u);
+        row_uploaded.assign(view_h, 0u);
 
-        window->destroy_texture(&front_buffer);
-        window->destroy_texture(&back_buffer);
+        front_buffer.destroy();
+        back_buffer.destroy();
 
-        front_buffer = window->create_texture(view_w, view_h);
-        back_buffer  = window->create_texture(view_w, view_h);
+        window->create_texture(&front_buffer, view_w, view_h);
+        window->create_texture(&back_buffer,  view_w, view_h);
 
-        void *tex_pixels = 0; int tex_pitch = 0;
-        if (SDL_LockTexture(front_buffer, NULL, &tex_pixels, &tex_pitch)) {
-            for (int iy = 0; iy < view_h; ++iy) {
-                for (int ix = 0; ix < view_w; ++ix) {
-                    Ray pr = Ray::primary(cam, cb, ix, iy, view_w, view_h);
-                    Color bg = scene.sample_background(pr.d);
+        fill_texture_with_background(window, &front_buffer);
 
-                    Uint8 *row = static_cast<Uint8*>(tex_pixels) + iy * tex_pitch;
-                    Uint32 *colors = reinterpret_cast<Uint32*>(row);
-                    colors[ix] = SDL_MapRGBA(SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGBA32),
-                            NULL, Color::encode(bg.r), Color::encode(bg.g), Color::encode(bg.b), 255);
-                }
-            }
-            SDL_UnlockTexture(front_buffer);
-        }
+        start_frame_jobs();
     }
 
 public:
     Renderer(Rect2F rect, Widget *parent_, State *s)
-        : Widget(rect, parent_, s), TitledWidget(rect, parent_, s),
-        front_buffer(NULL), view_w(0), view_h(0), next_x(0), next_y(0),
-        initialized(false), max_depth(5), eps(1e-4) {
-            scene = make_demo_scene();
-        }
+            : Widget(rect, parent_, s), TitledWidget(rect, parent_, s),
+            view_w(0), view_h(0), next_x(0), next_y(0),
+            initialized(false), max_depth(5), eps(1e-4) {
+        scene = make_demo_scene();
+
+        job_mtx = Window::create_mutex();
+        job_cv  = Window::create_condition();
+        job_stop = false; job_has_work = false;
+        job_next_row = 0; job_width = job_height = 0;
+
+        for (int i = 0; i < N_WORKERS; ++i)
+            workers[i] = Window::create_thread(Renderer::worker_entry, "rt_worker", this);
+    }
 
     ~Renderer() {
-        if (front_buffer) {
-            SDL_DestroyTexture(front_buffer);
-            front_buffer = NULL;
-        }
-        if (back_buffer) {
-            SDL_DestroyTexture(back_buffer);
-            back_buffer = NULL;
-        }
+        stop_workers();
+        Window::destroy_condition(job_cv);
+        Window::destroy_mutex(job_mtx);
+        front_buffer.destroy();
+        back_buffer.destroy();
     }
 
     const char *title() const {
@@ -167,16 +221,17 @@ public:
     void render(Window *window, float off_x, float off_y) {
         window->clear_rect(frame, off_x, off_y, 125, 12, 125);
 
-        const int viewX = (int)std::floor(frame.x + off_x);
-        const int viewY = (int)std::floor(frame.y + off_y);
-        const int viewW = (int)std::floor(frame.w);
-        const int viewH = (int)std::floor(frame.h);
+        const int viewX = std::floor(frame.x + off_x);
+        const int viewY = std::floor(frame.y + off_y);
+        const int viewW = std::floor(frame.w);
+        const int viewH = std::floor(frame.h);
 
         // Only size matters for (re)alloc
         ensure_init_for_size(window, viewW, viewH);
 
-        if (front_buffer) {
-            SDL_FRect dst = { (float)viewX, (float)viewY, (float)viewW, (float)viewH };
+        // TODO: figure out if this if-clause can be assumed true as invariant
+        if (front_buffer.is_init()) {
+            Rect2F dst = frect(viewX, viewY, viewW, viewH);
             window->render_texture(front_buffer, &dst);
         }
 
@@ -190,58 +245,112 @@ public:
         Time t0 = Window::now();
         double budget = ev->budget_s;
         Time deadline = ev->deadline;
-
         const double margin = 1e-4;
 
-        void *tex_pixels = 0; int tex_pitch = 0;
-        if (!SDL_LockTexture(back_buffer, NULL, &tex_pixels, &tex_pitch)) return PROPAGATE;
+        TextureHandle texh;
+        if (!back_buffer.lock(&texh)) {
+            return PROPAGATE;
+        }
 
-        // until run out of time or finish the image
+        // upload as many finished rows as time allows
         for (;;) {
-            // budget management
             Time now = Window::now();
             if ((now - t0) >= budget - margin) break;
             if (now >= deadline - margin) break;
 
-            // check for finished
-            if (next_y >= view_h) {
-                scene.objects[1]->center.x += 0.05;
+            int y_to_upload = -1;
 
-                SDL_UnlockTexture(back_buffer);
+            // find a finished row that is not yet uploaded
+            Window::lock_mutex(job_mtx);
+            for (int y = 0; y < view_h; ++y) {
+                if (row_done[y] && !row_uploaded[y]) {
+                    y_to_upload = y;
+                    break;
+                }
+            }
+            Window::unlock_mutex(job_mtx);
 
-                std::swap(front_buffer, back_buffer);
+            if (y_to_upload < 0) break; // nothing ready right now
 
-                next_x = next_y = 0;
+            // copy that whole row from buf to texture
+            const int y = y_to_upload;
+            uint32_t *pixels = texh.get_row(y);
 
-                return PROPAGATE;
+            Color *src = &buf[y * view_w];
+            for (int x = 0; x < view_w; ++x) {
+                const Color &c = src[x];
+                pixels[x] = ctx.window->map_rgba(Color::encode(c.r), Color::encode(c.g), Color::encode(c.b), 255);
             }
 
-            // tracing
-            int ix = next_x, iy = next_y;
-            Ray pr = Ray::primary(cam, cb, ix, iy, view_w, view_h);
-
-            // NOTE: this is _the_ expensive call
-            Color c = scene.trace(pr, 0, max_depth, eps);
-
-            int idx = iy * view_w + ix;
-            buf[idx] = c;
-            pixel_bitmask[idx] = 1;
-
-            Uint8 *row = static_cast<Uint8*>(tex_pixels) + iy * tex_pitch;
-            Uint32 *colors = reinterpret_cast<Uint32*>(row);
-            colors[ix] = SDL_MapRGBA(SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGBA32), NULL,
-                    Color::encode(c.r), Color::encode(c.g), Color::encode(c.b), 255);
-
-            // scanline order
-            ++next_x;
-            if (next_x >= view_w) {
-                next_x = 0;
-                ++next_y;
-            }
+            // mark uploaded (no need to hold lock long)
+            Window::lock_mutex(job_mtx);
+            row_uploaded[y] = 1u;
+            Window::unlock_mutex(job_mtx);
         }
 
-        SDL_UnlockTexture(back_buffer);
+        back_buffer.unlock(&texh);
+
+        // finished frame?
+        bool all_uploaded = true;
+        Window::lock_mutex(job_mtx);
+        for (int y = 0; y < view_h; ++y) {
+            if (!row_uploaded[y]) {
+                all_uploaded = false;
+                break;
+            }
+        }
+        Window::unlock_mutex(job_mtx);
+
+        if (all_uploaded) {
+            // your animation
+            scene.objects[1]->center.x += 0.05;
+
+            front_buffer.swap(back_buffer);
+
+            // reset & kick next frame
+            next_x = next_y = 0;
+            start_frame_jobs();
+        }
 
         return PROPAGATE;
     }
 };
+
+int Renderer::worker_entry(void* self_void) {
+    Renderer* self = static_cast<Renderer*>(self_void);
+
+    for (;;) {
+        // --- take a row ---
+        Window::lock_mutex(self->job_mtx);
+        while (!self->job_stop &&
+               (!self->job_has_work || self->job_next_row >= self->job_height)) {
+            Window::wait_condition(self->job_cv, self->job_mtx);
+        }
+        if (self->job_stop) {
+            Window::unlock_mutex(self->job_mtx);
+            break;
+        }
+        // if all rows already taken, loop to wait for next frame
+        if (self->job_next_row >= self->job_height) {
+            Window::unlock_mutex(self->job_mtx);
+            continue;
+        }
+        int y = self->job_next_row++;
+        Window::unlock_mutex(self->job_mtx);
+
+        // --- render the row into buf ---
+        for (int x = 0; x < self->job_width; ++x) {
+            Ray pr = Ray::primary(self->cam, self->cb, x, y, self->job_width, self->job_height);
+            Color c = self->scene.trace(pr, 0, self->max_depth, self->eps);
+            self->buf[y * self->job_width + x] = c;
+        }
+
+        // --- mark row done (under lock for visibility) ---
+        Window::lock_mutex(self->job_mtx);
+        self->row_done[y] = 1u;
+        // if y was the last one taken and all ≥height, allow main to start next frame
+        Window::unlock_mutex(self->job_mtx);
+    }
+
+    return 0;
+}
