@@ -86,7 +86,7 @@ public:
     ScrollableWidget(Rect2F content_frame_, Rect2F viewport_frame_, Widget *parent_, State *state_)
         : Widget(content_frame_, parent_, state_), viewport(viewport_frame_) {}
 
-    Rect2F get_viewport() const { return viewport; }
+    Rect2F getViewport() const { return viewport; }
 
     float content_progress() const {
         return viewport.y - frame.y;
