@@ -8,8 +8,10 @@ class Material {
 public:
     Material() {}
     virtual ~Material() {}
-
     virtual Color sample(TraceContext ctx) const = 0;
+
+    virtual bool  is_emissive() const { return false; }
+    virtual Color emission()   const { return Color(0,0,0); }
 };
 
 // A mirror surface
@@ -41,4 +43,15 @@ public:
         : Material(), kd(kd_), ks(ks_), shininess(shininess_) {}
 
     Color sample(TraceContext ctx) const;
+};
+
+class MaterialEmissive : public Material {
+public:
+    Color Le; // radiance emitted, e.g. 1..10
+
+    explicit MaterialEmissive(const Color &Le_=Color(1, 1, 1)) : Le(Le_) {}
+
+    Color sample(TraceContext ctx) const;
+    bool  is_emissive() const { return true; }
+    Color emission()    const { return Le; }
 };

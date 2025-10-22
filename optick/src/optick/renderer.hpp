@@ -64,8 +64,19 @@ static inline Scene make_demo_scene() {
     ));
 
     // Lights
-    scn.lights.push_back(PointLight(Vector3(-2, 2.5, -1.5), Color(1.0,0.95,0.9), 60.0)); // warm key
-    scn.lights.push_back(PointLight(Vector3( 2, 1.0,  0.5), Color(0.7,0.8,1.0),  25.0)); // cool fill
+    const MaterialEmissive* glow = new MaterialEmissive(Color(1.0, 1.0, 1.0)); // bright
+    scn.objects.push_back(new Sphere(
+        Vector3(-2, 2.5, -1.5), 0.25,
+        Color(1, 1, 1), // tint; (1,1,1) for neutral
+        glow
+    ));
+    scn.objects.push_back(new Sphere(
+        Vector3( 2, 1.0,  0.5), 0.25,
+        Color(1, 1, 1), // tint; (1,1,1) for neutral
+        glow
+    ));
+    //scn.lights.push_back(PointLight(Vector3(-2, 2.5, -1.5), Color(1.0,0.95,0.9), 60.0)); // warm key
+    //scn.lights.push_back(PointLight(Vector3( 2, 1.0,  0.5), Color(0.7,0.8,1.0),  25.0)); // cool fill
 
     return scn;
 }
@@ -82,7 +93,7 @@ class Renderer : public TitledWidget {
     ViewCS      cs;
 
     int view_w, view_h;
-    std::vector<Color> buf;  // size viewW_*viewH_
+    std::vector<Color> buf;  // size view_w * view_h
     std::vector<unsigned char> pixel_bitmask;
 
     int  next_x, next_y;
@@ -201,10 +212,12 @@ public:
         cam.pos    = Vector3(0, 2,  2.5);
         scene = make_demo_scene();
 
-        job_mtx = Window::create_mutex();
-        job_cv  = Window::create_condition();
-        job_stop = false; job_has_work = false;
-        job_next_row = 0; job_width = job_height = 0;
+        job_mtx      = Window::create_mutex();
+        job_cv       = Window::create_condition();
+        job_stop     = false;
+        job_has_work = false;
+        job_next_row = 0;
+        job_width    = job_height = 0;
 
         for (int i = 0; i < N_WORKERS; ++i)
             workers[i] = Window::create_thread(Renderer::worker_entry, "rt_worker", this);
@@ -324,11 +337,11 @@ public:
     }
 };
 
-int Renderer::worker_entry(void* self_void) {
+int Renderer::worker_entry(void *self_void) {
     Renderer* self = static_cast<Renderer*>(self_void);
 
     for (;;) {
-        // --- take a row ---
+        // take a row
         Window::lock_mutex(self->job_mtx);
         while (!self->job_stop &&
                (!self->job_has_work || self->job_next_row >= self->job_height)) {
@@ -346,7 +359,7 @@ int Renderer::worker_entry(void* self_void) {
         int y = self->job_next_row++;
         Window::unlock_mutex(self->job_mtx);
 
-        // --- render the row into buf ---
+        // render the row into buf
         for (int x = 0; x < self->job_width; ++x) {
             Ray pr = Ray::primary(self->cam, self->cb, x, y, self->job_width, self->job_height);
             Color c = self->scene.trace(pr, 0, self->max_depth, self->eps);

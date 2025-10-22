@@ -22,7 +22,6 @@ struct TraceContext {
 
 struct Scene {
     std::vector<Object*> objects;
-    std::vector<PointLight> lights;
     Color backgroundTop, backgroundBottom;
 
     Scene() : backgroundTop(0.7, 0.85, 1.0), backgroundBottom(0.05, 0.05, 0.1) {}
@@ -44,11 +43,35 @@ struct Scene {
         Ray sray(p + to_light * eps, to_light); // offset origin to avoid self-intersection
         for (size_t i = 0; i < objects.size(); ++i) {
             Hit h;
-            bool intersects = objects[i]->intersect(sray, eps, &h);
-            bool in_proximity = h.dist < max_dist;
-            if (intersects && in_proximity) return true;
+            if (!objects[i]->intersect(sray, eps, &h)) continue;
+            if (h.dist < max_dist) return true; // blocked by something
         }
         return false;
+    }
+
+    /**
+     * Ignore the target emissive if it is the first hit
+     */
+    bool occluded_towards(const Vector3 &p, const Vector3 &to_light,
+            double max_dist, double eps, const Object *target_light_geom) const {
+        Ray sray(p + to_light * eps, to_light);
+        const Object* first_obj = NULL;
+        Hit h_first;
+
+        double closest = max_dist;
+        for (size_t i = 0; i < objects.size(); ++i) {
+            Hit h;
+            if (!objects[i]->intersect(sray, eps, &h)) continue;
+            if (h.dist < closest) {
+                closest = h.dist;
+                first_obj = objects[i];
+                h_first = h;
+            }
+        }
+
+        if (!first_obj) return false; // nothing in the way
+        if (first_obj == target_light_geom) return false; // hit the light
+        return true; // some other geometry blocks
     }
 
     /**

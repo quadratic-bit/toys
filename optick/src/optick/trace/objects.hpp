@@ -5,16 +5,6 @@
 #include "common.hpp"
 #include <vector>
 
-struct PointLight {
-    Vector3 pos;   // world
-    Color   color;
-    double  power; // scalar intensity, ~10..100
-
-    PointLight() : color(1, 1, 1), power(10.0) {}
-    PointLight(const Vector3 &p, const Color &c, double pw)
-        : pos(p), color(c), power(pw) {}
-};
-
 struct Object {
     Vector3 center;
     Color   color;

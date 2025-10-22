@@ -42,18 +42,22 @@ Color MaterialOpaque::sample(TraceContext ctx) const {
     Color out(0, 0, 0);      // accumulated outgoing radiance
     Vector3 V = -ctx.ray.d;  // direction to camera
 
-    for (size_t li = 0; li < ctx.scene->lights.size(); ++li) {
-        const PointLight &L = ctx.scene->lights[li];
+    for (size_t oi = 0; oi < ctx.scene->objects.size(); ++oi) {
+        const Object *obj = ctx.scene->objects[oi];
+        if (!obj->mat->is_emissive()) continue;
 
-        Vector3 Lvec = L.pos - ctx.hit.pos;  // hit -> light
+        const Color Le = obj->mat->emission();  // radiance color
+        const double power = 100.0;
+
+        Vector3 Lvec = obj->center - ctx.hit.pos;  // hit -> light
         double dist2 = Lvec ^ Lvec;
         double dist  = std::sqrt(dist2);
         Vector3 Ldir = Lvec / dist;
 
-        if (ctx.scene->occluded(ctx.hit.pos, Ldir, dist, ctx.eps)) continue;
+        if (ctx.scene->occluded_towards(ctx.hit.pos, Ldir, dist, ctx.eps, obj)) continue;
 
         // incoming radiance estimate with 1/(4πr^2) falloff
-        Color Lradiance = L.color * (L.power / (4.0 * M_PI * dist2));
+        Color Lradiance = Le * (power / (4.0 * M_PI * dist2));
 
         // lambertian diffuse (cosine term)
         double ndotl = std::max(0.0, ctx.hit.norm ^ Ldir);
@@ -74,4 +78,8 @@ Color MaterialOpaque::sample(TraceContext ctx) const {
     out += ctx.target->color * (0.02 * kd);
 
     return out;
+}
+
+Color MaterialEmissive::sample(TraceContext ctx) const {
+    return ctx.target->color * Le;
 }
