@@ -20,6 +20,10 @@ static inline Scene make_demo_scene() {
         ground_plane
     ));
 
+    const MaterialOpaque *normal = new MaterialOpaque(/*kd*/1.0, /*ks*/1.0, /*shininess*/32);
+    const Vector3 verts[] = { Vector3(-10, -5, -10), Vector3(-8, -2, -10), Vector3(-11, -1, -10) };
+    scn.objects.push_back(new Polygon(std::vector<Vector3>(verts, verts + 3), Color(1.0, 1.0, 1.0), normal));
+
     const MaterialOpaque *solid = new MaterialOpaque(/*kd*/1.0, /*ks*/1.0, /*shininess*/32);
     scn.objects.push_back(new Sphere(
         Vector3(-1.5, -0.2, -5), 0.7,
