@@ -171,9 +171,7 @@ class Renderer : public TitledWidget {
         eps = 1e-4;
 
         // build camera
-        //cam.pos    = Vector3(0, 4,  0);
-        cam.pos    = Vector3(0, 2,  2.5);
-        cam.target = Vector3(0, 1, -1);
+        cam.target = cam.pos + Vector3(0, -1, -3.5);
         cam.up     = Vector3(0, 1,  0);
         cam.vfov   = 45.0;
         cam.width  = (double)view_w;
@@ -199,6 +197,8 @@ public:
             : Widget(rect, parent_, s), TitledWidget(rect, parent_, s),
             view_w(0), view_h(0), next_x(0), next_y(0),
             initialized(false), max_depth(5), eps(1e-4) {
+        //cam.pos    = Vector3(0, 4,  0);
+        cam.pos    = Vector3(0, 2,  2.5);
         scene = make_demo_scene();
 
         job_mtx = Window::create_mutex();
@@ -220,6 +220,10 @@ public:
 
     const char *title() const {
         return "Renderer";
+    }
+
+    void move_camera_left(float dx) {
+        cam.pos.x += dx;
     }
 
     void render(Window *window, float off_x, float off_y) {
@@ -307,7 +311,7 @@ public:
 
         if (all_uploaded) {
             // your animation
-            scene.objects[1]->center.x += 0.05;
+            scene.objects[2]->center.x += 0.05;
 
             front_buffer.swap(back_buffer);
 
