@@ -235,8 +235,26 @@ public:
         return "Renderer";
     }
 
-    void move_camera_left(float dx) {
+    void move_camera(float dx) {
         cam.pos.x += dx;
+        cam.target.x += dx;
+        cb = CameraBasis::make(cam);
+    }
+
+    void rotate_camera_xz(double dphi) {
+        Vector3 dir = cam.target - cam.pos;
+
+        const double c = std::cos(dphi);
+        const double s = std::sin(dphi);
+
+        const double x = dir.x;
+        const double z = dir.z;
+
+        dir.x =  x * c + z * s;
+        dir.z = -x * s + z * c;
+
+        cam.target = cam.pos + dir;
+        cb = CameraBasis::make(cam);
     }
 
     void render(Window *window, float off_x, float off_y) {
