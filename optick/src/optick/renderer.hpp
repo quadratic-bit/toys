@@ -5,6 +5,20 @@
 #include "trace/scene.hpp"
 #include "trace/cs.hpp"
 
+static inline unsigned lcg(unsigned &s) {
+    s = 1664525u * s + 1013904223u;
+    return s;
+}
+
+// Fisher–Yates shuffle
+static inline void shuffle(std::vector<int> &a, unsigned &state) {
+    for (int i = (int)a.size() - 1; i > 0; --i) {
+        unsigned r = lcg(state);
+        int j = (int)(r % (unsigned)(i + 1));
+        int tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+}
+
 static inline Scene make_demo_scene() {
     Scene scn;
 
@@ -85,7 +99,6 @@ static inline Scene make_demo_scene() {
 
 class Renderer : public TitledWidget {
     Texture front_buffer;
-    Texture back_buffer;
 
     Scene       scene;
     Camera      cam;
@@ -96,7 +109,6 @@ class Renderer : public TitledWidget {
     std::vector<Color> buf;  // size view_w * view_h
     std::vector<unsigned char> pixel_bitmask;
 
-    int  next_x, next_y;
     bool initialized;
 
     int max_depth;
@@ -108,26 +120,47 @@ class Renderer : public TitledWidget {
 
     bool job_stop;        // signal threads to exit
     bool job_has_work;    // a frame is active
-    int  job_next_row;    // next row to take
     int  job_width, job_height;
+    int  job_next_tile;  // next index into tile_order
 
-    std::vector<unsigned char> row_done;     // per-row flag: 1 when row fully traced
-    std::vector<unsigned char> row_uploaded; // per-row flag: 1 when row copied to texture
+    enum { TILE = 8 };
+
+    int tile_w, tile_h;
+    int num_tiles;  // tile_w * tile_h
+
+    std::vector<unsigned char> tile_done;
+    std::vector<unsigned char> tile_uploaded;
+    std::vector<int>           tile_order;
+
+    unsigned rng_state;  // simple per-frame RNG for shuffling
 
     static int worker_entry(void *self_void);
 
+    void build_tiles_for_size() {
+        tile_w = (view_w + TILE - 1) / TILE;
+        tile_h = (view_h + TILE - 1) / TILE;
+        num_tiles = tile_w * tile_h;
+
+        tile_done.assign(num_tiles, 0u);
+        tile_uploaded.assign(num_tiles, 0u);
+
+        tile_order.resize(num_tiles);
+        for (int i = 0; i < num_tiles; ++i) tile_order[i] = i;
+
+        rng_state = (unsigned)(Window::now() * 1e6);
+        shuffle(tile_order, rng_state);
+
+        job_next_tile = 0;
+    }
+
     void start_frame_jobs() {
         Window::lock_mutex(job_mtx);
+
+        build_tiles_for_size();
+
         job_width     = view_w;
         job_height    = view_h;
-        job_next_row  = 0;
         job_has_work  = true;
-
-        // reset per-row state
-        row_done.assign(view_h, 0u);
-        row_uploaded.assign(view_h, 0u);
-
-        // pixels/bits already sized in ensure_init_for_size
 
         Window::broadcast_condition(job_cv);
         Window::unlock_mutex(job_mtx);
@@ -175,7 +208,6 @@ class Renderer : public TitledWidget {
         pixel_bitmask.clear();
         pixel_bitmask.resize(view_w * view_h, 0);
 
-        next_x = next_y = 0;
         initialized = true;
 
         max_depth = 5;
@@ -189,14 +221,9 @@ class Renderer : public TitledWidget {
         cam.height = (double)view_h;
         cb         = CameraBasis::make(cam);
 
-        row_done.assign(view_h, 0u);
-        row_uploaded.assign(view_h, 0u);
-
         front_buffer.destroy();
-        back_buffer.destroy();
 
         window->create_texture(&front_buffer, view_w, view_h);
-        window->create_texture(&back_buffer,  view_w, view_h);
 
         fill_texture_with_background(window, &front_buffer);
 
@@ -206,8 +233,7 @@ class Renderer : public TitledWidget {
 public:
     Renderer(Rect2F rect, Widget *parent_, State *s)
             : Widget(rect, parent_, s), TitledWidget(rect, parent_, s),
-            view_w(0), view_h(0), next_x(0), next_y(0),
-            initialized(false), max_depth(5), eps(1e-4) {
+            view_w(0), view_h(0), initialized(false), max_depth(5), eps(1e-4) {
         //cam.pos    = Vector3(0, 4,  0);
         cam.pos    = Vector3(0, 2,  2.5);
         scene = make_demo_scene();
@@ -216,7 +242,6 @@ public:
         job_cv       = Window::create_condition();
         job_stop     = false;
         job_has_work = false;
-        job_next_row = 0;
         job_width    = job_height = 0;
 
         for (int i = 0; i < N_WORKERS; ++i)
@@ -228,7 +253,6 @@ public:
         Window::destroy_condition(job_cv);
         Window::destroy_mutex(job_mtx);
         front_buffer.destroy();
-        back_buffer.destroy();
     }
 
     const char *title() const {
@@ -287,7 +311,7 @@ public:
         const double margin = 1e-4;
 
         TextureHandle texh;
-        if (!back_buffer.lock(&texh)) {
+        if (!front_buffer.lock(&texh)) {
             return PROPAGATE;
         }
 
@@ -297,43 +321,51 @@ public:
             if ((now - t0) >= budget - margin) break;
             if (now >= deadline - margin) break;
 
-            int y_to_upload = -1;
+            int tile_to_upload = -1;
 
-            // find a finished row that is not yet uploaded
+            // find a finished tile that is not yet uploaded
             Window::lock_mutex(job_mtx);
-            for (int y = 0; y < view_h; ++y) {
-                if (row_done[y] && !row_uploaded[y]) {
-                    y_to_upload = y;
+            for (int ti = 0; ti < num_tiles; ++ti) {
+                if (tile_done[ti] && !tile_uploaded[ti]) {
+                    tile_to_upload = ti;
                     break;
                 }
             }
             Window::unlock_mutex(job_mtx);
 
-            if (y_to_upload < 0) break; // nothing ready right now
+            if (tile_to_upload < 0) break;  // nothing ready
 
-            // copy that whole row from buf to texture
-            const int y = y_to_upload;
-            uint32_t *pixels = texh.get_row(y);
+            const int tx = tile_to_upload % tile_w;
+            const int ty = tile_to_upload / tile_w;
+            const int x0 = tx * TILE;
+            const int y0 = ty * TILE;
+            const int x1 = std::min(x0 + TILE, view_w);
+            const int y1 = std::min(y0 + TILE, view_h);
 
-            Color *src = &buf[y * view_w];
-            for (int x = 0; x < view_w; ++x) {
-                const Color &c = src[x];
-                pixels[x] = ctx.window->map_rgba(Color::encode(c.r), Color::encode(c.g), Color::encode(c.b), 255);
+            for (int y = y0; y < y1; ++y) {
+                uint32_t *pixels = texh.get_row(y);
+                Color    *src    = &buf[y * view_w];
+                for (int x = x0; x < x1; ++x) {
+                    const Color& c = src[x];
+                    pixels[x] = ctx.window->map_rgba(Color::encode(c.r),
+                            Color::encode(c.g),
+                            Color::encode(c.b), 255);
+                }
             }
 
             // mark uploaded (no need to hold lock long)
             Window::lock_mutex(job_mtx);
-            row_uploaded[y] = 1u;
+            tile_uploaded[tile_to_upload] = 1u;
             Window::unlock_mutex(job_mtx);
         }
 
-        back_buffer.unlock(&texh);
+        front_buffer.unlock(&texh);
 
         // finished frame?
         bool all_uploaded = true;
         Window::lock_mutex(job_mtx);
-        for (int y = 0; y < view_h; ++y) {
-            if (!row_uploaded[y]) {
+        for (int ti = 0; ti < num_tiles; ++ti) {
+            if (!tile_uploaded[ti]) {
                 all_uploaded = false;
                 break;
             }
@@ -341,13 +373,8 @@ public:
         Window::unlock_mutex(job_mtx);
 
         if (all_uploaded) {
-            // your animation
             scene.objects[2]->center.x += 0.05;
 
-            front_buffer.swap(back_buffer);
-
-            // reset & kick next frame
-            next_x = next_y = 0;
             start_frame_jobs();
         }
 
@@ -359,35 +386,46 @@ int Renderer::worker_entry(void *self_void) {
     Renderer* self = static_cast<Renderer*>(self_void);
 
     for (;;) {
-        // take a row
+        // take a tile
         Window::lock_mutex(self->job_mtx);
         while (!self->job_stop &&
-               (!self->job_has_work || self->job_next_row >= self->job_height)) {
+               (!self->job_has_work || self->job_next_tile >= self->num_tiles)) {
             Window::wait_condition(self->job_cv, self->job_mtx);
         }
         if (self->job_stop) {
             Window::unlock_mutex(self->job_mtx);
             break;
         }
-        // if all rows already taken, loop to wait for next frame
-        if (self->job_next_row >= self->job_height) {
+        // if all tiles already taken, loop to wait for next frame
+        if (self->job_next_tile >= self->num_tiles) {
             Window::unlock_mutex(self->job_mtx);
             continue;
         }
-        int y = self->job_next_row++;
+        const int ord_idx = self->job_next_tile++;
+        const int tile_id = self->tile_order[ord_idx];
+
         Window::unlock_mutex(self->job_mtx);
 
-        // render the row into buf
-        for (int x = 0; x < self->job_width; ++x) {
-            Ray pr = Ray::primary(self->cam, self->cb, x, y, self->job_width, self->job_height);
-            Color c = self->scene.trace(pr, 0, self->max_depth, self->eps);
-            self->buf[y * self->job_width + x] = c;
+        // tile coords
+        const int tx = tile_id % self->tile_w;
+        const int ty = tile_id / self->tile_w;
+        const int x0 = tx * TILE;
+        const int y0 = ty * TILE;
+        const int x1 = std::min(x0 + TILE, self->job_width);
+        const int y1 = std::min(y0 + TILE, self->job_height);
+
+        // render the tile into buf
+        for (int y = y0; y < y1; ++y) {
+            for (int x = x0; x < x1; ++x) {
+                Ray pr = Ray::primary(self->cam, self->cb, x, y, self->job_width, self->job_height);
+                Color c = self->scene.trace(pr, 0, self->max_depth, self->eps);
+                self->buf[y * self->job_width + x] = c;
+            }
         }
 
-        // --- mark row done (under lock for visibility) ---
+        // publish completion
         Window::lock_mutex(self->job_mtx);
-        self->row_done[y] = 1u;
-        // if y was the last one taken and all ≥height, allow main to start next frame
+        self->tile_done[tile_id] = 1u;
         Window::unlock_mutex(self->job_mtx);
     }
 
