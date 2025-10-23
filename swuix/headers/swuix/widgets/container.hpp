@@ -11,6 +11,12 @@ public:
     WidgetContainer(Rect2F f, Widget *par, std::vector<Widget*> children_, State *st)
         : Widget(f, par, st), children(children_) {}
 
+    ~WidgetContainer() {
+        for (int i = 0; i < (int)children.size(); ++i) {
+            delete children[i];
+        }
+    }
+
     const char *title() const {
         return "Container";
     }
