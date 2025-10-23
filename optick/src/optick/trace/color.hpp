@@ -46,6 +46,6 @@ struct Color {
         // clamp then gamma 2.2 (approximate sRGB gamma)
         if (x < 0) x = 0;
         if (x > 1) x = 1;
-        return (uint8_t)(std::pow(x, 1.0 / 2.2) * 255.0 + 0.5);
+        return static_cast<uint8_t>(std::pow(x, 1.0 / 2.2) * 255.0 + 0.5);
     }
 };

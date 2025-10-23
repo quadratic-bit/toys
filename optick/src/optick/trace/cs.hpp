@@ -18,7 +18,7 @@ struct ViewCS {
      * Map an image sample (ix, iy) to window pixel (px, py)
      */
     inline void toPixels(int ix, int iy, int *px, int *py) const {
-        *px = ox + (int)std::floor(ix * axx + iy * ayx + 0.5);
-        *py = oy + (int)std::floor(ix * axy + iy * ayy + 0.5);
+        *px = ox + static_cast<int>(std::floor(ix * axx + iy * ayx + 0.5));
+        *py = oy + static_cast<int>(std::floor(ix * axy + iy * ayy + 0.5));
     }
 };

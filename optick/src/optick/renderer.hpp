@@ -22,11 +22,6 @@ static inline Scene make_demo_scene() {
     Scene scn;
 
     const MaterialOpaque *ground_plane = new MaterialOpaque(/*kd*/0.9);
-    //scn.objects.push_back(new Sphere(
-    //    Vector3(0, -1004, 0), 1000,
-    //    Color(0.9, 0.9, 0.9),
-    //    ground_plane
-    //));
     scn.objects.push_back(new Plane(
         Vector3(0, -4, 0), Vector3(0, 1, 0),
         Color(0.9, 0.9, 0.9),
@@ -40,7 +35,6 @@ static inline Scene make_demo_scene() {
     const MaterialOpaque *solid = new MaterialOpaque(/*kd*/1.0, /*ks*/1.0, /*shininess*/32);
     scn.objects.push_back(new Sphere(
         Vector3(-1.5, -0.2, -5), 0.7,
-        //Color(0.9, 0.1, 0.2),
         Color(1, 0, 0),
         solid
     ));
@@ -55,7 +49,6 @@ static inline Scene make_demo_scene() {
     const MaterialReflective *mirror2 = new MaterialReflective();
     scn.objects.push_back(new Sphere(
         Vector3(6, 0, -25), 10,
-        //Color(0.3, 0.3, 0.9),
         Color(0, 1, 1),
         mirror2
     ));
@@ -77,19 +70,17 @@ static inline Scene make_demo_scene() {
     ));
 
     // Lights
-    const MaterialEmissive* glow = new MaterialEmissive(Color(1.0, 1.0, 1.0)); // bright
+    const MaterialEmissive *glowing = new MaterialEmissive(Color(1.0, 1.0, 1.0));
     scn.objects.push_back(new Sphere(
         Vector3(-2, 2.5, -1.5), 0.25,
-        Color(1, 1, 1), // tint; (1,1,1) for neutral
-        glow
+        Color(1, 1, 1),  // tint
+        glowing
     ));
     scn.objects.push_back(new Sphere(
-        Vector3( 2, 1.0,  0.5), 0.25,
-        Color(1, 1, 1), // tint; (1,1,1) for neutral
-        glow
+        Vector3(2, 1.0, 0.5), 0.25,
+        Color(1, 1, 1),  // tint
+        glowing
     ));
-    //scn.lights.push_back(PointLight(Vector3(-2, 2.5, -1.5), Color(1.0,0.95,0.9), 60.0)); // warm key
-    //scn.lights.push_back(PointLight(Vector3( 2, 1.0,  0.5), Color(0.7,0.8,1.0),  25.0)); // cool fill
 
     return scn;
 }
@@ -233,7 +224,6 @@ public:
     Renderer(Rect2F rect, Widget *parent_, State *s)
             : Widget(rect, parent_, s), TitledWidget(rect, parent_, s),
             view_w(0), view_h(0), initialized(false), max_depth(5), eps(1e-4) {
-        //cam.pos    = Vector3(0, 4,  0);
         cam.pos    = Vector3(0, 2,  2.5);
         scene = make_demo_scene();
 

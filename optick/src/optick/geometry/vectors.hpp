@@ -90,10 +90,10 @@ public:
     // Cross product
     Vector3 operator%(const Vector3 &right) const {
         return Vector3(
-                y * right.z - z * right.y,
-                z * right.x - x * right.z,
-                x * right.y - y * right.x
-                );
+            y * right.z - z * right.y,
+            z * right.x - x * right.z,
+            x * right.y - y * right.x
+        );
     }
 
     Vector3 operator!() const {
