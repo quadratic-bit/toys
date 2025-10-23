@@ -1,11 +1,5 @@
 #pragma once
-#include <cstdio>
-
-#include <swuix/widgets/container.hpp>
-#include <swuix/widgets/handle.hpp>
-
-#include "renderer.hpp"
-#include "toolbox.hpp"
+#include "widgets/toolbox.hpp"
 
 class Desktop : public WidgetContainer {
 public:

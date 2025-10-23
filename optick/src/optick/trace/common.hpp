@@ -1,7 +1,6 @@
 #pragma once
 #include <limits>
 
-#include "../geometry/vectors.hpp"
 #include "camera.hpp"
 
 struct Hit {

@@ -1,9 +1,3 @@
-#include <SDL3/SDL_events.h>
-#include <cassert>
-#include <cstdio>
-
-#include <swuix/window/window.hpp>
-#include <swuix/widgets/container.hpp>
 #include <swuix/manager.hpp>
 
 #include "desktop.hpp"

@@ -1,5 +1,4 @@
 #pragma once
-#include <cassert>
 #include <swuix/widgets/handle.hpp>
 
 #include "trace/scene.hpp"

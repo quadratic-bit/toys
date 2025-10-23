@@ -1,8 +1,6 @@
 #pragma once
 #include <vector>
 
-#include "geometry/vectors.hpp"
-#include "common.hpp"
 #include "objects.hpp"
 
 struct Scene; // forward-declare for TraceContext

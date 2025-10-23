@@ -1,7 +1,6 @@
 #pragma once
+#include <stdint.h>
 #include <cmath>
-
-#include <SDL3/SDL_stdinc.h>
 
 struct Color {
     double r, g, b; // 0..1 linear in sRGB
@@ -43,10 +42,10 @@ struct Color {
     /**
      * Convert x from linear [0,1] to gamma-encoded sRGB 8-bit.
      */
-    static Uint8 encode(double x) {
+    static uint8_t encode(double x) {
         // clamp then gamma 2.2 (approximate sRGB gamma)
         if (x < 0) x = 0;
         if (x > 1) x = 1;
-        return (Uint8)(std::pow(x, 1.0 / 2.2) * 255.0 + 0.5);
+        return (uint8_t)(std::pow(x, 1.0 / 2.2) * 255.0 + 0.5);
     }
 };

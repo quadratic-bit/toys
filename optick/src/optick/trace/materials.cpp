@@ -1,5 +1,3 @@
-#include "../geometry/vectors.hpp"
-#include "material.hpp"
 #include "scene.hpp"
 
 Color MaterialReflective::sample(TraceContext ctx) const {

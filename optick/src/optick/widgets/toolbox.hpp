@@ -1,7 +1,4 @@
 #pragma once
-#include <swuix/widgets/handle.hpp>
-#include <swuix/window/window.hpp>
-
 #include "renderer.hpp"
 
 class Move : public Action {

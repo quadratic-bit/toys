@@ -1,9 +1,8 @@
 #pragma once
-#include "../geometry/vectors.hpp"
-#include "color.hpp"
+#include <vector>
+
 #include "material.hpp"
 #include "common.hpp"
-#include <vector>
 
 struct Object {
     Vector3 center;
