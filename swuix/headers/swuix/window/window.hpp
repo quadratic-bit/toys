@@ -193,7 +193,14 @@ public:
     static SwuixThread create_thread(int (*fn)(void*), const char *name, void *ud) {
         return SDL_CreateThread(fn, name, ud);
     }
-    static void wait_thread(SwuixThread t)             { if (t) SDL_WaitThread(t, 0); }
+
+    static void wait_thread(SwuixThread t) {
+        SDL_WaitThread(t, 0);
+    }
+
+    static void detach_thread(SwuixThread t) {
+        SDL_DetachThread(t);
+    }
 
     // ================ PRIMITIVES ================
 

@@ -13,6 +13,8 @@ int main() {
     State state = State(window);
     EventManager evmgr(&state, FPS);
 
+    { // start of `root` scope
+
     Desktop root(bbox, NULL, &state);
 
     for (;;) {
@@ -26,6 +28,8 @@ int main() {
 
         evmgr.render(&root);
     }
+
+    } // end of `root` scope
 
     delete window;
     return 0;

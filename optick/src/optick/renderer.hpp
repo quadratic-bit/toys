@@ -239,6 +239,8 @@ public:
 
     ~Renderer() {
         stop_workers();
+        for (int i = 0; i < N_WORKERS; ++i)
+            Window::detach_thread(workers[i]);
         Window::destroy_condition(job_cv);
         Window::destroy_mutex(job_mtx);
         front_buffer.destroy();
