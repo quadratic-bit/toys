@@ -95,7 +95,7 @@ static inline Scene make_demo_scene() {
     return scn;
 }
 
-#define N_WORKERS 6
+#define N_WORKERS 4
 
 class Renderer : public TitledWidget {
     Texture front_buffer;
@@ -123,7 +123,7 @@ class Renderer : public TitledWidget {
     int  job_width, job_height;
     int  job_next_tile;  // next index into tile_order
 
-    enum { TILE = 8 };
+    enum { TILE = 16 };
 
     int tile_w, tile_h;
     int num_tiles;  // tile_w * tile_h
