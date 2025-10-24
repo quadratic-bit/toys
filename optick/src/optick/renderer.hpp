@@ -3,6 +3,7 @@
 
 #include "trace/scene.hpp"
 #include "trace/cs.hpp"
+#include "state.hpp"
 
 static inline unsigned lcg(unsigned &s) {
     s = 1664525u * s + 1013904223u;
@@ -274,6 +275,36 @@ public:
         cb = CameraBasis::make(cam);
     }
 
+    static void draw_aabb_wire(
+            Window *window,
+            const AABB &bbox,
+            const Camera &cam, const CameraBasis &cb,
+            int view_x, int view_y, int view_w, int view_h, double eps,
+            uint8_t r, uint8_t g, uint8_t b
+    ) {
+        Vector3 v[8] = {
+            Vector3(bbox.mn.x, bbox.mn.y, bbox.mn.z), Vector3(bbox.mx.x, bbox.mn.y, bbox.mn.z),
+            Vector3(bbox.mx.x, bbox.mx.y, bbox.mn.z), Vector3(bbox.mn.x, bbox.mx.y, bbox.mn.z),
+            Vector3(bbox.mn.x, bbox.mn.y, bbox.mx.z), Vector3(bbox.mx.x, bbox.mn.y, bbox.mx.z),
+            Vector3(bbox.mx.x, bbox.mx.y, bbox.mx.z), Vector3(bbox.mn.x, bbox.mx.y, bbox.mx.z),
+        };
+        const int E[12][2] = {{0,1},{1,2},{2,3},{3,0},{4,5},{5,6},{6,7},{7,4},{0,4},{1,5},{2,6},{3,7}};
+
+        int sx[8], sy[8];
+        bool ok[8];
+
+        for (int i = 0; i < 8; ++i) {
+            ok[i] = project_point(cam, cb, view_w, view_h, v[i], eps, &sx[i], &sy[i]);
+        }
+
+        for (int e = 0; e < 12; ++e) {
+            int a = E[e][0];
+            int c = E[e][1];
+            if (!ok[a] || !ok[c]) continue;
+            window->draw_line_rgb(view_x + sx[a], view_y + sy[a], view_x + sx[c], view_y + sy[c], 1, r, g, b);
+        }
+    }
+
     void render(Window *window, float off_x, float off_y) {
         window->clear_rect(frame, off_x, off_y, 125, 12, 125);
 
@@ -289,6 +320,17 @@ public:
         if (front_buffer.is_init()) {
             Rect2F dst = frect(viewX, viewY, viewW, viewH);
             window->render_texture(front_buffer, &dst);
+        }
+
+        for (size_t i = 0; i < scene.objects.size(); ++i) {
+            const Object *obj = scene.objects[i];
+
+            if (!obj->selected()) continue;
+
+            AABB box;
+            if (!obj->world_aabb(&box)) continue;
+
+            draw_aabb_wire(window, box, cam, cb, viewX, viewY, viewW, viewH, eps, 255, 80, 0);
         }
 
         window->outline(frame, off_x, off_y, 2);

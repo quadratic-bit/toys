@@ -1,6 +1,7 @@
 #include <swuix/manager.hpp>
 
 #include "desktop.hpp"
+#include "state.hpp"
 
 static const int FPS = 60;
 
@@ -10,7 +11,7 @@ int main() {
     Rect2F bbox = frect(0, 0, 1280, 720);
     Window *window = new Window(bbox.w, bbox.h);
 
-    State state = State(window);
+    OptickState state = OptickState(window);
     EventManager evmgr(&state, FPS);
 
     { // start of `root` scope

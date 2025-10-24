@@ -1,13 +1,46 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <limits>
 
 #include "material.hpp"
 #include "common.hpp"
 
 using std::string;
 
-struct Object {
+struct AABB {
+    Vector3 mn, mx;
+
+    AABB() {
+        static const double inf = std::numeric_limits<double>::infinity();
+        mn = Vector3( inf,  inf,  inf);
+        mx = Vector3(-inf, -inf, -inf);
+    }
+
+    void include(const Vector3 &p) {
+        if (p.x < mn.x) mn.x = p.x;
+        if (p.y < mn.y) mn.y = p.y;
+        if (p.z < mn.z) mn.z = p.z;
+
+        if (p.x > mx.x) mx.x = p.x;
+        if (p.y > mx.y) mx.y = p.y;
+        if (p.z > mx.z) mx.z = p.z;
+    }
+
+    void include(const AABB &b) {
+        include(b.mn);
+        include(b.mx);
+    }
+
+    bool is_valid() const {
+        return mn.x <= mx.x && mn.y <= mx.y && mn.z <= mx.z;
+    }
+};
+
+class Object {
+    bool is_selected;
+
+public:
     Vector3 center;
     Color   color;
     string  name;
@@ -15,11 +48,30 @@ struct Object {
     const Material *mat;
 
     Object(string name_, const Vector3 &pos, const Color &col, const Material *m)
-        : center(pos), color(col), name(name_), mat(m) {}
+        : is_selected(false), center(pos), color(col), name(name_), mat(m) {}
 
     virtual ~Object() {};
 
+    bool selected() const {
+        return is_selected;
+    }
+
+    void toggle_select() {
+        is_selected = !is_selected;
+    }
+
+    void select() {
+        is_selected = true;
+    }
+
+    void unselect() {
+        is_selected = false;
+    }
+
     virtual bool intersect(const Ray &ray, double eps, Hit *hit) const = 0;
+
+    // false = no finite box
+    virtual bool world_aabb(AABB *out) const = 0;
 };
 
 struct Sphere : public Object {
@@ -61,6 +113,13 @@ struct Sphere : public Object {
         hit->dist = t;
         return true;
     }
+
+    bool world_aabb(AABB *out) const {
+        const Vector3 r(radius, radius, radius);
+        out->mn = center - r;
+        out->mx = center + r;
+        return true;
+    }
 };
 
 struct Plane : public Object {
@@ -88,6 +147,11 @@ struct Plane : public Object {
         hit->norm = (denom < 0.0) ? normal : (normal * -1.0);
         hit->dist = t;
         return true;
+    }
+
+    bool world_aabb(AABB *out) const {
+        (void)out;
+        return false;
     }
 };
 
@@ -199,5 +263,15 @@ struct Polygon : public Object {
         hit->norm = (denom < 0.0) ? normal : (normal * -1.0);
         hit->dist = t;
         return true;
+    }
+
+    bool world_aabb(AABB *out) const {
+        if (verts3.empty()) return false;
+
+        AABB box;
+        for (size_t i = 0; i < verts3.size(); ++i) box.include(verts3[i]);
+        *out = box;
+
+        return out->is_valid();
     }
 };
