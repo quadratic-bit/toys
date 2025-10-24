@@ -1,18 +1,21 @@
 #pragma once
+#include <string>
 #include <vector>
 
 #include "material.hpp"
 #include "common.hpp"
 
+using std::string;
+
 struct Object {
     Vector3 center;
     Color   color;
+    string  name;
 
     const Material *mat;
 
-    Object(const Material *mat_) : mat(mat_) {}
-    Object(const Vector3 &pos, const Color &col, const Material *m)
-        : center(pos), color(col), mat(m) {}
+    Object(string name_, const Vector3 &pos, const Color &col, const Material *m)
+        : center(pos), color(col), name(name_), mat(m) {}
 
     virtual ~Object() {};
 
@@ -22,10 +25,8 @@ struct Object {
 struct Sphere : public Object {
     double radius;
 
-    Sphere(const Material *m) : Object(m), radius(1.0) {}
-
-    Sphere(const Vector3 &c, double r, const Color &col, const Material *m)
-        : Object(c, col, m), radius(r) {}
+    Sphere(string name_, const Vector3 &c, double r, const Color &col, const Material *m)
+        : Object(name_, c, col, m), radius(r) {}
 
     /**
      * Ray-sphere intersection using stable quadratic form
@@ -65,13 +66,12 @@ struct Sphere : public Object {
 struct Plane : public Object {
     Vector3 normal; // must be unit
 
-    Plane(const Material *m) : Object(m), normal(0, 1, 0) {}
-
-    Plane(const Vector3  &point_on_plane,
+    Plane(string name_,
+          const Vector3  &point_on_plane,
           const Vector3  &n,
           const Color    &col,
           const Material *m)
-        : Object(point_on_plane, col, m), normal(!n) {}
+        : Object(name_, point_on_plane, col, m), normal(!n) {}
 
     bool intersect(const Ray &ray, double eps, Hit *hit) const {
         const double denom = ray.d ^ normal;
@@ -104,8 +104,8 @@ struct Polygon : public Object {
     Vector3 u, v;  // orthonormal (u,v,normal)
     std::vector<Vec2> verts2;  // projected onto (u,v)
 
-    Polygon(const std::vector<Vector3> &verts, const Color &col, const Material *m)
-            : Object(Vector3(0, 0, 0), col, m),
+    Polygon(string name_, const std::vector<Vector3> &verts, const Color &col, const Material *m)
+            : Object(name_, Vector3(0, 0, 0), col, m),
             verts3(verts),
             normal(0, 1, 0),
             u(1, 0, 0), v(0, 1, 0)

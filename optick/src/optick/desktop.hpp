@@ -1,5 +1,6 @@
 #pragma once
 #include "widgets/toolbox.hpp"
+#include "widgets/objcard.hpp"
 
 class Desktop : public WidgetContainer {
 public:
@@ -7,8 +8,9 @@ public:
             : Widget(frame_, parent_, state_), WidgetContainer(frame_, parent_, state_) {
         Renderer *renderer = new Renderer(frect(180, 50, 800, 600), NULL, state);
         ControlPanel *toolbox = new ControlPanel(renderer, frect(50, 50, 100, 80), NULL, state);
+        ObjectsView *objview = new ObjectsView(renderer->get_scene().objects, frect(1000, 200, 150, 200), frect(1000, 200, 150, 100), NULL, state);
 
-        Widget *arr[] = { renderer, toolbox };
+        Widget *arr[] = { renderer, toolbox, objview };
         this->append_children(Widget::makeChildren(arr));
         this->parent = this;
     }
