@@ -3,7 +3,7 @@
 #include <string>
 
 #include <swuix/state.hpp>
-#include <swuix/widgets/focusable.hpp>
+#include <swuix/traits/focusable.hpp>
 
 class TextInput : public virtual FocusableWidget {
     void remove_last_character() {

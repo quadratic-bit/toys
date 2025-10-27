@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdio>
 #include <swuix/widgets/scrollbar.hpp>
+#include <swuix/widgets/tall_view.hpp>
 #include <swuix/window/window.hpp>
 
 #include "state.hpp"

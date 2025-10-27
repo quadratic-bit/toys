@@ -1,7 +1,7 @@
 #pragma once
 #include <swuix/geometry.hpp>
 #include <swuix/widget.hpp>
-#include <swuix/widgets/focusable.hpp>
+#include <swuix/traits/focusable.hpp>
 #include <swuix/window/window.hpp>
 #include <swuix/state.hpp>
 

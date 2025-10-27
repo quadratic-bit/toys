@@ -1,4 +1,5 @@
 #pragma once
+#include "widgets/textbox.hpp"
 #include "widgets/toolbox.hpp"
 #include "widgets/objcard.hpp"
 
@@ -9,8 +10,9 @@ public:
         Renderer *renderer = new Renderer(frect(180, 50, 800, 600), NULL, state);
         ControlPanel *toolbox = new ControlPanel(renderer, frect(50, 50, 100, 80), NULL, state);
         ObjectsView *objview = new ObjectsView(renderer->get_scene().objects, frect(1000, 200, 250, 200), frect(1000, 200, 250, 175), NULL, state);
+        TextBox *dummy = new TextBox(frect(20, 500, 100, 40), NULL, state);
 
-        Widget *arr[] = { renderer, toolbox, objview };
+        Widget *arr[] = { renderer, toolbox, objview, dummy };
         this->append_children(Widget::makeChildren(arr));
         this->parent = this;
     }

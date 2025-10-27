@@ -1,7 +1,4 @@
-#include <cstddef>
-#include <swuix/widgets/handle.hpp>
-#include <swuix/widgets/controlled.hpp>
-#include <swuix/window/window.hpp>
+#include <swuix/widgets/titlebar.hpp>
 #include <swuix/state.hpp>
 
 class ToggleMinimize : public Action {

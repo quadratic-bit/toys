@@ -5,7 +5,7 @@
 #include <typeinfo>
 #include <vector>
 
-#include <swuix/widgets/handle.hpp>
+#include <swuix/widgets/titled.hpp>
 
 #include "linalg/vectors.hpp"
 #include "particles/particle_manager.hpp"

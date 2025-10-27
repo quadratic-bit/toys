@@ -7,7 +7,7 @@
 #include <string>
 
 #include <swuix/window/window.hpp>
-#include <swuix/widgets/handle.hpp>
+#include <swuix/widgets/titled.hpp>
 
 #include "ring_buffer.hpp"
 

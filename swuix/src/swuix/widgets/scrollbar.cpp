@@ -1,6 +1,4 @@
-#include <swuix/widgets/draggable.hpp>
 #include <swuix/widgets/scrollbar.hpp>
-#include <swuix/window/window.hpp>
 #include <swuix/state.hpp>
 
 const float SCROLL_DELTA_PX = 20.0f;

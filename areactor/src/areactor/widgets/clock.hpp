@@ -4,7 +4,7 @@
 #include <sstream>
 
 #include <swuix/window/window.hpp>
-#include <swuix/widgets/handle.hpp>
+#include <swuix/widgets/titled.hpp>
 
 #include "linalg/vectors.hpp"
 

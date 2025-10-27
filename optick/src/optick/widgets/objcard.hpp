@@ -1,4 +1,5 @@
 #pragma once
+#include <swuix/widgets/tall_view.hpp>
 #include <swuix/widgets/scrollbar.hpp>
 #include <swuix/widgets/container.hpp>
 #include <swuix/widgets/button.hpp>

@@ -1,69 +1,8 @@
 #pragma once
-#include <swuix/widgets/controlled.hpp>
-#include <swuix/widgets/draggable.hpp>
-#include <swuix/widgets/container.hpp>
-#include <swuix/widgets/button.hpp>
-
-const float HANDLE_H = 20.0f;
-
-static inline const Rect2F handle_box(Rect2F parent_box) {
-    Rect2F box;
-    box.x = 0.0f;
-    box.y = -HANDLE_H;
-    box.w = parent_box.w;
-    box.h = HANDLE_H;
-    return box;
-}
-
-static inline const Rect2F handle_box_zero() {
-    Rect2F box;
-    box.x = 0.0f;
-    box.y = -HANDLE_H;
-    box.w = 0.0f;
-    box.h = HANDLE_H;
-    return box;
-}
-
-class MinimizableWidget; // forward-declare
-
-class TitleBar : public Control, public DraggableWidget, public WidgetContainer {
-    Button *btn_minimize;
-    MinimizableWidget *host;
-
-public:
-    TitleBar(State *state_);
-
-    DispatchResult on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e);
-
-    DispatchResult on_layout(DispatcherCtx, const LayoutEvent *);
-
-    void attach_to(ControlledWidget *host_);
-
-    const char *title() const {
-        return "Title bar";
-    }
-
-    void render(Window *window, float off_x, float off_y);
-};
-
-class MinimizableWidget : public virtual Widget {
-public:
-    bool minimized;
-    MinimizableWidget(Rect2F dim_, Widget *parent_, State *state_)
-        : Widget(dim_, parent_, state_), minimized(false) {}
-
-    DispatchResult on_render(DispatcherCtx ctx, const RenderEvent *e) {
-        if (minimized) return PROPAGATE;
-        return Widget::on_render(ctx, e);
-    }
-
-    DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
-        if (minimized) return PROPAGATE;
-        return Widget::broadcast(ctx, e, reversed);
-    }
-};
+#include <swuix/widgets/titlebar.hpp>
 
 class TitledWidget : public MinimizableWidget, public ControlledWidget {
+protected:
     TitleBar *titlebar;
 
 public:
@@ -92,13 +31,10 @@ public:
             return PROPAGATE;
         }
     }
-
-    const char *title() const {
-        return "Titled widget";
-    }
 };
 
 class TitledContainer : public MinimizableWidget, public ControlledContainer {
+protected:
     TitleBar *titlebar;
 
 public:

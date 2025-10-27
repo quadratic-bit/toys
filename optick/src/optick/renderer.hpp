@@ -1,9 +1,8 @@
 #pragma once
-#include <swuix/widgets/handle.hpp>
+#include <swuix/widgets/titled.hpp>
 
 #include "trace/scene.hpp"
 #include "trace/cs.hpp"
-#include "state.hpp"
 
 static inline unsigned lcg(unsigned &s) {
     s = 1664525u * s + 1013904223u;

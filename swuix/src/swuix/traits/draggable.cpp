@@ -1,4 +1,4 @@
-#include <swuix/widgets/draggable.hpp>
+#include <swuix/traits/draggable.hpp>
 #include <swuix/state.hpp>
 
 DispatchResult DraggableWidget::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {

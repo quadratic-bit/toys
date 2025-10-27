@@ -1,5 +1,5 @@
 #pragma once
-#include <swuix/widgets/handle.hpp>
+#include <swuix/widgets/titled.hpp>
 #include <swuix/window/window.hpp>
 
 #include "state.hpp"
