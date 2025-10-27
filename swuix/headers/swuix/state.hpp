@@ -8,11 +8,12 @@ struct MouseState {
         Dragging
     };
     unsigned state;
-    Vec2F  pos;  // absolute
+    Vec2F    pos;  // absolute
     Widget  *target;
+    Widget  *wheel_target;
     Widget  *capture;
 
-    MouseState() : state(Idle), pos(), target(NULL), capture(NULL) {}
+    MouseState() : state(Idle), pos(), target(NULL), wheel_target(NULL), capture(NULL) {}
 };
 
 struct State {

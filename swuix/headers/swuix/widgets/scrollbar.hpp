@@ -105,6 +105,9 @@ public:
         frame.y = clamp(frame.y + dy, viewport.y + viewport.h - frame.h, viewport.y);
         refresh_layout();
     }
+
+    DispatchResult on_mouse_wheel(DispatcherCtx ctx, const MouseWheelEvent *e);
+    DispatchResult on_mouse_move (DispatcherCtx ctx, const MouseMoveEvent *e);
 };
 
 class TallView : public MinimizableWidget, public ScrollableWidget, public ControlledContainer {

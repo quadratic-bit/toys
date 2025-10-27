@@ -108,6 +108,7 @@ private:
     void syncMousePos(Vec2F abs, Widget *root) {
         if (state->mouse.pos == abs) return;
         state->mouse.target = NULL;
+        state->mouse.wheel_target = NULL;
         state->mouse.pos = abs;
         MouseMoveEvent we(abs);
         DispatcherCtx ctx = DispatcherCtx::fromAbsolute(abs, root->frame, state->window);
@@ -188,6 +189,17 @@ private:
                 DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame, state->window);
                 root->broadcast(ctx, &we);
             }
+        } break;
+
+        case SDL_EVENT_MOUSE_WHEEL: {
+            state->mouse.pos = Vec2F(ev.wheel.mouse_x, ev.wheel.mouse_y);
+            syncMousePos(state->mouse.pos, root);
+            Vec2F scrolled = Vec2F(ev.wheel.x, ev.wheel.y);
+            MouseWheelEvent we(scrolled);
+            if (!state->mouse.wheel_target) break;
+            Widget *capturer = state->mouse.wheel_target;
+            DispatcherCtx ctx = capturer->resolve_context(state->window);
+            capturer->broadcast(ctx, &we);
         } break;
 
         } // switch(ev.type)

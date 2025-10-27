@@ -92,3 +92,18 @@ void Scrollbar::attach_to(ControlledWidget *host_) {
 float Scrollbar::scroll_progress() {
     return host->content_progress() / host->frame.h * scroll_height();
 }
+
+DispatchResult ScrollableWidget::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {
+    (void)e;
+    bool c = contains_mouse(ctx);
+    if (!state->mouse.target && c) state->mouse.target = this;
+    if (c) state->mouse.wheel_target = this;
+    return PROPAGATE;
+}
+
+DispatchResult ScrollableWidget::on_mouse_wheel(DispatcherCtx ctx, const MouseWheelEvent *e) {
+    (void)ctx;
+    (void)e->delta.x;
+    if (e->delta.y) scroll_y(e->delta.y * SCROLL_DELTA_PX);
+    return CONSUME;
+}
