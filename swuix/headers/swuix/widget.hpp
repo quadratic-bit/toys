@@ -122,6 +122,14 @@ struct MouseWheelEvent : Event {
     DispatchResult deliver(DispatcherCtx ctx, Widget *w);
 };
 
+struct InputEvent : Event {
+    const char *text;  // The input text, UTF-8 encoded
+
+    InputEvent(const char *text_) : text(text_) {}
+
+    DispatchResult deliver(DispatcherCtx ctx, Widget *w);
+};
+
 struct KeyEvent : Event {
     unsigned scancode;   // platform-neutral
     uint32_t keycode;
@@ -195,6 +203,7 @@ public:
     virtual DispatchResult on_mouse_down  (DispatcherCtx, const MouseDownEvent   *) { return PROPAGATE; }
     virtual DispatchResult on_mouse_up    (DispatcherCtx, const MouseUpEvent     *) { return PROPAGATE; }
     virtual DispatchResult on_mouse_wheel (DispatcherCtx, const MouseWheelEvent  *) { return PROPAGATE; }
+    virtual DispatchResult on_input       (DispatcherCtx, const InputEvent       *) { return PROPAGATE; }
     virtual DispatchResult on_key_down    (DispatcherCtx, const KeyDownEvent     *) { return PROPAGATE; }
     virtual DispatchResult on_key_up      (DispatcherCtx, const KeyUpEvent       *) { return PROPAGATE; }
     virtual DispatchResult on_idle        (DispatcherCtx, const IdleEvent        *) { return PROPAGATE; }
@@ -229,6 +238,10 @@ inline DispatchResult MouseUpEvent::deliver(DispatcherCtx ctx, Widget *w) {
 
 inline DispatchResult MouseWheelEvent::deliver(DispatcherCtx ctx, Widget *w) {
     return w->on_mouse_wheel(ctx, this);
+}
+
+inline DispatchResult InputEvent::deliver(DispatcherCtx ctx, Widget *w) {
+    return w->on_input(ctx, this);
 }
 
 inline DispatchResult KeyDownEvent::deliver(DispatcherCtx ctx, Widget *w) {

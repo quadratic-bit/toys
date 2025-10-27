@@ -148,8 +148,8 @@ private:
 
         case SDL_EVENT_KEY_DOWN: {
             KeyDownEvent we(ev.key.scancode, ev.key.key, ev.key.mod, ev.key.repeat);
-            if (state->mouse.focus) {
-                Widget *capturer = state->mouse.focus;
+            if (state->get_focus()) {
+                FocusableWidget *capturer = state->get_focus();
                 DispatcherCtx ctx = capturer->resolve_context(state->window);
                 capturer->broadcast(ctx, &we);
             } else {
@@ -164,6 +164,18 @@ private:
             root->broadcast(ctx, &we);
         } break;
 
+        case SDL_EVENT_TEXT_INPUT: {
+            InputEvent we(ev.text.text);
+            if (state->get_focus()) {
+                FocusableWidget *capturer = state->get_focus();
+                DispatcherCtx ctx = capturer->resolve_context(state->window);
+                capturer->broadcast(ctx, &we);
+            } else {
+                DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame, state->window);
+                root->broadcast(ctx, &we);
+            }
+        } break;
+
         case SDL_EVENT_MOUSE_MOTION:
             syncMousePos(Vec2F(ev.motion.x, ev.motion.y), root);
             break;
@@ -171,7 +183,7 @@ private:
         case SDL_EVENT_MOUSE_BUTTON_DOWN: {
             state->mouse.state = MouseState::Dragging;
             state->mouse.pos = Vec2F(ev.button.x, ev.button.y);
-            state->mouse.focus = NULL;
+            state->unfocus();
             syncMousePos(state->mouse.pos, root);
             MouseDownEvent we(state->mouse.pos);
             if (state->mouse.capture) {
@@ -182,7 +194,7 @@ private:
                 DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame, state->window);
                 root->broadcast(ctx, &we);
             }
-            if (state->mouse.focus) state->mouse.focus->focus();
+            if (state->get_focus()) state->get_focus()->focus();
         } break;
 
         case SDL_EVENT_MOUSE_BUTTON_UP: {

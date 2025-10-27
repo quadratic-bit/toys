@@ -1,6 +1,7 @@
 #pragma once
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_error.h>
+#include <SDL3/SDL_keyboard.h>
 #include <SDL3_gfx/SDL3_gfxPrimitives.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
@@ -159,6 +160,16 @@ public:
 
     static Time now() {
         return (double)SDL_GetTicksNS() / (double)1e9;
+    }
+
+    // =================== TEXT ===================
+
+    bool start_input() {
+        return SDL_StartTextInput(window);
+    }
+
+    bool stop_input() {
+        return SDL_StopTextInput(window);
     }
 
     // ================= TEXTURES =================
