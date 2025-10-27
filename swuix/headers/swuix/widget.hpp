@@ -123,8 +123,9 @@ struct MouseWheelEvent : Event {
 };
 
 struct KeyEvent : Event {
-    int scancode;   // platform-neutral
-    int keycode;
+    unsigned scancode;   // platform-neutral
+    uint32_t keycode;
+
     uint16_t mods;  // bitmask
 
     KeyEvent(int scancode_, int keycode_, uint32_t mods_)
