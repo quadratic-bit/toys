@@ -56,8 +56,8 @@ public:
         return is_selected;
     }
 
-    void toggle_select() {
-        is_selected = !is_selected;
+    bool toggle_select() {
+        return is_selected = !is_selected;
     }
 
     void select() {

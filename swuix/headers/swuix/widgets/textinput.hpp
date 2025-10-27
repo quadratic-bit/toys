@@ -30,19 +30,27 @@ public:
         return value;
     }
 
-    virtual DispatchResult on_input(DispatcherCtx, const InputEvent *e) {
+    void setText(const std::string &new_value) {
+        value = new_value;
+    }
+
+    virtual void on_value_change() = 0;
+
+    DispatchResult on_input(DispatcherCtx, const InputEvent *e) {
         if (state->get_focus() != this) return PROPAGATE;
 
         value.append(e->text);
+        on_value_change();
 
         return CONSUME;
     }
 
-    virtual DispatchResult on_key_down(DispatcherCtx, const KeyDownEvent *e) {
+    DispatchResult on_key_down(DispatcherCtx, const KeyDownEvent *e) {
         if (state->get_focus() != this) return PROPAGATE;
 
         if (e->keycode == SDLK_BACKSPACE) {
             remove_last_character();
+            on_value_change();
             return CONSUME;
         }
 

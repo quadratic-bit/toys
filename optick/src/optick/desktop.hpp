@@ -1,7 +1,6 @@
 #pragma once
-#include "widgets/textbox.hpp"
 #include "widgets/toolbox.hpp"
-#include "widgets/objcard.hpp"
+#include "widgets/objpreview.hpp"
 
 class Desktop : public WidgetContainer {
 public:
@@ -9,10 +8,9 @@ public:
             : Widget(frame_, parent_, state_), WidgetContainer(frame_, parent_, state_) {
         Renderer *renderer = new Renderer(frect(180, 50, 800, 600), NULL, state);
         ControlPanel *toolbox = new ControlPanel(renderer, frect(50, 50, 100, 80), NULL, state);
-        ObjectsView *objview = new ObjectsView(renderer->get_scene().objects, frect(1000, 200, 250, 200), frect(1000, 200, 250, 175), NULL, state);
-        TextBox *dummy = new TextBox(frect(20, 500, 100, 40), NULL, state);
+        ObjectsList *objview = new ObjectsList(renderer->get_scene().objects, frect(1000, 200, 250, 200), frect(1000, 200, 250, 175), NULL, state);
 
-        Widget *arr[] = { renderer, toolbox, objview, dummy };
+        Widget *arr[] = { renderer, toolbox, objview };
         this->append_children(Widget::makeChildren(arr));
         this->parent = this;
     }

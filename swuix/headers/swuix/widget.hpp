@@ -171,6 +171,9 @@ public:
         return std::vector<T>(arr, arr + N);
     }
 
+    // TODO: for Controlled
+    virtual void remove_child(Widget *) {}
+
     virtual Rect2F getViewport() const {
         Rect2F v = frame;
         v.x -= 1;
