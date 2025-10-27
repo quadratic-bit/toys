@@ -1,6 +1,7 @@
 #pragma once
 #include <swuix/geometry.hpp>
 #include <swuix/widget.hpp>
+#include <swuix/widgets/focusable.hpp>
 #include <swuix/window/window.hpp>
 #include <swuix/state.hpp>
 
@@ -147,8 +148,14 @@ private:
 
         case SDL_EVENT_KEY_DOWN: {
             KeyDownEvent we(ev.key.scancode, ev.key.key, ev.key.mod, ev.key.repeat);
-            DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame, state->window);
-            root->broadcast(ctx, &we);
+            if (state->mouse.focus) {
+                Widget *capturer = state->mouse.focus;
+                DispatcherCtx ctx = capturer->resolve_context(state->window);
+                capturer->broadcast(ctx, &we);
+            } else {
+                DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame, state->window);
+                root->broadcast(ctx, &we);
+            }
         } break;
 
         case SDL_EVENT_KEY_UP: {
@@ -164,6 +171,7 @@ private:
         case SDL_EVENT_MOUSE_BUTTON_DOWN: {
             state->mouse.state = MouseState::Dragging;
             state->mouse.pos = Vec2F(ev.button.x, ev.button.y);
+            state->mouse.focus = NULL;
             syncMousePos(state->mouse.pos, root);
             MouseDownEvent we(state->mouse.pos);
             if (state->mouse.capture) {
@@ -174,6 +182,7 @@ private:
                 DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame, state->window);
                 root->broadcast(ctx, &we);
             }
+            if (state->mouse.focus) state->mouse.focus->focus();
         } break;
 
         case SDL_EVENT_MOUSE_BUTTON_UP: {

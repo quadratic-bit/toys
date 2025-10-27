@@ -1,5 +1,4 @@
 #pragma once
-#include <cstdio>
 #include <swuix/widget.hpp>
 
 class WidgetContainer : public virtual Widget {

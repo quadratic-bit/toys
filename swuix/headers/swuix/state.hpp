@@ -2,6 +2,8 @@
 #include <swuix/widget.hpp>
 #include <swuix/geometry.hpp>
 
+class FocusableWidget;  // forward-declare
+
 struct MouseState {
     enum Enum {
         Idle,
@@ -13,7 +15,9 @@ struct MouseState {
     Widget  *wheel_target;
     Widget  *capture;
 
-    MouseState() : state(Idle), pos(), target(NULL), wheel_target(NULL), capture(NULL) {}
+    FocusableWidget *focus;
+
+    MouseState() : state(Idle), pos(), target(NULL), wheel_target(NULL), capture(NULL), focus(NULL) {}
 };
 
 struct State {

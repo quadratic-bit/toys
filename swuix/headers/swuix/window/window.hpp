@@ -5,7 +5,6 @@
 #include <SDL3_ttf/SDL_ttf.h>
 
 #include <cassert>
-#include <cstdio>
 #include <stdexcept>
 #include <vector>
 
