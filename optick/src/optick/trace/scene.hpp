@@ -27,7 +27,7 @@ struct Scene {
     /**
      * Background color (based on Y component of ray's direction d)
      */
-    Color sample_background(const Vector3 &d) const {
+    Color sampleBackground(const Vector3 &d) const {
         double t = 0.5 * (d.y + 1.0); // map y [-1,1] to t [0,1] (d is normalized)
         if (t < 0) t = 0;
         if (t > 1) t = 1;
@@ -50,7 +50,7 @@ struct Scene {
     /**
      * Ignore the target emissive if it is the first hit
      */
-    bool occluded_towards(const Vector3 &p, const Vector3 &to_light,
+    bool occludedTowards(const Vector3 &p, const Vector3 &to_light,
             double max_dist, double eps, const Object *target_light_geom) const {
         Ray sray(p + to_light * eps, to_light);
         const Object* first_obj = NULL;
@@ -90,7 +90,7 @@ struct Scene {
         }
 
         if (hit.obj_i < 0) {
-            return this->sample_background(ray.d);
+            return this->sampleBackground(ray.d);
         }
 
         Object *sp = this->objects[hit.obj_i];

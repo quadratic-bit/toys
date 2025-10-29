@@ -41,7 +41,7 @@ struct Camera {
         b.aspect = width / height;
     }
 
-    bool project_point(int w, int h, const Vector3 &P, double eps, int *sx, int *sy) const {
+    bool projectPoint(int w, int h, const Vector3 &P, double eps, int *sx, int *sy) const {
         Vector3 d = P - pos;
         double  x = d ^ b.right;
         double  y = d ^ b.up;
@@ -61,7 +61,7 @@ struct Camera {
         return true;
     }
 
-    double currentPitch() const {
+    double getCurrentPitch() const {
         const Vector3 fwd = !(this->target - this->pos);
         double y = fwd.y;
         if (y < -1.0) y = -1.0;
@@ -89,7 +89,7 @@ struct Camera {
         const Vector3 worldUp(0, 1, 0);
         Vector3 fwd = !(this->target - this->pos);
 
-        double p0 = currentPitch();
+        double p0 = getCurrentPitch();
         double p1 = clamp(p0 + degrees, minPitchDeg, maxPitchDeg);
         double delta = p1 - p0;
         if (std::fabs(delta) < 1e-9) return;

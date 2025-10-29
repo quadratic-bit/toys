@@ -19,7 +19,7 @@ static inline void shuffle(std::vector<int> &a, unsigned &state) {
     }
 }
 
-static inline Scene make_demo_scene() {
+static inline Scene makeDemoScene() {
     Scene scn;
 
     const MaterialOpaque *ground_plane = new MaterialOpaque(/*kd*/0.9);
@@ -122,9 +122,9 @@ class Renderer : public TitledWidget {
 
     unsigned rng_state;  // simple per-frame RNG for shuffling
 
-    static int worker_entry(void *self_void);
+    static int workerEntry(void *self_void);
 
-    void build_tiles_for_size() {
+    void buildTiles() {
         tile_w = (view_w + TILE - 1) / TILE;
         tile_h = (view_h + TILE - 1) / TILE;
         num_tiles = tile_w * tile_h;
@@ -141,10 +141,10 @@ class Renderer : public TitledWidget {
         job_next_tile = 0;
     }
 
-    void start_frame_jobs() {
+    void startFrameJobs() {
         Window::lock_mutex(job_mtx);
 
-        build_tiles_for_size();
+        buildTiles();
 
         job_width     = view_w;
         job_height    = view_h;
@@ -154,7 +154,7 @@ class Renderer : public TitledWidget {
         Window::unlock_mutex(job_mtx);
     }
 
-    void stop_workers() {
+    void stopWorkers() {
         Window::lock_mutex(job_mtx);
         job_stop = true;
         Window::broadcast_condition(job_cv);
@@ -167,14 +167,14 @@ class Renderer : public TitledWidget {
         }
     }
 
-    void fill_texture_with_background(Window *window, Texture *tex) {
+    void fillTexture(Window *window, Texture *tex) {
         TextureHandle texh;
         if (!tex->lock(&texh)) return;
         for (int iy = 0; iy < view_h; ++iy) {
             uint32_t *pixels = texh.get_row(iy);
             for (int ix = 0; ix < view_w; ++ix) {
                 Ray pr = Ray::primary(cam, ix, iy, view_w, view_h);
-                Color bg = scene.sample_background(pr.d);
+                Color bg = scene.sampleBackground(pr.d);
                 pixels[ix] = window->map_rgba(Color::encode(bg.r), Color::encode(bg.g), Color::encode(bg.b), 255);
             }
         }
@@ -184,7 +184,7 @@ class Renderer : public TitledWidget {
     /**
      * Lazily (re)initialize buffers and texture if the view size changed
      */
-    void ensure_init_for_size(Window *window, int vw, int vh) {
+    void ensureInit(Window *window, int vw, int vh) {
         if (initialized && vw == view_w && vh == view_h) return;
 
         view_w = vw;
@@ -208,9 +208,9 @@ class Renderer : public TitledWidget {
 
         window->create_texture(&front_buffer, view_w, view_h);
 
-        fill_texture_with_background(window, &front_buffer);
+        fillTexture(window, &front_buffer);
 
-        start_frame_jobs();
+        startFrameJobs();
     }
 
 public:
@@ -218,7 +218,7 @@ public:
             : Widget(rect, parent_, s), TitledWidget(rect, parent_, s),
             cam(Vector3(0, 2, 2.5), 45.0, rect.w, rect.h),
             view_w(0), view_h(0), initialized(false), max_depth(5), eps(1e-4) {
-        scene = make_demo_scene();
+        scene = makeDemoScene();
 
         job_mtx      = Window::create_mutex();
         job_cv       = Window::create_condition();
@@ -227,11 +227,11 @@ public:
         job_width    = job_height = 0;
 
         for (int i = 0; i < N_WORKERS; ++i)
-            workers[i] = Window::create_thread(Renderer::worker_entry, "rt_worker", this);
+            workers[i] = Window::create_thread(Renderer::workerEntry, "rt_worker", this);
     }
 
     ~Renderer() {
-        stop_workers();
+        stopWorkers();
         for (int i = 0; i < N_WORKERS; ++i)
             Window::detach_thread(workers[i]);
         Window::destroy_condition(job_cv);
@@ -243,15 +243,15 @@ public:
         return "Renderer";
     }
 
-    const Scene &get_scene() {
+    const Scene &getScene() {
         return scene;
     }
 
-    Camera *get_camera() {
+    Camera *getCamera() {
         return &cam;
     }
 
-    static void draw_aabb_wire(
+    static void drawWireframe(
             Window *window,
             const AABB &bbox,
             const Camera &cam,
@@ -270,7 +270,7 @@ public:
         bool ok[8];
 
         for (int i = 0; i < 8; ++i) {
-            ok[i] = cam.project_point(view_w, view_h, v[i], eps, &sx[i], &sy[i]);
+            ok[i] = cam.projectPoint(view_w, view_h, v[i], eps, &sx[i], &sy[i]);
         }
 
         for (int e = 0; e < 12; ++e) {
@@ -290,7 +290,7 @@ public:
         const int viewH = std::floor(frame.h);
 
         // Only size matters for (re)alloc
-        ensure_init_for_size(window, viewW, viewH);
+        ensureInit(window, viewW, viewH);
 
         // TODO: figure out if this if-clause can be assumed true as invariant
         if (front_buffer.is_init()) {
@@ -304,9 +304,9 @@ public:
             if (!obj->selected()) continue;
 
             AABB box;
-            if (!obj->world_aabb(&box)) continue;
+            if (!obj->worldAABB(&box)) continue;
 
-            draw_aabb_wire(window, box, cam, viewX, viewY, viewW, viewH, eps, 255, 80, 0);
+            drawWireframe(window, box, cam, viewX, viewY, viewW, viewH, eps, 255, 80, 0);
         }
 
         window->outline(frame, off_x, off_y, 2);
@@ -386,14 +386,14 @@ public:
         if (all_uploaded) {
             scene.objects[2]->center.x += 0.05;
 
-            start_frame_jobs();
+            startFrameJobs();
         }
 
         return PROPAGATE;
     }
 };
 
-int Renderer::worker_entry(void *self_void) {
+int Renderer::workerEntry(void *self_void) {
     Renderer* self = static_cast<Renderer*>(self_void);
 
     for (;;) {

@@ -81,7 +81,7 @@ public:
 };
 
 void Select::apply(void *, Widget *) {
-    bool toggled = target->toggle_select();
+    bool toggled = target->toggleSelect();
     if (toggled) {
         if (child) return;
 

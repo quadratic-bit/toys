@@ -9,7 +9,7 @@ public:
     Strafe(Renderer *w, float dright_) : target(w), dright(dright_) {}
 
     void apply(void *, Widget *) {
-        target->get_camera()->strafe(dright);
+        target->getCamera()->strafe(dright);
     }
 };
 
@@ -21,7 +21,7 @@ public:
     Move(Renderer *w, float dfwd_) : target(w), dfwd(dfwd_) {}
 
     void apply(void *, Widget *) {
-        target->get_camera()->move(dfwd);
+        target->getCamera()->move(dfwd);
     }
 };
 
@@ -33,7 +33,7 @@ public:
     Elevate(Renderer *w, float dup_) : target(w), dup(dup_) {}
 
     void apply(void *, Widget *) {
-        target->get_camera()->elevate(dup);
+        target->getCamera()->elevate(dup);
     }
 };
 
@@ -45,7 +45,7 @@ public:
     Yaw(Renderer *w, double dphi_cw) : target(w), dphi(dphi_cw) {}
 
     void apply(void *, Widget *) {
-        target->get_camera()->yaw(dphi);
+        target->getCamera()->yaw(dphi);
     }
 };
 
@@ -57,7 +57,7 @@ public:
     Pitch(Renderer *w, double dphi_up) : target(w), dphi(dphi_up) {}
 
     void apply(void *, Widget *) {
-        target->get_camera()->pitch(dphi);
+        target->getCamera()->pitch(dphi);
     }
 };
 

@@ -42,7 +42,7 @@ Color MaterialOpaque::sample(TraceContext ctx) const {
 
     for (size_t oi = 0; oi < ctx.scene->objects.size(); ++oi) {
         const Object *obj = ctx.scene->objects[oi];
-        if (!obj->mat->is_emissive()) continue;
+        if (!obj->mat->isEmissive()) continue;
 
         const Color Le = obj->mat->emission();  // radiance color
         const double power = 100.0;
@@ -52,7 +52,7 @@ Color MaterialOpaque::sample(TraceContext ctx) const {
         double dist  = std::sqrt(dist2);
         Vector3 Ldir = Lvec / dist;
 
-        if (ctx.scene->occluded_towards(ctx.hit.pos, Ldir, dist, ctx.eps, obj)) continue;
+        if (ctx.scene->occludedTowards(ctx.hit.pos, Ldir, dist, ctx.eps, obj)) continue;
 
         // incoming radiance estimate with 1/(4πr^2) falloff
         Color Lradiance = Le * (power / (4.0 * M_PI * dist2));

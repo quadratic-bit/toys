@@ -32,7 +32,7 @@ struct AABB {
         include(b.mx);
     }
 
-    bool is_valid() const {
+    bool isValid() const {
         return mn.x <= mx.x && mn.y <= mx.y && mn.z <= mx.z;
     }
 };
@@ -56,7 +56,7 @@ public:
         return is_selected;
     }
 
-    bool toggle_select() {
+    bool toggleSelect() {
         return is_selected = !is_selected;
     }
 
@@ -71,7 +71,7 @@ public:
     virtual bool intersect(const Ray &ray, double eps, Hit *hit) const = 0;
 
     // false = no finite box
-    virtual bool world_aabb(AABB *out) const = 0;
+    virtual bool worldAABB(AABB *out) const = 0;
 };
 
 struct Sphere : public Object {
@@ -114,7 +114,7 @@ struct Sphere : public Object {
         return true;
     }
 
-    bool world_aabb(AABB *out) const {
+    bool worldAABB(AABB *out) const {
         const Vector3 r(radius, radius, radius);
         out->mn = center - r;
         out->mx = center + r;
@@ -149,7 +149,7 @@ struct Plane : public Object {
         return true;
     }
 
-    bool world_aabb(AABB *out) const {
+    bool worldAABB(AABB *out) const {
         (void)out;
         return false;
     }
@@ -206,7 +206,7 @@ struct Polygon : public Object {
         }
     }
 
-    static bool point_in_polygon_2d(const Vec2 &p, const std::vector<Vec2> &poly) {
+    static bool pointInPolygon2D(const Vec2 &p, const std::vector<Vec2> &poly) {
         bool inside = false;
         const size_t n = poly.size();
         for (size_t i = 0, j = n - 1; i < n; j = i++) {
@@ -257,7 +257,7 @@ struct Polygon : public Object {
         Vector3 d = p - center;
         Vec2 p2(d ^ u, d ^ v);
 
-        if (!point_in_polygon_2d(p2, verts2)) return false;
+        if (!pointInPolygon2D(p2, verts2)) return false;
 
         hit->pos  = p;
         hit->norm = (denom < 0.0) ? normal : (normal * -1.0);
@@ -265,13 +265,13 @@ struct Polygon : public Object {
         return true;
     }
 
-    bool world_aabb(AABB *out) const {
+    bool worldAABB(AABB *out) const {
         if (verts3.empty()) return false;
 
         AABB box;
         for (size_t i = 0; i < verts3.size(); ++i) box.include(verts3[i]);
         *out = box;
 
-        return out->is_valid();
+        return out->isValid();
     }
 };

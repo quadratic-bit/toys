@@ -10,7 +10,7 @@ public:
     virtual ~Material() {}
     virtual Color sample(TraceContext ctx) const = 0;
 
-    virtual bool  is_emissive() const { return false; }
+    virtual bool  isEmissive() const { return false; }
     virtual Color emission()   const { return Color(0,0,0); }
 };
 
@@ -52,6 +52,6 @@ public:
     explicit MaterialEmissive(const Color &Le_=Color(1, 1, 1)) : Le(Le_) {}
 
     Color sample(TraceContext ctx) const;
-    bool  is_emissive() const { return true; }
+    bool  isEmissive() const { return true; }
     Color emission()    const { return Le; }
 };
