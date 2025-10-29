@@ -111,7 +111,8 @@ struct Camera {
         this->makeBasis();
     }
 
-    void moveForward(double dist) {
+    // positive forwards, negative backward
+    void move(double dist) {
         Vector3 fwd = !(this->target - this->pos);
         Vector3 fwdXZ = Vector3(fwd.x, 0.0, fwd.z).normalizeClamp();
         if (fwdXZ.x == 0 && fwdXZ.y == 0 && fwdXZ.z == 0) return;
@@ -122,7 +123,8 @@ struct Camera {
         this->makeBasis();
     }
 
-    void strafeRight(double dist) {
+    // positive right, negative left
+    void strafe(double dist) {
         const Vector3 worldUp(0, 1, 0);
         Vector3 fwd = !(this->target - this->pos);
         Vector3 right = (fwd % worldUp).normalizeClamp();
@@ -134,7 +136,8 @@ struct Camera {
         this->makeBasis();
     }
 
-    void moveUp(double dist) {
+    // positive up, negative down
+    void elevate(double dist) {
         const Vector3 worldUp(0, 1, 0);
         Vector3 delta = worldUp * dist;
 
