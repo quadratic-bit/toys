@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdlib>
 #include <swuix/geometry.hpp>
 #include <swuix/widget.hpp>
 #include <swuix/traits/focusable.hpp>
@@ -106,8 +107,7 @@ private:
 
     inline Time frameDuration() const { return 1.0 / static_cast<Time>(FPS); }
 
-    void syncMousePos(Vec2F abs, Widget *root) {
-        if (state->mouse.pos == abs) return;
+    void forceSyncMousePos(Vec2F abs, Widget *root) {
         state->mouse.target = NULL;
         state->mouse.wheel_target = NULL;
         state->mouse.pos = abs;
@@ -115,6 +115,11 @@ private:
         DispatcherCtx ctx = DispatcherCtx::fromAbsolute(abs, root->frame, state->window);
         root->broadcast(ctx, &we);
         if (!state->mouse.target) state->mouse.target = root;
+    }
+
+    void syncMousePos(Vec2F abs, Widget *root) {
+        if (state->mouse.pos == abs) return;
+        forceSyncMousePos(abs, root);
     }
 
     /*
@@ -221,6 +226,7 @@ private:
             Widget *capturer = state->mouse.wheel_target;
             DispatcherCtx ctx = capturer->resolve_context(state->window);
             capturer->broadcast(ctx, &we);
+            forceSyncMousePos(state->mouse.pos, root);
         } break;
 
         } // switch(ev.type)

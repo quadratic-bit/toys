@@ -1,5 +1,7 @@
 #pragma once
+#include <iomanip>
 #include <limits>
+#include <sstream>
 
 #include "camera.hpp"
 
@@ -31,3 +33,9 @@ struct Ray {
         return Ray(cam.pos, dir);
     }
 };
+
+inline std::string double2string(double v, int precision=2) {
+    std::ostringstream s;
+    s << std::setprecision(precision) << v;
+    return s.str();
+}

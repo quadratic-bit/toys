@@ -41,3 +41,12 @@ Color MaterialOpaque::sample(TraceContext ctx) const {
 
     return out;
 }
+
+vector<Property> MaterialOpaque::getProperties() const {
+    vector<Property> v;
+    v.reserve(3);
+    v.push_back(Property("kd", double2string(kd)));
+    v.push_back(Property("ks", double2string(ks)));
+    v.push_back(Property("shininess", double2string(shininess)));
+    return v;
+}

@@ -1,6 +1,9 @@
 #pragma once
+#include <iostream>
+#include <sstream>
 #include <stdint.h>
 #include <cmath>
+#include <string>
 
 struct Color {
     double r, g, b; // 0..1 linear in sRGB
@@ -47,5 +50,11 @@ struct Color {
         if (x < 0) x = 0;
         if (x > 1) x = 1;
         return static_cast<uint8_t>(std::pow(x, 1.0 / 2.2) * 255.0 + 0.5);
+    }
+
+    std::string str() const {
+        std::ostringstream out;
+        out << (int)Color::encode(r) << ", " << (int)Color::encode(g) << ", " << (int)Color::encode(b);
+        return out.str();
     }
 };

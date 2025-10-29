@@ -92,7 +92,7 @@ void Select::apply(void *, Widget *) {
         WidgetContainer *container = dynamic_cast<WidgetContainer *>(list->parent);
         assert(container != NULL);
 
-        float w = 150, h = list->getViewport().h, y = list->getViewport().y;
+        float w = 200, h = list->getViewport().h, y = list->getViewport().y;
         child = new ObjectView(target, frect(list->frame.x - w, y, w, h), NULL, state);
 
         container->prepend_child(child);

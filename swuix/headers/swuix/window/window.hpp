@@ -2,6 +2,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_keyboard.h>
+#include <SDL3/SDL_render.h>
 #include <SDL3_gfx/SDL3_gfxPrimitives.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
@@ -250,17 +251,25 @@ public:
 
     // ================= CLIPPING =================
 
-    inline void clip(const Rect2F &rect) {
+    void clip(const Rect2F &rect) {
         SDL_Rect rect_int = {
             (int)SDL_floorf(rect.x),
             (int)SDL_floorf(rect.y),
             (int)SDL_ceilf (rect.w),
             (int)SDL_ceilf (rect.h)
         };
-        SDL_SetRenderClipRect(renderer, &rect_int);
+        restore_clip(&rect_int);
     }
 
-    inline void unclip() {
+    void get_clip(SDL_Rect *rect) {
+        SDL_GetRenderClipRect(renderer, rect);
+    }
+
+    void restore_clip(SDL_Rect *rect) {
+        SDL_SetRenderClipRect(renderer, rect);
+    }
+
+    void unclip() {
         SDL_SetRenderClipRect(renderer, NULL);
     }
 
@@ -290,6 +299,7 @@ public:
         TTF_DrawRendererText(tt, x, y);
         TTF_DestroyText(tt);
     }
+
     void clear() {
         SDL_SetRenderDrawColor(renderer, CLR_PLATINUM, SDL_ALPHA_OPAQUE);
         SDL_RenderClear(renderer);

@@ -6,3 +6,7 @@ Color MaterialReflective::sample(TraceContext ctx) const {
     // apply tint + faint base
     return ctx.target->color * inc_clr + Color(0.02, 0.02, 0.02);
 }
+
+vector<Property> MaterialReflective::getProperties() const {
+    return vector<Property>();
+}
