@@ -11,7 +11,7 @@ public:
     virtual Color sample(TraceContext ctx) const = 0;
 
     virtual bool  isEmissive() const { return false; }
-    virtual Color emission()   const { return Color(0,0,0); }
+    virtual Color emission()   const { return Color(0, 0, 0); }
 };
 
 // A mirror surface

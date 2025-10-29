@@ -3,7 +3,7 @@
 #include <vector>
 #include <limits>
 
-#include "material.hpp"
+#include "../materials/material.hpp"
 #include "common.hpp"
 
 using std::string;

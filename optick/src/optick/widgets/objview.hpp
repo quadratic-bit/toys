@@ -37,7 +37,7 @@ public:
     ObjectView(Object *obj_, Rect2F rect, Widget *parent_, State *state_)
             : Widget(rect, parent_, state_), TitledContainer(rect, parent_, state_),
             obj(obj_) {
-        ObjectViewName *objname = new ObjectViewName(obj, frect(5, 5, 100, 24), NULL, state_);
+        ObjectViewName *objname = new ObjectViewName(obj, frect(5, 5, 125, 24), NULL, state_);
         Widget *objs[] = { objname };
         this->append_children(Widget::makeChildren(objs));
     }

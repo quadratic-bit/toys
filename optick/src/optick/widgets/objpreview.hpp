@@ -12,9 +12,9 @@ class ObjectPreview;
 
 class Select : public Action {
     Object *target;
-    State *state;
+    State  *state;
     ObjectPreview *parent;
-    ObjectView *child;
+    ObjectView    *child;
 
 public:
     Select(Object *o, ObjectPreview *p, State *s) : target(o), state(s), parent(p), child(NULL) {}
@@ -92,8 +92,8 @@ void Select::apply(void *, Widget *) {
         WidgetContainer *container = dynamic_cast<WidgetContainer *>(list->parent);
         assert(container != NULL);
 
-        float w = 150, h = list->getViewport().h;
-        child = new ObjectView(target, frect(list->frame.x - w, list->frame.y, w, h), NULL, state);
+        float w = 150, h = list->getViewport().h, y = list->getViewport().y;
+        child = new ObjectView(target, frect(list->frame.x - w, y, w, h), NULL, state);
 
         container->prepend_child(child);
     } else {
