@@ -1,6 +1,7 @@
 #pragma once
 #include <swuix/widgets/titled.hpp>
 
+#include "trace/camera.hpp"
 #include "trace/scene.hpp"
 #include "trace/cs.hpp"
 
@@ -90,7 +91,6 @@ class Renderer : public TitledWidget {
 
     Scene       scene;
     Camera      cam;
-    CameraBasis cb;
     ViewCS      cs;
 
     double minPitchDeg;
@@ -176,17 +176,12 @@ class Renderer : public TitledWidget {
         for (int iy = 0; iy < view_h; ++iy) {
             uint32_t *pixels = texh.get_row(iy);
             for (int ix = 0; ix < view_w; ++ix) {
-                Ray pr = Ray::primary(cam, cb, ix, iy, view_w, view_h);
+                Ray pr = Ray::primary(cam, ix, iy, view_w, view_h);
                 Color bg = scene.sample_background(pr.d);
                 pixels[ix] = window->map_rgba(Color::encode(bg.r), Color::encode(bg.g), Color::encode(bg.b), 255);
             }
         }
         tex->unlock(&texh);
-    }
-
-    void refreshBasis() {
-        cam.up = Vector3(0, 1, 0);
-        cb = CameraBasis::make(cam);
     }
 
     double currentPitch() const {
@@ -218,12 +213,7 @@ class Renderer : public TitledWidget {
         eps = 1e-4;
 
         // build camera
-        cam.target = cam.pos + Vector3(0, -1, -3.5);
-        cam.up     = Vector3(0, 1,  0);
-        cam.vfov   = 45.0;
-        cam.width  = (double)view_w;
-        cam.height = (double)view_h;
-        cb         = CameraBasis::make(cam);
+        cam = Camera(Vector3(0, 2, 2.5), 45.0, view_w, view_h);
 
         front_buffer.destroy();
 
@@ -237,10 +227,10 @@ class Renderer : public TitledWidget {
 public:
     Renderer(Rect2F rect, Widget *parent_, State *s)
             : Widget(rect, parent_, s), TitledWidget(rect, parent_, s),
+            cam(Vector3(0, 2, 2.5), 45.0, rect.w, rect.h),
             view_w(0), view_h(0), initialized(false), max_depth(5), eps(1e-4) {
         minPitchDeg = -89.0;
         maxPitchDeg =  89.0;
-        cam.pos    = Vector3(0, 2,  2.5);
         scene = make_demo_scene();
 
         job_mtx      = Window::create_mutex();
@@ -270,12 +260,6 @@ public:
         return scene;
     }
 
-    void move_camera(float dx) {
-        cam.pos.x += dx;
-        cam.target.x += dx;
-        cb = CameraBasis::make(cam);
-    }
-
     void yaw(double degrees) {
         const Vector3 worldUp(0, 1, 0);
         Vector3 fwd = !(cam.target - cam.pos);
@@ -288,7 +272,7 @@ public:
 
         Vector3 fwdRot = fwd.rotateAroundAxis(worldUp, deg2rad(degrees));
         cam.target = cam.pos + !fwdRot;
-        refreshBasis();
+        cam.makeBasis();
     }
 
     void pitch(double degrees) {
@@ -314,7 +298,7 @@ public:
         }
 
         cam.target = cam.pos + fwdRot;
-        refreshBasis();
+        cam.makeBasis();
     }
 
     void moveForward(double dist) {
@@ -325,7 +309,7 @@ public:
         Vector3 delta = fwdXZ * dist;
         cam.pos    = cam.pos    + delta;
         cam.target = cam.target + delta;
-        refreshBasis();
+        cam.makeBasis();
     }
 
     void strafeRight(double dist) {
@@ -337,7 +321,7 @@ public:
         Vector3 delta = right * dist;
         cam.pos    = cam.pos    + delta;
         cam.target = cam.target + delta;
-        refreshBasis();
+        cam.makeBasis();
     }
 
     void moveUp(double dist) {
@@ -346,29 +330,13 @@ public:
 
         cam.pos    = cam.pos    + delta;
         cam.target = cam.target + delta;
-        refreshBasis();
-    }
-
-    void rotate_camera_xz(double dphi) {
-        Vector3 dir = cam.target - cam.pos;
-
-        const double c = std::cos(dphi);
-        const double s = std::sin(dphi);
-
-        const double x = dir.x;
-        const double z = dir.z;
-
-        dir.x =  x * c + z * s;
-        dir.z = -x * s + z * c;
-
-        cam.target = cam.pos + dir;
-        cb = CameraBasis::make(cam);
+        cam.makeBasis();
     }
 
     static void draw_aabb_wire(
             Window *window,
             const AABB &bbox,
-            const Camera &cam, const CameraBasis &cb,
+            const Camera &cam,
             int view_x, int view_y, int view_w, int view_h, double eps,
             uint8_t r, uint8_t g, uint8_t b
     ) {
@@ -384,7 +352,7 @@ public:
         bool ok[8];
 
         for (int i = 0; i < 8; ++i) {
-            ok[i] = project_point(cam, cb, view_w, view_h, v[i], eps, &sx[i], &sy[i]);
+            ok[i] = cam.project_point(view_w, view_h, v[i], eps, &sx[i], &sy[i]);
         }
 
         for (int e = 0; e < 12; ++e) {
@@ -420,7 +388,7 @@ public:
             AABB box;
             if (!obj->world_aabb(&box)) continue;
 
-            draw_aabb_wire(window, box, cam, cb, viewX, viewY, viewW, viewH, eps, 255, 80, 0);
+            draw_aabb_wire(window, box, cam, viewX, viewY, viewW, viewH, eps, 255, 80, 0);
         }
 
         window->outline(frame, off_x, off_y, 2);
@@ -542,7 +510,7 @@ int Renderer::worker_entry(void *self_void) {
         // render the tile into buf
         for (int y = y0; y < y1; ++y) {
             for (int x = x0; x < x1; ++x) {
-                Ray pr = Ray::primary(self->cam, self->cb, x, y, self->job_width, self->job_height);
+                Ray pr = Ray::primary(self->cam, x, y, self->job_width, self->job_height);
                 Color c = self->scene.trace(pr, 0, self->max_depth, self->eps);
                 self->buf[y * self->job_width + x] = c;
             }
