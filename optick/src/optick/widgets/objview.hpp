@@ -25,7 +25,7 @@ public:
     }
 
     void render(Window *window, float off_x, float off_y) {
-        window->text(getText().c_str(), frame.x + off_x + 5, frame.y + off_y + 5);
+        window->text(getText().c_str(), frame.x + off_x + 5, frame.y + off_y + 1);
         window->outline(frame, off_x, off_y, 2);
     }
 };
@@ -37,7 +37,7 @@ public:
     ObjectView(Object *obj_, Rect2F rect, Widget *parent_, State *state_)
             : Widget(rect, parent_, state_), TitledContainer(rect, parent_, state_),
             obj(obj_) {
-        ObjectViewName *objname = new ObjectViewName(obj, frect(5, 5, 70, 20), NULL, state_);
+        ObjectViewName *objname = new ObjectViewName(obj, frect(5, 5, 100, 24), NULL, state_);
         Widget *objs[] = { objname };
         this->append_children(Widget::makeChildren(objs));
     }

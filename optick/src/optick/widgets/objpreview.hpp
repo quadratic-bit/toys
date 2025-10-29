@@ -51,25 +51,6 @@ public:
 	}
 };
 
-void Select::apply(void *, Widget *) {
-    bool toggled = target->toggle_select();
-    if (toggled) {
-        if (child) return;
-        child = new ObjectView(target, frect(5, 100, 150, 300), NULL, state);
-        // FIXME: I wonder if this is fine
-        WidgetContainer *container = dynamic_cast<WidgetContainer *>(parent->parent->parent);
-        assert(container != NULL);
-        container->prepend_child(child);
-    } else {
-        if (!child) return;
-        WidgetContainer *container = dynamic_cast<WidgetContainer *>(parent->parent->parent);
-        assert(container != NULL);
-        container->remove_child(child);
-        delete child;
-        child = NULL;
-    }
-}
-
 class ObjectsList : public TallView {
     const std::vector<Object*> &objects;
 
@@ -98,3 +79,29 @@ public:
 		window->outline(viewport, off_x, off_y, 2);
 	}
 };
+
+void Select::apply(void *, Widget *) {
+    bool toggled = target->toggle_select();
+    if (toggled) {
+        if (child) return;
+
+        // FIXME: I wonder if this is fine
+        ObjectPreview *preview = parent;
+        ObjectsList *list = dynamic_cast<ObjectsList *>(preview->parent);
+        assert(list != NULL);
+        WidgetContainer *container = dynamic_cast<WidgetContainer *>(list->parent);
+        assert(container != NULL);
+
+        float w = 150, h = list->getViewport().h;
+        child = new ObjectView(target, frect(list->frame.x - w, list->frame.y, w, h), NULL, state);
+
+        container->prepend_child(child);
+    } else {
+        if (!child) return;
+        WidgetContainer *container = dynamic_cast<WidgetContainer *>(parent->parent->parent);
+        assert(container != NULL);
+        container->remove_child(child);
+        delete child;
+        child = NULL;
+    }
+}

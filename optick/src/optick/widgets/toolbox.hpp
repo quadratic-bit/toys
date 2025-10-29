@@ -40,7 +40,7 @@ public:
 	}
 
 	const char *title() const {
-		return "Controller";
+		return "Control";
 	}
 
 	void render(Window *window, float off_x, float off_y) {
