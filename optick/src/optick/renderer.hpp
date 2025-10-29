@@ -93,6 +93,9 @@ class Renderer : public TitledWidget {
     CameraBasis cb;
     ViewCS      cs;
 
+    double minPitchDeg;
+    double maxPitchDeg;
+
     int view_w, view_h;
     std::vector<Color> buf;  // size view_w * view_h
     std::vector<unsigned char> pixel_bitmask;
@@ -181,6 +184,19 @@ class Renderer : public TitledWidget {
         tex->unlock(&texh);
     }
 
+    void refreshBasis() {
+        cam.up = Vector3(0, 1, 0);
+        cb = CameraBasis::make(cam);
+    }
+
+    double currentPitch() const {
+        const Vector3 fwd = !(cam.target - cam.pos);
+        double y = fwd.y;
+        if (y < -1.0) y = -1.0;
+        else if (y > 1.0) y = 1.0;
+        return std::asin(y) * (180.0 / M_PI);
+    }
+
     /**
      * Lazily (re)initialize buffers and texture if the view size changed
      */
@@ -222,6 +238,8 @@ public:
     Renderer(Rect2F rect, Widget *parent_, State *s)
             : Widget(rect, parent_, s), TitledWidget(rect, parent_, s),
             view_w(0), view_h(0), initialized(false), max_depth(5), eps(1e-4) {
+        minPitchDeg = -89.0;
+        maxPitchDeg =  89.0;
         cam.pos    = Vector3(0, 2,  2.5);
         scene = make_demo_scene();
 
@@ -256,6 +274,79 @@ public:
         cam.pos.x += dx;
         cam.target.x += dx;
         cb = CameraBasis::make(cam);
+    }
+
+    void yaw(double degrees) {
+        const Vector3 worldUp(0, 1, 0);
+        Vector3 fwd = !(cam.target - cam.pos);
+
+        if (std::fabs(fwd ^ worldUp) > 1.0 - 1e-8) {
+            Vector3 right = (worldUp % fwd).normalizeClamp();
+            if (right.x == 0 && right.y == 0 && right.z == 0) right = Vector3(1, 0, 0);
+            fwd = (fwd + right * 1e-6).normalizeClamp();
+        }
+
+        Vector3 fwdRot = fwd.rotateAroundAxis(worldUp, deg2rad(degrees));
+        cam.target = cam.pos + !fwdRot;
+        refreshBasis();
+    }
+
+    void pitch(double degrees) {
+        const Vector3 worldUp(0, 1, 0);
+        Vector3 fwd = !(cam.target - cam.pos);
+
+        double p0 = currentPitch();
+        double p1 = clamp(p0 + degrees, minPitchDeg, maxPitchDeg);
+        double delta = p1 - p0;
+        if (std::fabs(delta) < 1e-9) return;
+
+        Vector3 right = (fwd % worldUp).normalizeClamp();
+        if (right.x == 0 && right.y == 0 && right.z == 0) {
+            right = Vector3(1, 0, 0);
+        }
+
+        Vector3 fwdRot = fwd.rotateAroundAxis(right, deg2rad(delta));
+        fwdRot = !fwdRot;
+
+        Vector3 right2 = (fwdRot % worldUp).normalizeClamp();
+        if (right2.x == 0 && right2.y == 0 && right2.z == 0) {
+            return;
+        }
+
+        cam.target = cam.pos + fwdRot;
+        refreshBasis();
+    }
+
+    void moveForward(double dist) {
+        Vector3 fwd = !(cam.target - cam.pos);
+        Vector3 fwdXZ = Vector3(fwd.x, 0.0, fwd.z).normalizeClamp();
+        if (fwdXZ.x == 0 && fwdXZ.y == 0 && fwdXZ.z == 0) return;
+
+        Vector3 delta = fwdXZ * dist;
+        cam.pos    = cam.pos    + delta;
+        cam.target = cam.target + delta;
+        refreshBasis();
+    }
+
+    void strafeRight(double dist) {
+        const Vector3 worldUp(0, 1, 0);
+        Vector3 fwd = !(cam.target - cam.pos);
+        Vector3 right = (fwd % worldUp).normalizeClamp();
+        if (right.x == 0 && right.y == 0 && right.z == 0) return;
+
+        Vector3 delta = right * dist;
+        cam.pos    = cam.pos    + delta;
+        cam.target = cam.target + delta;
+        refreshBasis();
+    }
+
+    void moveUp(double dist) {
+        const Vector3 worldUp(0, 1, 0);
+        Vector3 delta = worldUp * dist;
+
+        cam.pos    = cam.pos    + delta;
+        cam.target = cam.target + delta;
+        refreshBasis();
     }
 
     void rotate_camera_xz(double dphi) {

@@ -11,6 +11,14 @@ inline float rand01() {
     return (float)(std::rand()) / RAND_MAX;
 }
 
+inline double deg2rad(double d) {
+    return d * (M_PI / 180.0);
+}
+
+inline double clamp(double v, double lo, double hi) {
+    return v < lo ? lo : (v > hi ? hi : v);
+}
+
 class Vector3 {
 public:
     double x;
@@ -52,6 +60,20 @@ public:
         if (k < 0.0) return false; // TIR
         *this = !(vec * eta - n * (eta * cos_incident + std::sqrt(k)));
         return true;
+    }
+
+    // zero if input is zero
+    inline Vector3 normalizeClamp() {
+        const double len2 = *this ^ *this;
+        if (len2 <= 1e-20) return Vector3(0, 0, 0);
+        return *this / std::sqrt(len2);
+    }
+
+    // rodrigues rotation: rotate vector around unit axis by angle in radians
+    inline Vector3 rotateAroundAxis(const Vector3 &a_unit, double ang) {
+        const double c = std::cos(ang);
+        const double s = std::sin(ang);
+        return *this * c + (a_unit % *this) * s + a_unit * ((a_unit ^ *this) * (1.0 - c));
     }
 
     Vector3 operator-() const {
