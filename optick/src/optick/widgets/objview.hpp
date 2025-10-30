@@ -25,8 +25,9 @@ public:
     }
 
     void render(Window *window, float off_x, float off_y) {
-        window->text(getText().c_str(), frame.x + off_x + 5, frame.y + off_y + 1);
-        window->outline(frame, off_x, off_y, 2);
+        window->clear_rect(frame, off_x, off_y, RGB(CLR_SURFACE_2));
+        window->text(getText().c_str(), frame.x + off_x + 5, frame.y + off_y + 1, RGB(CLR_TEXT_STRONG));
+        window->outline(frame, off_x, off_y, RGB(CLR_BORDER), 2);
     }
 };
 
@@ -43,9 +44,9 @@ public:
     }
 
     void render(Window *window, float off_x, float off_y) {
-        window->text_aligned(property.first.c_str(),  frame.x + off_x + 5,  frame.y + off_y + 15, TA_LEFT);
-        window->text_aligned(property.second.c_str(), frame.x + off_x + frame.w - 10, frame.y + off_y + 15, TA_RIGHT);
-        window->outline(frame, off_x, off_y, 1);
+        window->text_aligned(property.first.c_str(),  frame.x + off_x + 5,  frame.y + off_y + 15, RGB(CLR_TEXT_STRONG), TA_LEFT);
+        window->text_aligned(property.second.c_str(), frame.x + off_x + frame.w - 10, frame.y + off_y + 15, RGB(CLR_TEXT_STRONG), TA_RIGHT);
+        window->outline(frame, off_x, off_y, RGB(CLR_BORDER), 1);
     }
 };
 
@@ -74,7 +75,7 @@ public:
         window->get_clip(&rect);
         window->unclip();
 
-        window->text("Материал", frame.x + off_x,  frame.y + off_y - 20);
+        window->text("Материал", frame.x + off_x,  frame.y + off_y - 20, RGB(CLR_TEXT_STRONG));
 
         window->restore_clip(&rect);
     }
@@ -98,7 +99,7 @@ public:
 	}
 
 	void render(Window *window, float off_x, float off_y) {
-        window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
-		window->outline(frame, off_x, off_y, 2);
+        window->clear_rect(frame, off_x, off_y, RGB(CLR_SURFACE_2));
+		window->outline(frame, off_x, off_y, RGB(CLR_BORDER), 2);
 	}
 };

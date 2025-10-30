@@ -5,6 +5,7 @@
 #include <swuix/widgets/container.hpp>
 #include <swuix/widgets/button.hpp>
 
+#include "swuix/window/common.hpp"
 #include "trace/objects.hpp"
 #include "objview.hpp"
 
@@ -40,14 +41,15 @@ public:
 
 	void render(Window *window, float off_x, float off_y) {
         if (obj.selected()) {
-            window->clear_rect(frame, off_x, off_y, CLR_PUCE);
+            //                                       TODO: move into a constant (soft-selection)
+            window->clear_rect(frame, off_x, off_y, OKLabDarken(RGB(CLR_SURFACE_2), 0.18));
         } else {
-            window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
+            window->clear_rect(frame, off_x, off_y, RGB(CLR_SURFACE_2));
         }
 
-		window->text(title(), frame.x + off_x + 5, frame.y + off_y + 5);
+		window->text(title(), frame.x + off_x + 5, frame.y + off_y + 5, RGB(CLR_TEXT_STRONG));
 
-		window->outline(frame, off_x, off_y, 2);
+		window->outline(frame, off_x, off_y, RGB(CLR_BORDER), 2);
 	}
 };
 
@@ -75,8 +77,8 @@ public:
 	}
 
 	void render(Window *window, float off_x, float off_y) {
-		window->clear_rect(viewport, off_x, off_y, CLR_TIMBERWOLF);
-		window->outline(viewport, off_x, off_y, 2);
+		window->clear_rect(viewport, off_x, off_y, RGB(CLR_SURFACE_2));
+		window->outline(viewport, off_x, off_y, RGB(CLR_BORDER), 2);
 	}
 };
 

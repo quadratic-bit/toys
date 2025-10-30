@@ -9,9 +9,9 @@ struct Action {
 static const int BTN_THICK = 1;
 
 class BtnCallbackAction : public Action {
-    void (*click_cb)(void*, Widget*);
+    void (*click_cb)(void *, Widget *);
 public:
-    BtnCallbackAction(void (*click_cb_)(void*, Widget*)) : click_cb(click_cb_) {}
+    BtnCallbackAction(void (*click_cb_)(void *, Widget *)) : click_cb(click_cb_) {}
 
     void apply(void *state, Widget *target) {
         if (click_cb) click_cb(state, target);
@@ -21,21 +21,24 @@ public:
 class Button : public Widget {
     bool hovered;
     bool pressed;
+
     Action *action;
-    const char* label;
+
+    const char *label;
+
 public:
     Button(Rect2F f, Widget *par, const char *label_, State *st, Action *action_)
         : Widget(f, par, st), hovered(false), action(action_), label(label_) {}
 
     Button(Rect2F f, Widget *par, const char *label_, State *st, void (*on_click_)(void*, Widget*))
-        : Widget(f, par, st), hovered(false), label(label_) {
-            action = new BtnCallbackAction(on_click_);
-        }
+            : Widget(f, par, st), hovered(false), label(label_) {
+        action = new BtnCallbackAction(on_click_);
+    }
 
     Button(Rect2F f, Widget *par, const char *label_, State *st)
-        : Widget(f, par, st), hovered(false), label(label_) {
-            action = new BtnCallbackAction(NULL);
-        }
+            : Widget(f, par, st), hovered(false), label(label_) {
+        action = new BtnCallbackAction(NULL);
+    }
 
     ~Button() {
         delete action;
@@ -60,11 +63,11 @@ public:
         Rect2F inner = frect(frame.x + off_x + BTN_THICK, frame.y + off_y + BTN_THICK,
                 frame.w - BTN_THICK * 2, frame.h - BTN_THICK * 2);
 
-        window->draw_filled_rect_rgb(outer, CLR_BLACK);
+        window->draw_filled_rect_rgb(outer, RGB(CLR_BORDER));
 
-        if (hovered) window->draw_filled_rect_rgb(inner, CLR_LIGHT_GRAY);
-        else window->draw_filled_rect_rgb(inner, CLR_PLATINUM);
+        if (hovered) window->draw_filled_rect_rgb(inner, OKLabDarken(RGB(CLR_SURFACE_2), 0.06));
+        else window->draw_filled_rect_rgb(inner, RGB(CLR_SURFACE_2));
 
-        window->text_aligned(label, frame.x + off_x + frame.w / 2, frame.y + off_y + frame.h / 2, TA_CENTER);
+        window->text_aligned(label, frame.x + off_x + frame.w / 2, frame.y + off_y + frame.h / 2, RGB(CLR_TEXT_STRONG), TA_CENTER);
     }
 };

@@ -146,7 +146,7 @@ public:
         pb = new PixelBuffer(renderer, width, height);
         pfmt_rgba32 = SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGBA32);
 
-        clear();
+        clear(RGB(CLR_BACKGROUND));
         present();
     }
 
@@ -184,9 +184,9 @@ public:
         tex.render(renderer, dest);
     }
 
-    inline uint32_t map_rgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) const {
+    inline uint32_t map_rgba(RGBu8 clr, uint8_t a = 255) const {
         // NOTE: pfmt_rgba32 is never null for a valid pixel format
-        return SDL_MapRGBA(pfmt_rgba32, NULL, r, g, b, a);
+        return SDL_MapRGBA(pfmt_rgba32, NULL, clr.r, clr.g, clr.b, a);
     }
 
     // ================ THREADING =================
@@ -215,38 +215,38 @@ public:
 
     // ================ PRIMITIVES ================
 
-    void draw_line_rgb(int16_t x1, int16_t y1, int16_t x2, int16_t y2, unsigned thick, uint8_t r, uint8_t g, uint8_t b) {
-        thickLineRGBA(renderer, x1, y1, x2, y2, thick, r, g, b, SDL_ALPHA_OPAQUE);
+    void draw_line_rgb(int16_t x1, int16_t y1, int16_t x2, int16_t y2, unsigned thick, RGBu8 clr) {
+        thickLineRGBA(renderer, x1, y1, x2, y2, thick, clr.r, clr.g, clr.b, SDL_ALPHA_OPAQUE);
     }
 
-    void draw_line(int16_t x1, int16_t y1, int16_t x2, int16_t y2, unsigned thick) {
-        draw_line_rgb(x1, y1, x2, y2, thick, CLR_NIGHT);
+    void draw_line(int16_t x1, int16_t y1, int16_t x2, int16_t y2, unsigned thick, RGBu8 clr) {
+        draw_line_rgb(x1, y1, x2, y2, thick, clr);
     }
 
-    void draw_circle_rgb(float x, float y, float rad, uint8_t r, uint8_t g, uint8_t b) {
-        SDL_SetRenderDrawColor(renderer, r, g, b, SDL_ALPHA_OPAQUE);
-        circleRGBA(renderer, x, y, rad, r, g, b, SDL_ALPHA_OPAQUE);
+    void draw_circle_rgb(float x, float y, float rad, RGBu8 clr) {
+        SDL_SetRenderDrawColor(renderer, clr.r, clr.g, clr.b, SDL_ALPHA_OPAQUE);
+        circleRGBA(renderer, x, y, rad, clr.r, clr.g, clr.b, SDL_ALPHA_OPAQUE);
     }
 
-    void draw_filled_circle_rgb(float x, float y, float rad, uint8_t r, uint8_t g, uint8_t b) {
-        SDL_SetRenderDrawColor(renderer, r, g, b, SDL_ALPHA_OPAQUE);
-        filledCircleRGBA(renderer, x, y, rad, r, g, b, SDL_ALPHA_OPAQUE);
+    void draw_filled_circle_rgb(float x, float y, float rad, RGBu8 clr) {
+        SDL_SetRenderDrawColor(renderer, clr.r, clr.g, clr.b, SDL_ALPHA_OPAQUE);
+        filledCircleRGBA(renderer, x, y, rad, clr.r, clr.g, clr.b, SDL_ALPHA_OPAQUE);
     }
 
-    void draw_filled_rect_rgb(const Rect2F &rect, uint8_t r, uint8_t g, uint8_t b) {
-        SDL_SetRenderDrawColor(renderer, r, g, b, SDL_ALPHA_OPAQUE);
+    void draw_filled_rect_rgb(const Rect2F &rect, RGBu8 clr) {
+        SDL_SetRenderDrawColor(renderer, clr.r, clr.g, clr.b, SDL_ALPHA_OPAQUE);
         SDL_RenderFillRect(renderer, &rect);
     }
 
     // =============== MISC GRAPHICS ==============
 
-    void outline(const Rect2F box, float off_x, float off_y, unsigned thick = 2) {
+    void outline(const Rect2F box, float off_x, float off_y, RGBu8 clr, unsigned thick = 2) {
         int16_t x = box.x + off_x, y = box.y + off_y;
         int16_t w = box.w, h = box.h;
-        draw_line(x, y, x + w, y, thick);
-        draw_line(x, y, x, y + h, thick);
-        draw_line(x + w, y, x + w, y + h, thick);
-        draw_line(x, y + h, x + w, y + h, thick);
+        draw_line(x, y, x + w, y, thick, clr);
+        draw_line(x, y, x, y + h, thick, clr);
+        draw_line(x + w, y, x + w, y + h, thick, clr);
+        draw_line(x, y + h, x + w, y + h, thick, clr);
     }
 
     // ================= CLIPPING =================
@@ -275,16 +275,16 @@ public:
 
     // =================== TEXT ===================
 
-    void text(const char *string, float x, float y) {
+    void text(const char *string, float x, float y, RGBu8 clr) {
         TTF_Text *tt = TTF_CreateText(text_engine, font, string, strlen(string));
         if (!tt) return;
 
-        TTF_SetTextColor(tt, CLR_NIGHT, SDL_ALPHA_OPAQUE);
+        TTF_SetTextColor(tt, clr.r, clr.g, clr.b, SDL_ALPHA_OPAQUE);
         TTF_DrawRendererText(tt, x, y);
         TTF_DestroyText(tt);
     }
 
-    void text_aligned(const char *string, float x, float y, TextAlign align = TA_LEFT, bool vcenter = true) {
+    void text_aligned(const char *string, float x, float y, RGBu8 clr, TextAlign align = TA_LEFT, bool vcenter = true) {
         TTF_Text *tt = TTF_CreateText(text_engine, font, string, strlen(string));
         if (!tt) return;
 
@@ -295,20 +295,20 @@ public:
         else if (align == TA_RIGHT) x -= (float)w;
         if (vcenter) y -= h * 0.5;
 
-        TTF_SetTextColor(tt, CLR_NIGHT, SDL_ALPHA_OPAQUE);
+        TTF_SetTextColor(tt, clr.r, clr.g, clr.b, SDL_ALPHA_OPAQUE);
         TTF_DrawRendererText(tt, x, y);
         TTF_DestroyText(tt);
     }
 
-    void clear() {
-        SDL_SetRenderDrawColor(renderer, CLR_PLATINUM, SDL_ALPHA_OPAQUE);
+    void clear(RGBu8 clr) {
+        SDL_SetRenderDrawColor(renderer, clr.r, clr.g, clr.b, SDL_ALPHA_OPAQUE);
         SDL_RenderClear(renderer);
     }
 
-    void clear_rect(Rect2F box, float off_x, float off_y, uint8_t r, uint8_t g, uint8_t b) {
+    void clear_rect(Rect2F box, float off_x, float off_y, RGBu8 clr) {
         box.x += off_x;
         box.y += off_y;
-        SDL_SetRenderDrawColor(renderer, r, g, b, SDL_ALPHA_OPAQUE);
+        SDL_SetRenderDrawColor(renderer, clr.r, clr.g, clr.b, SDL_ALPHA_OPAQUE);
         SDL_RenderFillRect(renderer, &box);
     }
 

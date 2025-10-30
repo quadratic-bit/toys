@@ -45,7 +45,7 @@ public:
 class Scrollbar : public Control, public WidgetContainer {
 public:
     ScrollableWidget *host;
-    ScrollbarSlider *slider;
+    ScrollbarSlider  *slider;
 
     Scrollbar(State *state_);
 
@@ -62,8 +62,8 @@ public:
     float scroll_progress();
 
     void render(Window *window, float off_x, float off_y) {
-        window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
-        window->outline(frame, off_x, off_y, 2);
+        window->clear_rect(frame, off_x, off_y, RGB(CLR_SURFACE_2));
+        window->outline(frame, off_x, off_y, RGB(CLR_BORDER_SUBTLE), 2);
     }
 
     DispatchResult on_layout(DispatcherCtx, const LayoutEvent *) {

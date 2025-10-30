@@ -22,7 +22,7 @@ public:
     }
 
     void render(Widget *root) {
-        state->window->clear();
+        state->window->clear(RGB(CLR_BACKGROUND));
         RenderEvent e;
         DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame, state->window);
         root->broadcast(ctx, &e, true);

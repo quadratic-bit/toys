@@ -50,7 +50,8 @@ void TitleBar::attach_to(ControlledWidget *host_) {
 }
 
 void TitleBar::render(Window *window, float off_x, float off_y) {
-    window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
-    window->outline(frame, off_x, off_y, 2);
-    window->text(host->title(), frame.x + off_x + 3, frame.y + off_y + 1);
+    window->clear_rect(frame, off_x, off_y, RGB(CLR_PRIMARY_ACT));
+    window->outline(frame, off_x, off_y, RGB(CLR_BORDER), 2);
+    // TODO: CLR_TEXT_STRONG when inactive
+    window->text(host->title(), frame.x + off_x + 3, frame.y + off_y + 1, RGB(CLR_ON_PRIMARY));
 }

@@ -100,7 +100,7 @@ public:
 	}
 
 	void render(Window *window, float off_x, float off_y) {
-		window->clear_rect(frame, off_x, off_y, CLR_TIMBERWOLF);
-		window->outline(frame, off_x, off_y, 2);
+		window->clear_rect(frame, off_x, off_y, RGB(CLR_SURFACE_2));
+		window->outline(frame, off_x, off_y, RGB(CLR_BORDER), 2);
 	}
 };

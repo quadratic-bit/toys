@@ -29,8 +29,8 @@ ScrollbarSlider::ScrollbarSlider(Rect2F f, Scrollbar *par, State *st)
     : Widget(f, par, st), DraggableWidget(f, par, st), scrollbar(par) {}
 
 void ScrollbarSlider::render(Window *window, float off_x, float off_y) {
-    window->clear_rect(frame, off_x, off_y, CLR_PLATINUM);
-    window->outline(frame, off_x, off_y, 1);
+    window->clear_rect(frame, off_x, off_y, RGB(CLR_BORDER));
+    window->outline(frame, off_x, off_y, RGB(CLR_BORDER_SUBTLE), 1);
 }
 
 DispatchResult ScrollbarSlider::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {

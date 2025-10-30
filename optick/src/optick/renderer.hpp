@@ -175,7 +175,7 @@ class Renderer : public TitledWidget {
             for (int ix = 0; ix < view_w; ++ix) {
                 Ray pr = Ray::primary(cam, ix, iy, view_w, view_h);
                 Color bg = scene.sampleBackground(pr.d);
-                pixels[ix] = window->map_rgba(Color::encode(bg.r), Color::encode(bg.g), Color::encode(bg.b), 255);
+                pixels[ix] = window->map_rgba(RGBu8(Color::encode(bg.r), Color::encode(bg.g), Color::encode(bg.b)), 255);
             }
         }
         tex->unlock(&texh);
@@ -277,12 +277,12 @@ public:
             int a = E[e][0];
             int c = E[e][1];
             if (!ok[a] || !ok[c]) continue;
-            window->draw_line_rgb(view_x + sx[a], view_y + sy[a], view_x + sx[c], view_y + sy[c], 1, r, g, b);
+            window->draw_line_rgb(view_x + sx[a], view_y + sy[a], view_x + sx[c], view_y + sy[c], 1, RGBu8(r, g, b));
         }
     }
 
     void render(Window *window, float off_x, float off_y) {
-        window->clear_rect(frame, off_x, off_y, 125, 12, 125);
+        window->clear_rect(frame, off_x, off_y, RGBu8(125, 12, 125));
 
         const int viewX = std::floor(frame.x + off_x);
         const int viewY = std::floor(frame.y + off_y);
@@ -309,7 +309,7 @@ public:
             drawWireframe(window, box, cam, viewX, viewY, viewW, viewH, eps, 255, 80, 0);
         }
 
-        window->outline(frame, off_x, off_y, 2);
+        window->outline(frame, off_x, off_y, RGB(CLR_BORDER), 2);
     }
 
     DispatchResult on_idle(DispatcherCtx ctx, const IdleEvent *ev) {
@@ -358,9 +358,12 @@ public:
                 Color    *src    = &buf[y * view_w];
                 for (int x = x0; x < x1; ++x) {
                     const Color& c = src[x];
-                    pixels[x] = ctx.window->map_rgba(Color::encode(c.r),
+                    pixels[x] = ctx.window->map_rgba(
+                        RGBu8(
+                            Color::encode(c.r),
                             Color::encode(c.g),
-                            Color::encode(c.b), 255);
+                            Color::encode(c.b)
+                        ), 255);
                 }
             }
 
