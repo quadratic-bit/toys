@@ -13,12 +13,10 @@ class ObjectPreview;
 
 class Select : public Action {
     Object *target;
-    State  *state;
-    ObjectPreview *parent;
-    ObjectView    *child;
+    ObjectView *view;
 
 public:
-    Select(Object *o, ObjectPreview *p, State *s) : target(o), state(s), parent(p), child(NULL) {}
+    Select(Object *o, ObjectView *v) : target(o), view(v) {}
 
     void apply(void *, Widget *);
 };
@@ -27,10 +25,10 @@ class ObjectPreview : public WidgetContainer {
     const Object &obj;
 
 public:
-    ObjectPreview(Object *obj_, Rect2F rect, Widget *parent_, State *state_)
+    ObjectPreview(Object *o, ObjectView *v, Rect2F rect, Widget *parent_, State *state_)
             : Widget(rect, parent_, state_), WidgetContainer(rect, parent_, state_),
-            obj(*obj_) {
-        Button *select_btn = new Button(frect(rect.w - 75, 5, 70, rect.h - 10), NULL, "Select", state_, new Select(obj_, this, state_));
+            obj(*o) {
+        Button *select_btn = new Button(frect(rect.w - 75, 5, 70, rect.h - 10), NULL, "Select", state_, new Select(o, v));
         Widget *objs[] = { select_btn };
         this->append_children(Widget::makeChildren(objs));
     }
@@ -57,12 +55,12 @@ class ObjectsList : public TallView {
     const std::vector<Object*> &objects;
 
 public:
-	ObjectsList(const std::vector<Object*> &objects_, Rect2F rect, Rect2F clip, Widget *parent_, State *state_)
+	ObjectsList(const std::vector<Object*> &objects_, ObjectView *view, Rect2F rect, Rect2F clip, Widget *parent_, State *state_)
 			: Widget(rect, parent_, state_), TallView(rect, clip, parent_, state_), objects(objects_) {
         std::vector<Widget*> cards = std::vector<Widget*>();
         cards.reserve(cards.size());
         for (size_t i = 0; i < objects.size(); ++i) {
-            ObjectPreview *obj = new ObjectPreview(objects[i], frect(5, 5 + 35 * i, frame.w - 20, 30), NULL, state);
+            ObjectPreview *obj = new ObjectPreview(objects[i], view, frect(5, 5 + 35 * i, frame.w - 20, 30), NULL, state);
             cards.push_back(obj);
         }
 
@@ -85,25 +83,8 @@ public:
 void Select::apply(void *, Widget *) {
     bool toggled = target->toggleSelect();
     if (toggled) {
-        if (child) return;
-
-        // FIXME: I wonder if this is fine
-        ObjectPreview *preview = parent;
-        ObjectsList *list = dynamic_cast<ObjectsList *>(preview->parent);
-        assert(list != NULL);
-        WidgetContainer *container = dynamic_cast<WidgetContainer *>(list->parent);
-        assert(container != NULL);
-
-        float w = 200, h = list->getViewport().h, y = list->getViewport().y;
-        child = new ObjectView(target, frect(list->frame.x - w, y, w, h), NULL, state);
-
-        container->prepend_child(child);
+        view->populate(target);
     } else {
-        if (!child) return;
-        WidgetContainer *container = dynamic_cast<WidgetContainer *>(parent->parent->parent);
-        assert(container != NULL);
-        container->remove_child(child);
-        delete child;
-        child = NULL;
+        // TODO: multiple selection
     }
 }

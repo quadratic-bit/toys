@@ -82,21 +82,27 @@ public:
 };
 
 class ObjectView : public TitledContainer {
-    Object *obj;
-
 public:
-    ObjectView(Object *obj_, Rect2F rect, Widget *parent_, State *state_)
-            : Widget(rect, parent_, state_), TitledContainer(rect, parent_, state_),
-            obj(obj_) {
-        ObjectViewName *objname = new ObjectViewName(obj, frect(5, 5, 125, 24), NULL, state_);
-        ObjectViewPropertyList *objprops = new ObjectViewPropertyList(obj, frect(5, 50, frame.w - 10, frame.h - 55), NULL, state_);
-        Widget *objs[] = { objname, objprops };
-        this->append_children(Widget::makeChildren(objs));
-    }
+    ObjectView(Rect2F rect, Widget *parent_, State *state_)
+            : Widget(rect, parent_, state_), TitledContainer(rect, parent_, state_) {}
 
 	const char *title() const {
-		return obj->name.c_str();
+		return "Properties";
 	}
+
+    void unpopulate() {
+        this->clear_children();
+    }
+
+    void populate(Object *obj) {
+        unpopulate();
+
+        ObjectViewName *objname = new ObjectViewName(obj, frect(5, 5, 125, 24), NULL, state);
+        this->append_child(objname);
+
+        ObjectViewPropertyList *objprops = new ObjectViewPropertyList(obj, frect(5, 50, frame.w - 10, frame.h - 55), NULL, state);
+        this->append_child(objprops);
+    }
 
 	void render(Window *window, float off_x, float off_y) {
         window->clear_rect(frame, off_x, off_y, RGB(CLR_SURFACE_2));

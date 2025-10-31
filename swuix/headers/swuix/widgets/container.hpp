@@ -51,6 +51,15 @@ public:
         assert(0);
     }
 
+    void clear_children() {
+        size_t size;
+        while ((size = children.size())) {
+            Widget *ch = children[size - 1];
+            delete ch;
+            children.pop_back();
+        }
+    }
+
     DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
         ctx.clip(getViewport());
 
