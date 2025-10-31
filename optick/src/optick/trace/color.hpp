@@ -58,3 +58,13 @@ struct Color {
         return out.str();
     }
 };
+
+inline std::ostream &operator<<(std::ostream &os, Color const &c) {
+    os << c.r << ' ' << c.g << ' ' << c.b;
+    return os;
+}
+
+inline std::istream &operator>>(std::istream &is, Color &c) {
+    is >> c.r >> c.g >> c.b;
+    return is;
+}

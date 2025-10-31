@@ -28,9 +28,3 @@ Color MaterialRefractive::sample(TraceContext ctx) const {
         return ctx.target->color * inc_clr;
     }
 }
-
-vector<Property> MaterialRefractive::getProperties() const {
-    vector<Property> v;
-    v.push_back(Property("IoR", double2string(ior)));
-    return v;
-}

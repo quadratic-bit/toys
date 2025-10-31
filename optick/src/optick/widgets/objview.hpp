@@ -33,10 +33,10 @@ public:
 
 class ObjectViewProperty : public Widget {
     //Object *obj;
-    Property property;
+    Field *property;
 
 public:
-    ObjectViewProperty(Property p, Rect2F frame_, Widget *parent_, State *state_)
+    ObjectViewProperty(Field *p, Rect2F frame_, Widget *parent_, State *state_)
             : Widget(frame_, parent_, state_), property(p) {}
 
     const char *title() const {
@@ -44,22 +44,22 @@ public:
     }
 
     void render(Window *window, float off_x, float off_y) {
-        window->text_aligned(property.first.c_str(),  frame.x + off_x + 5,  frame.y + off_y + 15, RGB(CLR_TEXT_STRONG), TA_LEFT);
-        window->text_aligned(property.second.c_str(), frame.x + off_x + frame.w - 10, frame.y + off_y + 15, RGB(CLR_TEXT_STRONG), TA_RIGHT);
+        window->text_aligned(property->name().c_str(),  frame.x + off_x + 5,  frame.y + off_y + 15, RGB(CLR_TEXT_STRONG), TA_LEFT);
+        window->text_aligned(property->serialize().c_str(), frame.x + off_x + frame.w - 10, frame.y + off_y + 15, RGB(CLR_TEXT_STRONG), TA_RIGHT);
         window->outline(frame, off_x, off_y, RGB(CLR_BORDER), 1);
     }
 };
 
 class ObjectViewPropertyList : public WidgetContainer {
     Object *obj;
+    FieldList fields;
 
 public:
     ObjectViewPropertyList(Object *o, Rect2F frame_, Widget *parent_, State *state_)
             : Widget(frame_, parent_, state_), WidgetContainer(frame_, parent_, state_), obj(o) {
-        vector<Property> properties = obj->mat->getProperties();
-
-        for (size_t i = 0; i < properties.size(); ++i) {
-            ObjectViewProperty *property = new ObjectViewProperty(properties[i], frect(0, i * 35, frame.w, 35), NULL, state_);
+        obj->mat->collectFields(fields);            // fill member 'fields'
+        for (size_t i = 0; i < fields.size(); ++i) {
+            ObjectViewProperty *property = new ObjectViewProperty(fields[i], frect(0, i * 35, frame.w, 35), NULL, state_);
             append_child(property);
         }
     }

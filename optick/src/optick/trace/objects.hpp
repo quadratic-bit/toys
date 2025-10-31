@@ -45,9 +45,9 @@ public:
     Color   color;
     string  name;
 
-    const Material *mat;
+    Material *mat;
 
-    Object(string name_, const Vector3 &pos, const Color &col, const Material *m)
+    Object(string name_, const Vector3 &pos, const Color &col, Material *m)
         : is_selected(false), center(pos), color(col), name(name_), mat(m) {}
 
     virtual ~Object() {};
@@ -77,7 +77,7 @@ public:
 struct Sphere : public Object {
     double radius;
 
-    Sphere(string name_, const Vector3 &c, double r, const Color &col, const Material *m)
+    Sphere(string name_, const Vector3 &c, double r, const Color &col, Material *m)
         : Object(name_, c, col, m), radius(r) {}
 
     /**
@@ -129,7 +129,7 @@ struct Plane : public Object {
           const Vector3  &point_on_plane,
           const Vector3  &n,
           const Color    &col,
-          const Material *m)
+                Material *m)
         : Object(name_, point_on_plane, col, m), normal(!n) {}
 
     bool intersect(const Ray &ray, double eps, Hit *hit) const {
@@ -168,7 +168,7 @@ struct Polygon : public Object {
     Vector3 u, v;  // orthonormal (u,v,normal)
     std::vector<Vec2> verts2;  // projected onto (u,v)
 
-    Polygon(string name_, const std::vector<Vector3> &verts, const Color &col, const Material *m)
+    Polygon(string name_, const std::vector<Vector3> &verts, const Color &col, Material *m)
             : Object(name_, Vector3(0, 0, 0), col, m),
             verts3(verts),
             normal(0, 1, 0),

@@ -1,19 +1,19 @@
 #pragma once
-#include "../trace/color.hpp"
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "../trace/color.hpp"
+#include "reflection.hpp"
 
 using std::vector;
 using std::pair;
 using std::string;
 
-typedef pair<string, string> Property;
-
 // forward-declare
 struct TraceContext;
 
-class Material {
+class Material : public Reflectable {
 public:
     Material() {}
     virtual ~Material() {}
@@ -21,8 +21,6 @@ public:
 
     virtual bool  isEmissive() const { return false; }
     virtual Color emission()   const { return Color(0, 0, 0); }
-
-    virtual vector<Property> getProperties() const = 0;
 };
 
 // A mirror surface
@@ -31,7 +29,8 @@ public:
     MaterialReflective() : Material() {}
 
     Color sample(TraceContext ctx) const;
-    vector<Property> getProperties() const;
+
+    void collectFields(FieldList &) {}
 };
 
 // A transparent material with a specified index of refraction (ior)
@@ -42,7 +41,10 @@ public:
     MaterialRefractive(double ior_=1.5) : Material(), ior(ior_) {}
 
     Color sample(TraceContext ctx) const;
-    vector<Property> getProperties() const;
+
+    void collectFields(FieldList &out) {
+        Fields<MaterialRefractive>(this, out).add(&MaterialRefractive::ior, "ior");
+    }
 };
 
 // An opaque surface with Lambert/Blinn-Phong lighting model
@@ -56,7 +58,13 @@ public:
         : Material(), kd(kd_), ks(ks_), shininess(shininess_) {}
 
     Color sample(TraceContext ctx) const;
-    vector<Property> getProperties() const;
+
+    void collectFields(FieldList &out) {
+        Fields<MaterialOpaque>(this, out)
+            .add(&MaterialOpaque::kd, "kd")
+            .add(&MaterialOpaque::ks, "ks")
+            .add(&MaterialOpaque::shininess, "shininess");
+    }
 };
 
 class MaterialEmissive : public Material {
@@ -68,5 +76,8 @@ public:
     Color sample(TraceContext ctx) const;
     bool  isEmissive() const { return true; }
     Color emission()   const { return Le; }
-    vector<Property> getProperties() const;
+
+    void collectFields(FieldList &out) {
+        Fields<MaterialEmissive>(this, out).add(&MaterialEmissive::Le, "Le");
+    }
 };

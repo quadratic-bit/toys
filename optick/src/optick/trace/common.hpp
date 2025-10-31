@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "camera.hpp"
+#include "trace/color.hpp"
 
 struct Hit {
     double  dist;     // distance along ray
@@ -38,4 +39,38 @@ inline std::string double2string(double v, int precision=2) {
     std::ostringstream s;
     s << std::setprecision(precision) << v;
     return s.str();
+}
+
+template<typename T>
+std::string stringify(const T &v) {
+    std::ostringstream os; os << v; return os.str();
+}
+template<>
+inline std::string stringify<std::string>(const std::string &s) { return s; }
+
+template<>
+inline std::string stringify<bool>(const bool &b) { return b ? "true" : "false"; }
+
+template<typename T>
+T parse_from_string(const std::string &s) {
+    std::istringstream is(s);
+    T val;
+    is >> val;
+    if (!is) throw std::runtime_error("parse error");
+    return val;
+}
+
+template<>
+inline bool parse_from_string<bool>(const std::string &s) {
+    if (s == "1" || s == "true" || s == "True") return true;
+    if (s == "0" || s == "false" || s == "False") return false;
+    throw std::runtime_error("parse error bool");
+}
+
+template<>
+inline Color parse_from_string<Color>(const std::string &s) {
+    std::istringstream is(s);
+    Color c; is >> c;
+    if (!is) throw std::runtime_error("parse error Color");
+    return c;
 }

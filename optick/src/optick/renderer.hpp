@@ -22,46 +22,46 @@ static inline void shuffle(std::vector<int> &a, unsigned &state) {
 static inline Scene makeDemoScene() {
     Scene scn;
 
-    const MaterialOpaque *ground_plane = new MaterialOpaque(/*kd*/0.9);
+    MaterialOpaque *ground_plane = new MaterialOpaque(/*kd*/0.9);
     scn.objects.push_back(new Plane("ground",
         Vector3(0, -4, 0), Vector3(0, 1, 0),
         Color(0.9, 0.9, 0.9),
         ground_plane
     ));
 
-    const MaterialOpaque *normal = new MaterialOpaque(/*kd*/1.0, /*ks*/1.0, /*shininess*/32);
+    MaterialOpaque *normal = new MaterialOpaque(/*kd*/1.0, /*ks*/1.0, /*shininess*/32);
     const Vector3 verts[] = { Vector3(-10, -5, -10), Vector3(-8, -2, -10), Vector3(-11, -1, -10) };
     scn.objects.push_back(new Polygon("triangle", std::vector<Vector3>(verts, verts + 3), Color(1.0, 1.0, 1.0), normal));
 
-    const MaterialOpaque *solid = new MaterialOpaque(/*kd*/1.0, /*ks*/1.0, /*shininess*/32);
+    MaterialOpaque *solid = new MaterialOpaque(/*kd*/1.0, /*ks*/1.0, /*shininess*/32);
     scn.objects.push_back(new Sphere("red ball",
         Vector3(-1.5, -0.2, -5), 0.7,
         Color(1, 0, 0),
         solid
     ));
 
-    const MaterialReflective *mirror = new MaterialReflective();
+    MaterialReflective *mirror = new MaterialReflective();
     scn.objects.push_back(new Sphere("mirror",
         Vector3(-1.5, -0.2, -3.5), 0.8,
         Color(0.9, 0.8, 0.7),
         mirror
     ));
 
-    const MaterialReflective *mirror2 = new MaterialReflective();
+    MaterialReflective *mirror2 = new MaterialReflective();
     scn.objects.push_back(new Sphere("big mirror",
         Vector3(6, 0, -25), 10,
         Color(0, 1, 1),
         mirror2
     ));
 
-    const MaterialRefractive *glass = new MaterialRefractive(/*ior*/1.5);
+    MaterialRefractive *glass = new MaterialRefractive(/*ior*/1.5);
     scn.objects.push_back(new Sphere("clear glass",
         Vector3(0.2, 0.0, -2.5), 0.6,
         Color(0.95, 1.0, 1.0),
         glass
     ));
 
-    const MaterialRefractive *water_glass = new MaterialRefractive(/*ior*/1.33);
+    MaterialRefractive *water_glass = new MaterialRefractive(/*ior*/1.33);
     scn.objects.push_back(new Sphere("tinted water glass",
         Vector3(1.2, -0.1, -3.0), 0.7,
         Color(0.7, 0.9, 1.0),
@@ -69,7 +69,7 @@ static inline Scene makeDemoScene() {
     ));
 
     // Lights
-    const MaterialEmissive *glowing = new MaterialEmissive(Color(1.0, 1.0, 1.0));
+    MaterialEmissive *glowing = new MaterialEmissive(Color(1.0, 1.0, 1.0));
     scn.objects.push_back(new Sphere("glowing 1",
         Vector3(-2, 2.5, -1.5), 0.25,
         Color(1, 1, 1),  // tint
