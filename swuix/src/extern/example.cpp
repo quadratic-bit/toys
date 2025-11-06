@@ -1,4 +1,3 @@
-#include <cstdio>
 #include <dlfcn.h>
 #include <thread>
 #include <chrono>
@@ -49,6 +48,17 @@ int main(int argc, char **argv) {
     };
 
     tex->Draw(rect);
+
+    dr4::Text text {
+        "dr4 + SDL3_ttf",
+        dr4::Vec2f(24.f, 48.f),
+        dr4::Color(255, 255, 255, 255),
+        19.f,
+        dr4::Text::VAlign::TOP,
+        NULL
+    };
+
+    tex->Draw(text);
 
     window->Clear(dr4::Color(30, 30, 30, 255));
     window->Draw(*tex, dr4::Vec2f(100.f, 80.f));

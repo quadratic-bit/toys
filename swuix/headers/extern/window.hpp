@@ -14,6 +14,30 @@
 
 #include "texture.hpp"
 
+static inline uint32_t utf8_first_codepoint(const char* s) {
+    if (!s || !*s) return 0;
+    const unsigned char c = static_cast<unsigned char>(s[0]);
+    if ((c & 0x80u) == 0x00u) {
+        return c;
+    } else if ((c & 0xE0u) == 0xC0u) {
+        unsigned char c1 = static_cast<unsigned char>(s[1]);
+        if ((c1 & 0xC0u) != 0x80u) return 0;
+        return ((c & 0x1Fu) << 6) | (c1 & 0x3Fu);
+    } else if ((c & 0xF0u) == 0xE0u) {
+        unsigned char c1 = static_cast<unsigned char>(s[1]);
+        unsigned char c2 = static_cast<unsigned char>(s[2]);
+        if ((c1 & 0xC0u) != 0x80u || (c2 & 0xC0u) != 0x80u) return 0;
+        return ((c & 0x0Fu) << 12) | ((c1 & 0x3Fu) << 6) | (c2 & 0x3Fu);
+    } else if ((c & 0xF8u) == 0xF0u) {
+        unsigned char c1 = static_cast<unsigned char>(s[1]);
+        unsigned char c2 = static_cast<unsigned char>(s[2]);
+        unsigned char c3 = static_cast<unsigned char>(s[3]);
+        if ((c1 & 0xC0u) != 0x80u || (c2 & 0xC0u) != 0x80u || (c3 & 0xC0u) != 0x80u) return 0;
+        return ((c & 0x07u) << 18) | ((c1 & 0x3Fu) << 12) | ((c2 & 0x3Fu) << 6) | (c3 & 0x3Fu);
+    }
+    return 0;
+}
+
 class SwuixWindow : public dr4::Window {
 public:
     explicit SwuixWindow(dr4::Vec2f size,
@@ -50,6 +74,14 @@ public:
         int w = 0, h = 0;
         SDL_GetWindowSize(window_, &w, &h);
         return dr4::Vec2f(static_cast<float>(w), static_cast<float>(h));
+    }
+
+    void SetSize(const ::dr4::Vec2f& size) {
+        size_ = size;
+        if (window_) {
+            SDL_SetWindowSize(window_, static_cast<int>(SDL_ceilf(size.x)),
+                                       static_cast<int>(SDL_ceilf(size.y)));
+        }
     }
 
     void Open() {
@@ -154,7 +186,7 @@ public:
     void Draw(const dr4::Texture &texture, dr4::Vec2f pos) {
         ensureOpen_();
 
-        const SwuixTexture *sw = dynamic_cast<const SwuixTexture*>(&texture);
+        const SwuixTexture *sw = static_cast<const SwuixTexture*>(&texture);
         if (!sw) return;
 
         SDL_Texture *sdltex = sw->GetSDLTexture();
@@ -176,6 +208,13 @@ public:
         return new SwuixTexture(renderer_, text_engine_, font_);
     }
 
+    dr4::Image *CreateImage() {
+        return new SwuixImage();
+    }
+
+    dr4::Font *CreateFont() {
+        return new SwuixFont();
+    }
 
     std::optional<dr4::Event> PollEvent() {
         ensureOpen_();
@@ -199,25 +238,27 @@ public:
 
         case SDL_EVENT_MOUSE_MOTION: {
             out.type = dr4::Event::Type::MOUSE_MOVE;
-            out.mouseMove = dr4::Event::MouseMove{ dr4::Vec2f(
+            out.mouseMove.pos = dr4::Vec2f(
                 static_cast<float>(e.motion.x),
                 static_cast<float>(e.motion.y)
-            ) };
+            );
+            out.mouseMove.rel = dr4::Vec2f(
+                static_cast<float>(e.motion.xrel),
+                static_cast<float>(e.motion.yrel)
+            );
             return out;
         }
 
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
         case SDL_EVENT_MOUSE_BUTTON_UP: {
-            const bool pressed = (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN);
-            out.type = pressed ? dr4::Event::Type::MOUSE_DOWN
-                               : dr4::Event::Type::MOUSE_UP;
-            dr4::Event::MouseButton mb;
-            mb.button  = e.button.button;
-            mb.pressed = pressed;
-            mb.pos     = dr4::Vec2f(static_cast<float>(e.button.x),
-                                    static_cast<float>(e.button.y));
-            if (pressed) out.mouseDown = mb;
-            else         out.mouseUp   = mb;
+            out.type = (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+                       ? dr4::Event::Type::MOUSE_DOWN
+                       : dr4::Event::Type::MOUSE_UP;
+            out.mouseButton.button = static_cast<dr4::MouseCode>(e.button.button);
+            out.mouseButton.pos = dr4::Vec2f(
+                static_cast<float>(e.button.x),
+                static_cast<float>(e.button.y)
+            );
             return out;
         }
 
@@ -225,21 +266,24 @@ public:
             out.type = dr4::Event::Type::MOUSE_WHEEL;
             float mx = 0.f, my = 0.f;
             SDL_GetMouseState(&mx, &my);
-            out.mouseWheel = dr4::Event::MouseWheel{
-                dr4::Vec2f(static_cast<float>(e.wheel.x),
-                           static_cast<float>(e.wheel.y)),
-                dr4::Vec2f(mx, my)
-            };
+            out.mouseWheel.delta = static_cast<int>(e.wheel.y);
+            out.mouseWheel.pos   = dr4::Vec2f(mx, my);
+            return out;
+        }
+        case SDL_EVENT_TEXT_INPUT: {
+            out.type = dr4::Event::Type::TEXT_EVENT;
+            const char *txt = e.text.text;
+            out.text.unicode = utf8_first_codepoint(txt);
             return out;
         }
 
-        case SDL_EVENT_KEY_DOWN: {
-            out.type = dr4::Event::Type::KEY_DOWN;
-            return out;
-        }
-
+        case SDL_EVENT_KEY_DOWN:
         case SDL_EVENT_KEY_UP: {
-            out.type = dr4::Event::Type::KEY_UP;
+            out.type = (e.type == SDL_EVENT_KEY_DOWN)
+                     ? dr4::Event::Type::KEY_DOWN
+                     : dr4::Event::Type::KEY_UP;
+            out.key.sym = static_cast<dr4::KeyCode>(e.key.key);
+            out.key.mod = static_cast<dr4::KeyMode>(SDL_GetModState());
             return out;
         }
 

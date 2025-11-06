@@ -3,3 +3,5 @@ bin
 dist
 .cache
 compile_commands.json
+labs
+drawing-txlib

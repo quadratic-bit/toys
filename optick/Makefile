@@ -24,12 +24,12 @@ DEPFILES := $(LIB_OBJS:.o=.d) $(MAIN_OBJS:.o=.d) $(TEST_OBJS:.o=.d)
 
 MODE ?= debug   # debug | release
 
-CXXFLAGS_COMMON := -std=c++03 -pedantic-errors -Wall -Wextra -Werror \
+CXXFLAGS_COMMON := -std=c++17 -pedantic-errors -Wall -Wextra -Werror \
 				   -Wshadow -Wformat=2 \
 				   -Wmissing-declarations -Wmissing-field-initializers \
 				   -Wcast-align -Wwrite-strings \
 				   -Wpointer-arith -Wstrict-aliasing=2 \
-				   -I$(INC_PUBLIC) -I$(INC_SRC) -I$(SWUIX_INC)
+				   -I$(INC_PUBLIC) -I/home/ashooww/Projects/mipt-ded-zemax/include -I$(INC_SRC) -I$(SWUIX_INC)
 
 ifeq ($(SAN),1)
 	CXXFLAGS_SAN := -fsanitize=address,undefined

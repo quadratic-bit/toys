@@ -19,7 +19,7 @@ DIST_DIR := dist/plugin
 
 MODE ?= debug   # debug | release
 
-CXXFLAGS_COMMON := -std=c++03 -pedantic-errors -Wall -Wextra -Werror \
+CXXFLAGS_COMMON := -std=c++17 -pedantic-errors -Wall -Wextra -Werror \
 				   -Wshadow -Wformat=2 \
 				   -Wmissing-declarations -Wmissing-field-initializers \
 				   -Wcast-align -Wwrite-strings \
@@ -40,8 +40,6 @@ LD_LIBRARY_PATH ?= /usr/local/lib
 
 CXXFLAGS := $(CXXFLAGS_COMMON) $(CXXFLAGS_$(MODE)) $(SDL_CFLAGS)
 DEPFLAGS := -MMD -MP
-
-CXXFLAGS_CXX17 := $(filter-out -std=c++03,$(CXXFLAGS)) -std=c++17
 
 EXAMPLE_OBJ := $(BUILD_DIR)/extern_example.o
 EXAMPLE_SRC := src/extern/example.cpp
@@ -90,7 +88,7 @@ example: $(EXAMPLE_BIN)
 
 $(EXAMPLE_OBJ): $(EXAMPLE_SRC) | $(BUILD_DIR)
 	@$(MKDIR_P) $(dir $@)
-	$(CXX) $(CXXFLAGS_CXX17) $(DEPFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c $< -o $@
 
 $(EXAMPLE_BIN): $(EXAMPLE_OBJ)
 	$(CXX) -o $@ $^ -ldl
@@ -109,6 +107,6 @@ plugin-dist: plugin
 	@echo "Packed to $(DIST_DIR)"
 
 $(PLUGIN_SO): $(PLUGIN_SRC) | $(BUILD_DIR)
-	$(CXX) $(CXXFLAGS_CXX17) -fPIC $(SDL_CFLAGS) -shared -o $@ $< $(SDL_LDLIBS) $(RPATH_ORIGIN) -Wl,-soname,libswuix_sdl3.so
+	$(CXX) $(CXXFLAGS) -fPIC $(SDL_CFLAGS) -shared -o $@ $< $(SDL_LDLIBS) $(RPATH_ORIGIN) -Wl,-soname,libswuix_sdl3.so
 
 -include $(LIB_OBJS:.o=.d)
