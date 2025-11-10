@@ -1,4 +1,5 @@
 #pragma once
+#include "dr4/math/color.hpp"
 #include "renderer.hpp"
 
 class Strafe : public Action {
@@ -67,24 +68,24 @@ public:
  *      v     Down
  *  -      +
  */
-class ControlPanel : public TitledContainer {
+class ControlPanel final : public TitledWidget {
 public:
-	ControlPanel(Renderer *renderer, Rect2F rect, Widget *parent_, State *state_)
-			: Widget(rect, parent_, state_), TitledContainer(rect, parent_, state_) {
-        Button *move_right = new Button(frect(80, 55, 25, 25), NULL, ">", state, new Strafe(renderer,  0.5));
-        Button *move_left  = new Button(frect(20, 55, 25, 25), NULL, "<", state, new Strafe(renderer, -0.5));
+	ControlPanel(Renderer *renderer, Rect2f f, Widget *p, State *s)
+			: Widget(f, p, s), TitledWidget(f, p, s) {
+        Button *move_right = new Button({80, 55, 25, 25}, NULL, ">", state, new Strafe(renderer,  0.5));
+        Button *move_left  = new Button({20, 55, 25, 25}, NULL, "<", state, new Strafe(renderer, -0.5));
 
-        Button *move_fwd  = new Button(frect(50, 25, 25, 25), NULL, "^", state, new Move(renderer,  0.5));
-        Button *move_back = new Button(frect(50, 90, 25, 25), NULL, "v", state, new Move(renderer, -0.5));
+        Button *move_fwd  = new Button({50, 25, 25, 25}, NULL, "^", state, new Move(renderer,  0.5));
+        Button *move_back = new Button({50, 90, 25, 25}, NULL, "v", state, new Move(renderer, -0.5));
 
-        Button *move_up   = new Button(frect(90, 105, 25, 25), NULL, "+", state, new Elevate(renderer,  0.5));
-        Button *move_down = new Button(frect(10, 105, 25, 25), NULL, "-", state, new Elevate(renderer, -0.5));
+        Button *move_up   = new Button({90, 105, 25, 25}, NULL, "+", state, new Elevate(renderer,  0.5));
+        Button *move_down = new Button({10, 105, 25, 25}, NULL, "-", state, new Elevate(renderer, -0.5));
 
-        Button *yaw_cw  = new Button(frect(90, 10, 30, 25), NULL, "CW",  state, new Yaw(renderer, -10));
-        Button *yaw_ccw = new Button(frect( 5, 10, 30, 25), NULL, "CCW", state, new Yaw(renderer,  10));
+        Button *yaw_cw  = new Button({90, 10, 30, 25}, NULL, "CW",  state, new Yaw(renderer, -10));
+        Button *yaw_ccw = new Button({ 5, 10, 30, 25}, NULL, "CCW", state, new Yaw(renderer,  10));
 
-        Button *pitch_up   = new Button(frect(130, 25, 30, 25), NULL, "Up",   state, new Pitch(renderer,  10));
-        Button *pitch_down = new Button(frect(125, 90, 40, 25), NULL, "Down", state, new Pitch(renderer, -10));
+        Button *pitch_up   = new Button({130, 25, 30, 25}, NULL, "Up",   state, new Pitch(renderer,  10));
+        Button *pitch_down = new Button({125, 90, 40, 25}, NULL, "Down", state, new Pitch(renderer, -10));
 
 		Widget *btns[] = {
             move_left, move_right,
@@ -92,15 +93,22 @@ public:
             move_up,   move_down,
             yaw_cw,    yaw_ccw,
             pitch_up,  pitch_down };
-		this->append_children(Widget::makeChildren(btns));
+        for (Widget *btn : btns) {
+            this->appendChild(btn);
+        }
 	}
 
-	const char *title() const {
+	const char *title() const override {
 		return "Control";
 	}
 
-	void render(Window *window, float off_x, float off_y) {
-		window->clear_rect(frame, off_x, off_y, RGB(CLR_SURFACE_2));
-		window->outline(frame, off_x, off_y, RGB(CLR_BORDER), 2);
+	void draw() override {
+        texture->Clear(dr4::Color(CLR_BORDER, 255));
+        Rect2f f = frame();
+        Rectangle r{
+            Rect2f(2, 2, f.size.x - 4, f.size.y - 4),
+            Color(CLR_SURFACE_2, 255)
+        };
+        texture->Draw(r);
 	}
 };

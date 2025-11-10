@@ -4,16 +4,16 @@
 class MinimizableWidget : public virtual Widget {
 public:
     bool minimized;
-    MinimizableWidget(Rect2F dim_, Widget *parent_, State *state_)
-        : Widget(dim_, parent_, state_), minimized(false) {}
 
-    DispatchResult on_render(DispatcherCtx ctx, const RenderEvent *e) {
-        if (minimized) return PROPAGATE;
-        return Widget::on_render(ctx, e);
+    MinimizableWidget(Rect2f f, Widget *p, State *s)
+        : Widget(f, p, s), minimized(false) {}
+
+    virtual void blit(Texture *target, Vec2f acc) override {
+        if (!minimized) Widget::blit(target, acc);
     }
 
-    DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
+    virtual DispatchResult broadcast(DispatcherCtx ctx, Event *e) override {
         if (minimized) return PROPAGATE;
-        return Widget::broadcast(ctx, e, reversed);
+        return Widget::broadcast(ctx, e);
     }
 };

@@ -68,7 +68,7 @@ $(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c $< -o $@
 
 run: $(BIN_DIR)/example
-	./$(BIN_DIR)/example
+	./$(BIN_DIR)/example ../swuix/dist/plugin/libswuix_sdl3.so
 
 $(BIN_DIR) $(BUILD_DIR):
 	$(MKDIR_P) $@

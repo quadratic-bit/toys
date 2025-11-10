@@ -1,17 +1,19 @@
 #pragma once
+#include <cstdio>
 #include <swuix/widget.hpp>
+#include <swuix/window/common.hpp>
 
 struct Action {
     virtual ~Action() {}
-    virtual void apply(void *, Widget *) = 0;
+    virtual void apply(void*, Widget*) = 0;
 };
 
 static const int BTN_THICK = 1;
 
 class BtnCallbackAction : public Action {
-    void (*click_cb)(void *, Widget *);
+    void (*click_cb)(void*, Widget*);
 public:
-    BtnCallbackAction(void (*click_cb_)(void *, Widget *)) : click_cb(click_cb_) {}
+    BtnCallbackAction(void (*click_cb_)(void*, Widget*)) : click_cb(click_cb_) {}
 
     void apply(void *state, Widget *target) {
         if (click_cb) click_cb(state, target);
@@ -27,47 +29,65 @@ class Button : public Widget {
     const char *label;
 
 public:
-    Button(Rect2F f, Widget *par, const char *label_, State *st, Action *action_)
-        : Widget(f, par, st), hovered(false), action(action_), label(label_) {}
+    Button(Rect2f f, Widget *p, const char *l, State *s, Action *a)
+        : Widget(f, p, s), hovered(false), pressed(false), action(a), label(l) {}
 
-    Button(Rect2F f, Widget *par, const char *label_, State *st, void (*on_click_)(void*, Widget*))
-            : Widget(f, par, st), hovered(false), label(label_) {
-        action = new BtnCallbackAction(on_click_);
-    }
+    Button(Rect2f f, Widget *p, const char *l, State *s, void (*on_click)(void*, Widget*))
+        : Widget(f, p, s), hovered(false), pressed(false), action(new BtnCallbackAction(on_click)), label(l) {}
 
-    Button(Rect2F f, Widget *par, const char *label_, State *st)
-            : Widget(f, par, st), hovered(false), label(label_) {
-        action = new BtnCallbackAction(NULL);
-    }
+    Button(Rect2f f, Widget *p, const char *l, State *s)
+        : Widget(f, p, s), hovered(false), pressed(false), action(new BtnCallbackAction(nullptr)), label(l) {}
 
     ~Button() {
         delete action;
     }
 
-    const char *title() const {
-        return label;
-    }
-
-    void set_action(Action *a) {
+    void setAction(Action *a) {
         delete action;
         action = a;
     }
 
-    DispatchResult on_mouse_move(DispatcherCtx, const MouseMoveEvent *);
-    DispatchResult on_mouse_down(DispatcherCtx, const MouseDownEvent *);
-    DispatchResult on_mouse_up  (DispatcherCtx, const MouseUpEvent   *);
-
-    void render(Window *window, float off_x, float off_y) {
-        Rect2F outer = frect(frame.x + off_x - BTN_THICK, frame.y + off_y - BTN_THICK,
-                frame.w + BTN_THICK * 2, frame.h + BTN_THICK * 2);
-        Rect2F inner = frect(frame.x + off_x + BTN_THICK, frame.y + off_y + BTN_THICK,
-                frame.w - BTN_THICK * 2, frame.h - BTN_THICK * 2);
-
-        window->draw_filled_rect_rgb(outer, RGB(CLR_BORDER));
-
-        if (hovered) window->draw_filled_rect_rgb(inner, OKLabDarken(RGB(CLR_SURFACE_2), 0.06));
-        else window->draw_filled_rect_rgb(inner, RGB(CLR_SURFACE_2));
-
-        window->text_aligned(label, frame.x + off_x + frame.w / 2, frame.y + off_y + frame.h / 2, RGB(CLR_TEXT_STRONG), TA_CENTER);
+    const char *title() const override {
+        return label;
     }
+
+    virtual void draw() override {
+        Rect2f f = frame();
+        // TODO: color without alpha
+        texture->Clear(Color(CLR_BORDER, 255));
+
+        Rectangle r;
+        if (pressed) {
+            const RGBu8 darkened = OKLabDarken(RGB(CLR_SURFACE_2), 0.10);
+            r = {
+                Rect2f(BTN_THICK, BTN_THICK, f.size.x - BTN_THICK * 2, f.size.y - BTN_THICK * 2),
+                Color(darkened.r, darkened.g, darkened.b, 225)
+            };
+        } else if (hovered) {
+            const RGBu8 darkened = OKLabDarken(RGB(CLR_SURFACE_2), 0.06);
+            r = {
+                Rect2f(BTN_THICK, BTN_THICK, f.size.x - BTN_THICK * 2, f.size.y - BTN_THICK * 2),
+                Color(darkened.r, darkened.g, darkened.b, 225)
+            };
+        } else {
+            r = {
+                Rect2f(BTN_THICK, BTN_THICK, f.size.x - BTN_THICK * 2, f.size.y - BTN_THICK * 2),
+                Color(CLR_SURFACE_2, 225)
+            };
+        }
+        texture->Draw(r);
+
+        Text t;
+        t.text = label;
+        t.color = Color(CLR_TEXT_STRONG, 255);
+        // TODO: align t.pos = {f.size.x / 2, f.size.y / 2};
+        t.pos = {5, 5};
+        t.valign = Text::VAlign::MIDDLE;
+        t.font = nullptr;
+        texture->Draw(t);
+    }
+
+    DispatchResult onMouseMove(DispatcherCtx, const MouseMoveEvent *) override;
+    DispatchResult onMouseDown(DispatcherCtx, const MouseDownEvent *) override;
+    DispatchResult onMouseUp  (DispatcherCtx, const MouseUpEvent   *) override;
 };

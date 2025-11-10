@@ -5,6 +5,8 @@
 #include <cmath>
 #include <string>
 
+namespace opt {
+
 struct Color {
     double r, g, b; // 0..1 linear in sRGB
 
@@ -67,4 +69,6 @@ inline std::ostream &operator<<(std::ostream &os, Color const &c) {
 inline std::istream &operator>>(std::istream &is, Color &c) {
     is >> c.r >> c.g >> c.b;
     return is;
+}
+
 }

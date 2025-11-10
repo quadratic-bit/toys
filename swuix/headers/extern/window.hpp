@@ -3,6 +3,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
+#include <cstdio>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -17,24 +18,64 @@
 static inline uint32_t utf8_first_codepoint(const char* s) {
     if (!s || !*s) return 0;
     const unsigned char c = static_cast<unsigned char>(s[0]);
+
+    // 1-byte (ASCII)
     if ((c & 0x80u) == 0x00u) {
         return c;
-    } else if ((c & 0xE0u) == 0xC0u) {
+    }
+
+    // 2-byte 110xxxxx 10xxxxxx
+    if ((c & 0xE0u) == 0xC0u) {
         unsigned char c1 = static_cast<unsigned char>(s[1]);
-        if ((c1 & 0xC0u) != 0x80u) return 0;
-        return ((c & 0x1Fu) << 6) | (c1 & 0x3Fu);
-    } else if ((c & 0xF0u) == 0xE0u) {
+        if (c1 == 0 || (c1 & 0xC0u) != 0x80u) return 0;
+        // overlong
+        if (c < 0xC2u) return 0;
+        return (((uint32_t)(c & 0x1Fu)) << 6) | (uint32_t)(c1 & 0x3Fu);
+    }
+
+    // 3-byte 1110xxxx 10xxxxxx 10xxxxxx
+    if ((c & 0xF0u) == 0xE0u) {
         unsigned char c1 = static_cast<unsigned char>(s[1]);
         unsigned char c2 = static_cast<unsigned char>(s[2]);
+        if (c1 == 0 || c2 == 0) return 0;
         if ((c1 & 0xC0u) != 0x80u || (c2 & 0xC0u) != 0x80u) return 0;
-        return ((c & 0x0Fu) << 12) | ((c1 & 0x3Fu) << 6) | (c2 & 0x3Fu);
-    } else if ((c & 0xF8u) == 0xF0u) {
+
+        if (c == 0xE0u) {
+            if (c1 < 0xA0u) return 0; // overlong
+        } else if (c == 0xEDu) {
+            if (c1 >= 0xA0u) return 0; // surrogate
+        }
+
+        uint32_t cp = (((uint32_t)(c & 0x0Fu)) << 12) |
+                      (((uint32_t)(c1 & 0x3Fu)) << 6) |
+                      ((uint32_t)(c2 & 0x3Fu));
+        return cp;
+    }
+
+    // 4-byte 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+    if ((c & 0xF8u) == 0xF0u) {
         unsigned char c1 = static_cast<unsigned char>(s[1]);
         unsigned char c2 = static_cast<unsigned char>(s[2]);
         unsigned char c3 = static_cast<unsigned char>(s[3]);
+        if (c1 == 0 || c2 == 0 || c3 == 0) return 0;
         if ((c1 & 0xC0u) != 0x80u || (c2 & 0xC0u) != 0x80u || (c3 & 0xC0u) != 0x80u) return 0;
-        return ((c & 0x07u) << 18) | ((c1 & 0x3Fu) << 12) | ((c2 & 0x3Fu) << 6) | (c3 & 0x3Fu);
+
+        if (c == 0xF0u) {
+            if (c1 < 0x90u) return 0; // overlong
+        } else if (c == 0xF4u) {
+            if (c1 > 0x8Fu) return 0; // beyond U+10FFFF
+        } else if (c > 0xF4u) {
+            return 0; // invalid first byte
+        }
+
+        uint32_t cp = (((uint32_t)(c & 0x07u)) << 18) |
+                      (((uint32_t)(c1 & 0x3Fu)) << 12) |
+                      (((uint32_t)(c2 & 0x3Fu)) << 6) |
+                      ((uint32_t)(c3 & 0x3Fu));
+        if (cp > 0x10FFFFu) return 0;
+        return cp;
     }
+
     return 0;
 }
 
@@ -292,6 +333,14 @@ public:
         }
 
         return std::nullopt;
+    }
+
+    void StartInput() {
+        SDL_StartTextInput(window_);
+    }
+
+    void StopInput() {
+        SDL_StartTextInput(window_);
     }
 
     SDL_Renderer   *GetRenderer()   const { return renderer_; }

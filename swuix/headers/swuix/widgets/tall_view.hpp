@@ -1,51 +1,36 @@
 #pragma once
 #include <swuix/traits/scrollable.hpp>
 #include <swuix/widgets/scrollbar.hpp>
-#include <swuix/widgets/titlebar.hpp>
+#include <swuix/widgets/titled.hpp>
 
-class TallView : public MinimizableWidget, public ScrollableWidget, public ControlledContainer {
-    TitleBar *titlebar;
-    Scrollbar *scrollbar;
+class TallView : public TitledWidget, public ScrollableWidget {
+    VScrollbar *scrollbar;
 
 public:
-    TallView(Rect2F content_frame_, Rect2F viewport_frame_, Widget *parent_, State *state_)
-            : Widget(content_frame_, parent_, state_),
-            MinimizableWidget(content_frame_, parent_, state_),
-            ScrollableWidget(content_frame_, viewport_frame_, parent_, state_),
-            ControlledContainer(content_frame_, parent_, state_) {
-        titlebar  = new TitleBar(state_);
-        scrollbar = new Scrollbar(state_);
-
-        // NOTE: don't change the order of the following two lines!
-        // The line `titlebar->attach_to(...)` calls layout, which
-        // depends on the scrollbar's host, which is not set until
-        // scrollbar is attached
-        scrollbar->attach_to(this);
-        titlebar ->attach_to(this);
+    TallView(Rect2f frame, Vec2f content_box, Widget *p, State *s)
+            : Widget(Rect2f(frame.pos, content_box), p, s),
+            TitledWidget(Rect2f(frame.pos, content_box), p, s),
+            ScrollableWidget(frame, content_box, p, s) {
+        scrollbar = new VScrollbar(state);
+        scrollbar->attachTo(this);
     }
 
-    DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
-        if (!minimized) {
-            return ControlledContainer::broadcast(ctx, e, reversed);
-        }
-
-        DispatcherCtx local_ctx = ctx.withOffset(frame);
-
-        return titlebar->broadcast(local_ctx, e, reversed);
+    const char *title() const override {
+        return "Widget window";
     }
 
-    const char *title() const {
-        return "Tall view";
+    void blit(Texture *target, Vec2f acc) override {
+        if (!minimized) return ScrollableWidget::blit(target, acc);
+        titlebar->blit(target, acc);
     }
 
-    DispatchResult on_layout(DispatcherCtx, const LayoutEvent *) {
-        float progress_px = content_progress();
-        titlebar->frame.y = progress_px - HANDLE_H;
-        scrollbar->frame.y = progress_px;
-        scrollbar->frame.h = viewport.h;
-        scrollbar->slider->frame.h = scrollbar->scroll_height() * (viewport.h / frame.h);
-        scrollbar->slider->frame.y = SCROLL_B_H + scrollbar->scroll_progress();
-        scrollbar->refresh_layout();
-        return PROPAGATE;
+    void layout() override {
+        float progress_px = contentProgressY();
+        titlebar->position.y = progress_px - HANDLE_H;
+        scrollbar->position.y = progress_px;
+        scrollbar->texture->SetSize({scrollbar->texture->GetWidth(), viewport->GetHeight()});
+        scrollbar->slider->texture->SetSize({scrollbar->slider->texture->GetWidth(), scrollbar->scrollHeight() * (viewport->GetHeight() / texture->GetHeight())});
+        scrollbar->slider->position.y = SCROLL_BUT_H + scrollbar->scrollProgress();
+        scrollbar->layout();
     }
 };

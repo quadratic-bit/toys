@@ -1,35 +1,79 @@
 #pragma once
-#include <swuix/traits/minimizable.hpp>
-#include <swuix/widgets/container.hpp>
-#include <swuix/widgets/button.hpp>
+#include <swuix/widget.hpp>
+#include <swuix/state.hpp>
 
 class ScrollableWidget : public virtual Widget {
 public:
-    Rect2F viewport;
+    Texture *viewport;
+    Vec2f    viewport_pos;
 
-    ScrollableWidget(Rect2F content_frame_, Rect2F viewport_frame_, Widget *parent_, State *state_)
-        : Widget(content_frame_, parent_, state_), viewport(viewport_frame_) {}
-
-    Rect2F getViewport() const { return viewport; }
-
-    float content_progress() const {
-        return viewport.y - frame.y;
+    ScrollableWidget(Rect2f frame, Vec2f content_box, Widget *p, State *s)
+            : Widget(Rect2f(frame.pos, content_box), p, s) {
+        viewport_pos = frame.pos;
+        viewport = state->window->CreateTexture();
+        viewport->SetSize(frame.size);
     }
 
-    void set_frame(Rect2F new_frame) {
-        float ydiff = viewport.y - frame.y;
-        float xdiff = viewport.x - frame.x;
-        frame = new_frame;
-        viewport.x = frame.x + xdiff;
-        viewport.y = frame.y + ydiff;
-        refresh_layout();
+    void blit(Texture *target, Vec2f acc) override {
+        if (texture_dirty) {
+            draw();
+
+            for (int i = children.size() - 1; i >= 0; --i) {
+                Widget *child = children[i];
+                if (child->isClipped())
+                    child->blit(texture, {0, 0});
+            }
+            texture_dirty = false;
+        }
+
+        viewport->Draw(*texture, contentOffset());
+        target->Draw(*viewport, acc + viewport_pos);
+
+        for (int i = children.size() - 1; i >= 0; --i) {
+            Widget *child = children[i];
+            if (!child->isClipped())
+                child->blit(target, acc + position);
+        }
     }
 
-    void scroll_y(float dy) {
-        frame.y = clamp(frame.y + dy, viewport.y + viewport.h - frame.h, viewport.y);
-        refresh_layout();
+    Vec2f contentOffset() const {
+        return {-contentProgressX(), -contentProgressY()};
     }
 
-    DispatchResult on_mouse_wheel(DispatcherCtx, const MouseWheelEvent *);
-    DispatchResult on_mouse_move (DispatcherCtx, const MouseMoveEvent  *);
+    float contentProgressY() const {
+        return viewport_pos.y - position.y;
+    }
+
+    float contentProgressX() const {
+        return viewport_pos.x - position.x;
+    }
+
+    void scrollY(float dy) {
+        Rect2f f = frame();
+        Vec2f viewport_size = viewport->GetSize();
+        float new_y = clamp(
+            f.pos.y + dy,
+            viewport_pos.y + viewport_size.y - f.size.y,
+            viewport_pos.y
+        );
+        position.y = new_y;
+        requestLayout();
+        requestRedraw();
+    }
+
+    void scrollX(float dx) {
+        Rect2f f = frame();
+        Vec2f viewport_size = viewport->GetSize();
+        float new_x = clamp(
+            f.pos.x + dx,
+            viewport_pos.x + viewport_size.x - f.size.x,
+            viewport_pos.x
+        );
+        position.x = new_x;
+        requestLayout();
+        requestRedraw();
+    }
+
+    DispatchResult onMouseWheel(DispatcherCtx, const MouseWheelEvent *) override;
+    DispatchResult onMouseMove (DispatcherCtx, const MouseMoveEvent  *) override;
 };

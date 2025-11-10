@@ -7,10 +7,10 @@ protected:
     float start_drag_y;  // y position of `parent`
     bool is_dragging;
 public:
-    DraggableWidget(Rect2F f, Widget *par, State *st)
-        : Widget(f, par, st), start_drag_x(0), start_drag_y(0), is_dragging(false) {}
+    DraggableWidget(Rect2f f, Widget *p, State *s)
+        : Widget(f, p, s), start_drag_x(0), start_drag_y(0), is_dragging(false) {}
 
-    DispatchResult on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e);
-    DispatchResult on_mouse_down(DispatcherCtx ctx, const MouseDownEvent *e);
-    DispatchResult on_mouse_up  (DispatcherCtx ctx, const MouseUpEvent   *e);
+    DispatchResult onMouseMove(DispatcherCtx ctx, const MouseMoveEvent *e) override;
+    DispatchResult onMouseDown(DispatcherCtx ctx, const MouseDownEvent *e) override;
+    DispatchResult onMouseUp  (DispatcherCtx ctx, const MouseUpEvent   *e) override;
 };

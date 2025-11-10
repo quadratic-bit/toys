@@ -1,9 +1,8 @@
 #pragma once
-#include <SDL3/SDL_stdinc.h>
-#include <string>
+#include <SDL3/SDL_keycode.h>
 
-#include <swuix/state.hpp>
 #include <swuix/traits/focusable.hpp>
+#include <swuix/state.hpp>
 
 class TextInput : public virtual FocusableWidget {
     void remove_last_character() {
@@ -23,8 +22,7 @@ protected:
     std::string value;
 
 public:
-    TextInput(Rect2F frame_, Widget *parent_, State *state_)
-        : Widget(frame_, parent_, state_) {}
+    TextInput(Rect2f f, Widget *p, State *s) : Widget(f, p, s) {}
 
     const std::string &getText() const {
         return value;
@@ -34,23 +32,25 @@ public:
         value = new_value;
     }
 
-    virtual void on_value_change() = 0;
+    virtual void onValueChange() = 0;
 
-    DispatchResult on_input(DispatcherCtx, const InputEvent *e) {
-        if (state->get_focus() != this) return PROPAGATE;
+    DispatchResult onInput(DispatcherCtx, const InputEvent *e) override {
+        if (state->getFocus() != this) return PROPAGATE;
 
         value.append(e->text);
-        on_value_change();
+        onValueChange();
+        requestRedraw();
 
         return CONSUME;
     }
 
-    DispatchResult on_key_down(DispatcherCtx, const KeyDownEvent *e) {
-        if (state->get_focus() != this) return PROPAGATE;
+    DispatchResult onKeyDown(DispatcherCtx, const KeyDownEvent *e) override {
+        if (state->getFocus() != this) return PROPAGATE;
 
         if (e->keycode == SDLK_BACKSPACE) {
             remove_last_character();
-            on_value_change();
+            onValueChange();
+            requestRedraw();
             return CONSUME;
         }
 

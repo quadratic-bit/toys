@@ -2,6 +2,7 @@
 #include <string>
 #include <typeinfo>
 #include <vector>
+
 #include "trace/common.hpp"
 
 using std::string;

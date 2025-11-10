@@ -68,9 +68,9 @@ inline bool parse_from_string<bool>(const std::string &s) {
 }
 
 template<>
-inline Color parse_from_string<Color>(const std::string &s) {
+inline opt::Color parse_from_string<opt::Color>(const std::string &s) {
     std::istringstream is(s);
-    Color c; is >> c;
+    opt::Color c; is >> c;
     if (!is) throw std::runtime_error("parse error Color");
     return c;
 }

@@ -1,31 +1,25 @@
 #include <swuix/traits/draggable.hpp>
 #include <swuix/state.hpp>
 
-DispatchResult DraggableWidget::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {
-    (void)e;
-    if (state->mouse.state == MouseState::Dragging && is_dragging) {
-        Rect2F new_frame = frame;
-        new_frame.x = ctx.mouseRel.x - start_drag_x;
-        new_frame.y = ctx.mouseRel.y - start_drag_y;
-        set_frame(new_frame);
+DispatchResult DraggableWidget::onMouseMove(DispatcherCtx ctx, const MouseMoveEvent *e) {
+    if (state->mouse.state == Mouse::State::Dragging && is_dragging) {
+        translate({ctx.mouse_rel.x - start_drag_x, ctx.mouse_rel.y - start_drag_y});
+        parent->requestRedraw();
     }
-    return Widget::on_mouse_move(ctx, e);
+    return Widget::onMouseMove(ctx, e);
 }
 
-DispatchResult DraggableWidget::on_mouse_down(DispatcherCtx ctx, const MouseDownEvent *e) {
-    (void)e;
+DispatchResult DraggableWidget::onMouseDown(DispatcherCtx ctx, const MouseDownEvent *) {
     if (state->mouse.target == this) {
         is_dragging = true;
-        start_drag_x = ctx.mouseRel.x;
-        start_drag_y = ctx.mouseRel.y;
+        start_drag_x = ctx.mouse_rel.x;
+        start_drag_y = ctx.mouse_rel.y;
         return CONSUME;
     }
     return PROPAGATE;
 }
 
-DispatchResult DraggableWidget::on_mouse_up(DispatcherCtx ctx, const MouseUpEvent *e) {
-    (void)e;
-    (void)ctx;
+DispatchResult DraggableWidget::onMouseUp(DispatcherCtx, const MouseUpEvent *) {
     if (is_dragging) is_dragging = false;
     return PROPAGATE;
 }

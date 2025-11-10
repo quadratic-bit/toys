@@ -1,70 +1,29 @@
 #pragma once
 #include <swuix/widgets/titlebar.hpp>
 
-class TitledWidget : public MinimizableWidget, public ControlledWidget {
+class TitledWidget : public MinimizableWidget {
 protected:
     TitleBar *titlebar;
 
 public:
-    TitledWidget(Rect2F content_frame_, Widget *parent_, State *state_)
-        : Widget(content_frame_, parent_, state_),
-        MinimizableWidget(content_frame_, parent_, state_),
-        ControlledWidget(content_frame_, parent_, state_) {
-            titlebar = new TitleBar(state_);
-            titlebar->attach_to(this);
-        }
-
-    DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
-        if (!minimized) {
-            return ControlledWidget::broadcast(ctx, e, reversed);
-        }
-
-        DispatcherCtx local_ctx = ctx.withOffset(frame);
-
-        if (reversed) {
-            for (int i = (int)controls.size() - 1; i >= 0; --i)
-                if (controls[i]->broadcast(local_ctx, e, true) == CONSUME) return CONSUME;
-            return PROPAGATE;
-        } else {
-            for (size_t i = 0; i < controls.size(); ++i)
-                if (controls[i]->broadcast(local_ctx, e) == CONSUME) return CONSUME;
-            return PROPAGATE;
-        }
-    }
-};
-
-class TitledContainer : public MinimizableWidget, public ControlledContainer {
-protected:
-    TitleBar *titlebar;
-
-public:
-    TitledContainer(Rect2F content_frame_, Widget *parent_, State *state_)
-        : Widget(content_frame_, parent_, state_),
-        MinimizableWidget(content_frame_, parent_, state_),
-        ControlledContainer(content_frame_, parent_, state_) {
-            titlebar = new TitleBar(state_);
-            titlebar->attach_to(this);
-        }
-
-    DispatchResult broadcast(DispatcherCtx ctx, Event *e, bool reversed=false) {
-        if (!minimized) {
-            return ControlledContainer::broadcast(ctx, e, reversed);
-        }
-
-        DispatcherCtx local_ctx = ctx.withOffset(frame);
-
-        if (reversed) {
-            for (int i = (int)controls.size() - 1; i >= 0; --i)
-                if (controls[i]->broadcast(local_ctx, e, true) == CONSUME) return CONSUME;
-            return PROPAGATE;
-        } else {
-            for (size_t i = 0; i < controls.size(); ++i)
-                if (controls[i]->broadcast(local_ctx, e) == CONSUME) return CONSUME;
-            return PROPAGATE;
-        }
+    TitledWidget(Rect2f f, Widget *p, State *s) : Widget(f, p, s), MinimizableWidget(f, p, s) {
+        titlebar = new TitleBar(state);
+        titlebar->attachTo(this);
     }
 
-    const char *title() const {
-        return "Titled container";
+    virtual void blit(Texture *target, Vec2f acc) override {
+        if (!minimized) return Widget::blit(target, acc);
+        titlebar->blit(target, acc + position);
+    }
+
+    virtual DispatchResult broadcast(DispatcherCtx ctx, Event *e) override {
+        if (!minimized) return Widget::broadcast(ctx, e);
+        return titlebar->broadcast(ctx.withOffset(position), e);
+    }
+
+    void layout() override {
+        titlebar->texture->SetSize({texture->GetWidth(), HANDLE_H});
+        titlebar->position.x = 0;
+        titlebar->position.y = -HANDLE_H;
     }
 };

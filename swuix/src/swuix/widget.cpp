@@ -1,39 +1,32 @@
 #include <swuix/widget.hpp>
 #include <swuix/state.hpp>
 
+Widget::Widget(Rect2f frame, Widget *p, State *s)
+        : parent(p ? p : this), position(frame.pos), state(s) {
+    texture = state->window->CreateTexture();
+    if (frame.size.x == 0) frame.size.x = 1;
+    if (frame.size.y == 0) frame.size.y = 1;
+    texture->SetSize(frame.size);
+}
+
 Widget::~Widget() {
     if (state->mouse.target == this) {
-        state->mouse.target = NULL;
+        state->mouse.target = nullptr;
     }
+
     if (state->mouse.capture == this) {
-        state->mouse.capture = NULL;
+        state->mouse.capture = nullptr;
+    }
+
+    for (Widget *child : children)  {
+        delete child;
     }
 }
 
-DispatchResult Widget::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {
+DispatchResult Widget::onMouseMove(DispatcherCtx ctx, const MouseMoveEvent *e) {
     (void)e;
-    if (!state->mouse.target && contains_mouse(ctx)) {
+    if (!state->mouse.target && containsMouse(ctx)) {
         state->mouse.target = this;
     }
     return PROPAGATE;
-}
-
-static DispatcherCtx _build_context(const Widget *w, const Vec2F &abs, Window *window) {
-    if (w->parent == w) {
-        return DispatcherCtx::fromAbsolute(abs, w->frame, window);
-    }
-
-    // ctx is currently in w->parent's coordinate space
-    DispatcherCtx ctx = _build_context(w->parent, abs, window);
-
-    ctx.clip(w->parent->getViewport());
-
-    ctx = ctx.withOffset(w->parent->frame);
-    return ctx;
-}
-
-DispatcherCtx Widget::resolve_context(Window *w) const {
-    DispatcherCtx ctx = _build_context(this, state->mouse.pos, w);
-    ctx.clip(this->getViewport());
-    return ctx;
 }

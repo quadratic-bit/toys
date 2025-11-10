@@ -1,6 +1,14 @@
 #pragma once
+#include <SDL3/SDL.h> // TODO: remove SDL
+#include <SDL3/SDL_mutex.h>
+#include <atomic>
+#include <cstdio>
+#include <memory>
 #include <swuix/widgets/titled.hpp>
 
+#include "dr4/math/color.hpp"
+#include "dr4/texture.hpp"
+#include "swuix/manager.hpp"
 #include "trace/camera.hpp"
 #include "trace/scene.hpp"
 #include "trace/cs.hpp"
@@ -25,59 +33,59 @@ static inline Scene makeDemoScene() {
     MaterialOpaque *ground_plane = new MaterialOpaque(/*kd*/0.9);
     scn.objects.push_back(new Plane("ground",
         Vector3(0, -4, 0), Vector3(0, 1, 0),
-        Color(0.9, 0.9, 0.9),
+        opt::Color(0.9, 0.9, 0.9),
         ground_plane
     ));
 
     MaterialOpaque *normal = new MaterialOpaque(/*kd*/1.0, /*ks*/1.0, /*shininess*/32);
     const Vector3 verts[] = { Vector3(-10, -5, -10), Vector3(-8, -2, -10), Vector3(-11, -1, -10) };
-    scn.objects.push_back(new Polygon("triangle", std::vector<Vector3>(verts, verts + 3), Color(1.0, 1.0, 1.0), normal));
+    scn.objects.push_back(new Polygon("triangle", std::vector<Vector3>(verts, verts + 3), opt::Color(1.0, 1.0, 1.0), normal));
 
     MaterialOpaque *solid = new MaterialOpaque(/*kd*/1.0, /*ks*/1.0, /*shininess*/32);
     scn.objects.push_back(new Sphere("red ball",
         Vector3(-1.5, -0.2, -5), 0.7,
-        Color(1, 0, 0),
+        opt::Color(1, 0, 0),
         solid
     ));
 
     MaterialReflective *mirror = new MaterialReflective();
     scn.objects.push_back(new Sphere("mirror",
         Vector3(-1.5, -0.2, -3.5), 0.8,
-        Color(0.9, 0.8, 0.7),
+        opt::Color(0.9, 0.8, 0.7),
         mirror
     ));
 
     MaterialReflective *mirror2 = new MaterialReflective();
     scn.objects.push_back(new Sphere("big mirror",
         Vector3(6, 0, -25), 10,
-        Color(0, 1, 1),
+        opt::Color(0, 1, 1),
         mirror2
     ));
 
     MaterialRefractive *glass = new MaterialRefractive(/*ior*/1.5);
     scn.objects.push_back(new Sphere("clear glass",
         Vector3(0.2, 0.0, -2.5), 0.6,
-        Color(0.95, 1.0, 1.0),
+        opt::Color(0.95, 1.0, 1.0),
         glass
     ));
 
     MaterialRefractive *water_glass = new MaterialRefractive(/*ior*/1.33);
     scn.objects.push_back(new Sphere("tinted water glass",
         Vector3(1.2, -0.1, -3.0), 0.7,
-        Color(0.7, 0.9, 1.0),
+        opt::Color(0.7, 0.9, 1.0),
         water_glass
     ));
 
     // Lights
-    MaterialEmissive *glowing = new MaterialEmissive(Color(1.0, 1.0, 1.0));
+    MaterialEmissive *glowing = new MaterialEmissive(opt::Color(1.0, 1.0, 1.0));
     scn.objects.push_back(new Sphere("glowing 1",
         Vector3(-2, 2.5, -1.5), 0.25,
-        Color(1, 1, 1),  // tint
+        opt::Color(1, 1, 1),  // tint
         glowing
     ));
     scn.objects.push_back(new Sphere("glowing 2",
         Vector3(2, 1.0, 0.5), 0.25,
-        Color(1, 1, 1),  // tint
+        opt::Color(1, 1, 1),  // tint
         glowing
     ));
 
@@ -87,24 +95,21 @@ static inline Scene makeDemoScene() {
 #define N_WORKERS 4
 
 class Renderer : public TitledWidget {
-    Texture front_buffer;
+    Scene  scene;
+    Camera cam;
+    ViewCS cs;
 
-    Scene       scene;
-    Camera      cam;
-    ViewCS      cs;
-
-    int view_w, view_h;
-    std::vector<Color> buf;  // size view_w * view_h
-    std::vector<unsigned char> pixel_bitmask;
+    dr4::Image *front_img = nullptr;
+    dr4::Image *back_img  = nullptr;
 
     bool initialized;
 
     int max_depth;
     double eps;
 
-    SwuixThread workers[N_WORKERS];
-    SwuixMutex  job_mtx;
-    SwuixCond   job_cv;
+    SDL_Thread    *workers[N_WORKERS];
+    SDL_Mutex     *job_mtx;
+    SDL_Condition *job_cv;
 
     bool job_stop;        // signal threads to exit
     bool job_has_work;    // a frame is active
@@ -116,130 +121,145 @@ class Renderer : public TitledWidget {
     int tile_w, tile_h;
     int num_tiles;  // tile_w * tile_h
 
-    std::vector<unsigned char> tile_done;
-    std::vector<unsigned char> tile_uploaded;
-    std::vector<int>           tile_order;
+    std::atomic<bool> tiles_need_present {false};
+
+    std::unique_ptr<std::atomic<uint8_t>[]> tile_done;
+    std::vector<uint8_t>                    tile_uploaded;
+    std::vector<int>                        tile_order;
 
     unsigned rng_state;  // simple per-frame RNG for shuffling
 
     static int workerEntry(void *self_void);
 
     void buildTiles() {
-        tile_w = (view_w + TILE - 1) / TILE;
-        tile_h = (view_h + TILE - 1) / TILE;
-        num_tiles = tile_w * tile_h;
+        tile_w = (back_img->GetWidth() + TILE - 1) / TILE;
+        tile_h = (back_img->GetHeight() + TILE - 1) / TILE;
 
-        tile_done.assign(num_tiles, 0u);
-        tile_uploaded.assign(num_tiles, 0u);
+        num_tiles = tile_w * tile_h;
+        allocTileFlags(num_tiles);
 
         tile_order.resize(num_tiles);
         for (int i = 0; i < num_tiles; ++i) tile_order[i] = i;
 
-        rng_state = (unsigned)(Window::now() * 1e6);
+        rng_state = (unsigned)(Windownow() * 1e6);
         shuffle(tile_order, rng_state);
 
         job_next_tile = 0;
     }
 
+    void allocTileFlags(int count) {
+        tile_done.reset(new std::atomic<uint8_t>[count]);
+        for (int i = 0; i < count; ++i)
+            tile_done[i].store(0, std::memory_order_relaxed);
+
+        tile_uploaded.assign(count, 0);
+    }
+
     void startFrameJobs() {
-        Window::lock_mutex(job_mtx);
+        SDL_LockMutex(job_mtx);
 
         buildTiles();
 
-        job_width     = view_w;
-        job_height    = view_h;
+        job_width     = back_img->GetWidth();
+        job_height    = back_img->GetHeight();
         job_has_work  = true;
 
-        Window::broadcast_condition(job_cv);
-        Window::unlock_mutex(job_mtx);
+        SDL_BroadcastCondition(job_cv);
+        SDL_UnlockMutex(job_mtx);
     }
 
     void stopWorkers() {
-        Window::lock_mutex(job_mtx);
+        SDL_LockMutex(job_mtx);
         job_stop = true;
-        Window::broadcast_condition(job_cv);
-        Window::unlock_mutex(job_mtx);
+        SDL_BroadcastCondition(job_cv);
+        SDL_UnlockMutex(job_mtx);
         for (int i = 0; i < N_WORKERS; ++i) {
             if (workers[i]) {
-                Window::wait_thread(workers[i]);
+                SDL_WaitThread(workers[i], 0);
                 workers[i] = 0;
             }
         }
     }
 
-    void fillTexture(Window *window, Texture *tex) {
-        TextureHandle texh;
-        if (!tex->lock(&texh)) return;
-        for (int iy = 0; iy < view_h; ++iy) {
-            uint32_t *pixels = texh.get_row(iy);
-            for (int ix = 0; ix < view_w; ++ix) {
-                Ray pr = Ray::primary(cam, ix, iy, view_w, view_h);
-                Color bg = scene.sampleBackground(pr.d);
-                pixels[ix] = window->map_rgba(RGBu8(Color::encode(bg.r), Color::encode(bg.g), Color::encode(bg.b)), 255);
+    void fillBackground(dr4::Image *buf) {
+        for (int iy = 0; iy < buf->GetHeight(); ++iy) {
+            for (int ix = 0; ix < buf->GetWidth(); ++ix) {
+                Ray pr = Ray::primary(cam, ix, iy, buf->GetWidth(), buf->GetHeight());
+                opt::Color bg = scene.sampleBackground(pr.d);
+                buf->SetPixel(ix, iy,
+                    dr4::Color(
+                        opt::Color::encode(bg.r),
+                        opt::Color::encode(bg.g),
+                        opt::Color::encode(bg.b),
+                    255)
+                );
             }
         }
-        tex->unlock(&texh);
+        texture->Draw(*buf, {0, 0});
     }
 
     /**
      * Lazily (re)initialize buffers and texture if the view size changed
      */
-    void ensureInit(Window *window, int vw, int vh) {
-        if (initialized && vw == view_w && vh == view_h) return;
+    void ensureInit(int vw, int vh) {
+        if (initialized && vw == front_img->GetWidth() && vh == front_img->GetHeight()) return;
 
-        view_w = vw;
-        view_h = vh;
+        if (front_img) { delete front_img; front_img = nullptr; }
+        if (back_img)  { delete back_img;  back_img  = nullptr; }
 
-        buf.clear();
-        buf.resize(view_w * view_h, Color(0, 0, 0));
+        // TODO: check on memory leaks
+        front_img = state->window->CreateImage();
+        front_img->SetSize({static_cast<float>(vw), static_cast<float>(vh)});
 
-        pixel_bitmask.clear();
-        pixel_bitmask.resize(view_w * view_h, 0);
+        back_img = state->window->CreateImage();
+        back_img->SetSize({static_cast<float>(vw), static_cast<float>(vh)});
 
-        initialized = true;
+        if (!texture) texture = state->window->CreateTexture();
+        texture->SetSize({static_cast<float>(vw), static_cast<float>(vh)});
 
+        buildTiles();
+
+        // build camera
+        cam = Camera(Vector3(0, 2, 2.5), 45.0, vw, vh);
         max_depth = 5;
         eps = 1e-4;
 
-        // build camera
-        cam = Camera(Vector3(0, 2, 2.5), 45.0, view_w, view_h);
-
-        front_buffer.destroy();
-
-        window->create_texture(&front_buffer, view_w, view_h);
-
-        fillTexture(window, &front_buffer);
+        fillBackground(front_img);
+        fillBackground(back_img);
+        texture->Draw(*front_img, {0, 0});
 
         startFrameJobs();
+        requestRedraw();
+        initialized = true;
     }
 
 public:
-    Renderer(Rect2F rect, Widget *parent_, State *s)
-            : Widget(rect, parent_, s), TitledWidget(rect, parent_, s),
-            cam(Vector3(0, 2, 2.5), 45.0, rect.w, rect.h),
-            view_w(0), view_h(0), initialized(false), max_depth(5), eps(1e-4) {
+    Renderer(Rect2f rect, Widget *p, State *s)
+            : Widget(rect, p, s), TitledWidget(rect, p, s),
+            cam(Vector3(0, 2, 2.5), 45.0, rect.size.x, rect.size.y),
+            initialized(false), max_depth(5), eps(1e-4) {
         scene = makeDemoScene();
 
-        job_mtx      = Window::create_mutex();
-        job_cv       = Window::create_condition();
+        job_mtx      = SDL_CreateMutex();
+        job_cv       = SDL_CreateCondition();
         job_stop     = false;
         job_has_work = false;
         job_width    = job_height = 0;
 
         for (int i = 0; i < N_WORKERS; ++i)
-            workers[i] = Window::create_thread(Renderer::workerEntry, "rt_worker", this);
+            workers[i] = SDL_CreateThread(Renderer::workerEntry, "rt_worker", this);
     }
 
     ~Renderer() {
         stopWorkers();
         for (int i = 0; i < N_WORKERS; ++i)
-            Window::detach_thread(workers[i]);
-        Window::destroy_condition(job_cv);
-        Window::destroy_mutex(job_mtx);
-        front_buffer.destroy();
+            SDL_DetachThread(workers[i]);
+
+        if (job_cv)  SDL_DestroyCondition(job_cv);
+        if (job_mtx) SDL_DestroyMutex(job_mtx);
     }
 
-    const char *title() const {
+    const char *title() const override {
         return "Renderer";
     }
 
@@ -252,7 +272,6 @@ public:
     }
 
     static void drawWireframe(
-            Window *window,
             const AABB &bbox,
             const Camera &cam,
             int view_x, int view_y, int view_w, int view_h, double eps,
@@ -277,148 +296,114 @@ public:
             int a = E[e][0];
             int c = E[e][1];
             if (!ok[a] || !ok[c]) continue;
-            window->draw_line_rgb(view_x + sx[a], view_y + sy[a], view_x + sx[c], view_y + sy[c], 1, RGBu8(r, g, b));
+            // TODO: draw line, that's really hard lol
+            (void)view_x;
+            (void)view_y;
+            (void)r;
+            (void)g;
+            (void)b;
+            //window->draw_line_rgb(view_x + sx[a], view_y + sy[a], view_x + sx[c], view_y + sy[c], 1, RGBu8(r, g, b));
         }
     }
 
-    void render(Window *window, float off_x, float off_y) {
-        window->clear_rect(frame, off_x, off_y, RGBu8(125, 12, 125));
+    void draw() override {
+        const int viewW = int(std::floor(frame().size.x));
+        const int viewH = int(std::floor(frame().size.y));
+        ensureInit(viewW, viewH);
 
-        const int viewX = std::floor(frame.x + off_x);
-        const int viewY = std::floor(frame.y + off_y);
-        const int viewW = std::floor(frame.w);
-        const int viewH = std::floor(frame.h);
+        texture->Draw(*front_img, {0, 0});
 
-        // Only size matters for (re)alloc
-        ensureInit(window, viewW, viewH);
-
-        // TODO: figure out if this if-clause can be assumed true as invariant
-        if (front_buffer.is_init()) {
-            Rect2F dst = frect(viewX, viewY, viewW, viewH);
-            window->render_texture(front_buffer, &dst);
-        }
-
-        for (size_t i = 0; i < scene.objects.size(); ++i) {
-            const Object *obj = scene.objects[i];
-
-            if (!obj->selected()) continue;
-
-            AABB box;
-            if (!obj->worldAABB(&box)) continue;
-
-            drawWireframe(window, box, cam, viewX, viewY, viewW, viewH, eps, 255, 80, 0);
-        }
-
-        window->outline(frame, off_x, off_y, RGB(CLR_BORDER), 2);
+        //window->outline(frame, off_x, off_y, RGB(CLR_BORDER), 2);
     }
 
-    DispatchResult on_idle(DispatcherCtx ctx, const IdleEvent *ev) {
+    void blit(Texture *target, Vec2f acc) override {
+        if (tiles_need_present.exchange(false, std::memory_order_acq_rel)) {
+            requestRedraw();
+        }
+
+        TitledWidget::blit(target, acc);
+    }
+
+    DispatchResult onIdle(DispatcherCtx ctx, const IdleEvent *ev) override {
         (void)ctx;
-        if (!initialized) return PROPAGATE;
+        const int viewW = int(std::floor(frame().size.x));
+        const int viewH = int(std::floor(frame().size.y));
+        ensureInit(viewW, viewH);
 
-        Time t0 = Window::now();
-        double budget = ev->budget_s;
-        Time deadline = ev->deadline;
-        const double margin = 1e-4;
+        bool any_uploaded = false;
 
-        TextureHandle texh;
-        if (!front_buffer.lock(&texh)) {
-            return PROPAGATE;
-        }
-
-        // upload as many finished rows as time allows
         for (;;) {
-            Time now = Window::now();
-            if ((now - t0) >= budget - margin) break;
-            if (now >= deadline - margin) break;
-
-            int tile_to_upload = -1;
-
-            // find a finished tile that is not yet uploaded
-            Window::lock_mutex(job_mtx);
-            for (int ti = 0; ti < num_tiles; ++ti) {
-                if (tile_done[ti] && !tile_uploaded[ti]) {
-                    tile_to_upload = ti;
+            int ti = -1;
+            for (int i = 0; i < num_tiles; ++i) {
+                if (!tile_uploaded[i] &&
+                        tile_done[i].load(std::memory_order_acquire) != 0) {
+                    ti = i;
                     break;
                 }
             }
-            Window::unlock_mutex(job_mtx);
+            if (ti < 0) break; // nothing to do
 
-            if (tile_to_upload < 0) break;  // nothing ready
+            const int tx = ti % tile_w, ty = ti / tile_w;
+            const int x0 = tx * TILE, y0 = ty * TILE;
+            const int x1 = std::min(x0 + TILE, (int)front_img->GetWidth());
+            const int y1 = std::min(y0 + TILE, (int)front_img->GetHeight());
 
-            const int tx = tile_to_upload % tile_w;
-            const int ty = tile_to_upload / tile_w;
-            const int x0 = tx * TILE;
-            const int y0 = ty * TILE;
-            const int x1 = std::min(x0 + TILE, view_w);
-            const int y1 = std::min(y0 + TILE, view_h);
+            for (int y = y0; y < y1; ++y)
+                for (int x = x0; x < x1; ++x)
+                    front_img->SetPixel(x, y, back_img->GetPixel(x, y));
 
-            for (int y = y0; y < y1; ++y) {
-                uint32_t *pixels = texh.get_row(y);
-                Color    *src    = &buf[y * view_w];
-                for (int x = x0; x < x1; ++x) {
-                    const Color& c = src[x];
-                    pixels[x] = ctx.window->map_rgba(
-                        RGBu8(
-                            Color::encode(c.r),
-                            Color::encode(c.g),
-                            Color::encode(c.b)
-                        ), 255);
-                }
+            tile_uploaded[ti] = 1;
+            any_uploaded = true;
+
+            if (ev && ev->deadline > 0) {
+                //  Windownow() in seconds:
+                // if (Windownow() >= ev->deadline - margin) break;
             }
-
-            // mark uploaded (no need to hold lock long)
-            Window::lock_mutex(job_mtx);
-            tile_uploaded[tile_to_upload] = 1u;
-            Window::unlock_mutex(job_mtx);
         }
 
-        front_buffer.unlock(&texh);
+        if (any_uploaded) {
+            texture->Draw(*front_img, {0, 0});
+            requestRedraw();
+        }
 
-        // finished frame?
         bool all_uploaded = true;
-        Window::lock_mutex(job_mtx);
-        for (int ti = 0; ti < num_tiles; ++ti) {
-            if (!tile_uploaded[ti]) {
-                all_uploaded = false;
-                break;
-            }
-        }
-        Window::unlock_mutex(job_mtx);
-
+        for (uint8_t u : tile_uploaded) { if (!u) { all_uploaded = false; break; } }
         if (all_uploaded) {
-            scene.objects[2]->center.x += 0.05;
+            scene.objects[2]->center.x += 0.05f;
 
+            buildTiles();
             startFrameJobs();
+            requestRedraw();
         }
 
+        return PROPAGATE;
         return PROPAGATE;
     }
 };
 
-int Renderer::workerEntry(void *self_void) {
-    Renderer* self = static_cast<Renderer*>(self_void);
+inline int Renderer::workerEntry(void *self_void) {
+    Renderer *self = static_cast<Renderer*>(self_void);
 
     for (;;) {
         // take a tile
-        Window::lock_mutex(self->job_mtx);
+        SDL_LockMutex(self->job_mtx);
         while (!self->job_stop &&
                (!self->job_has_work || self->job_next_tile >= self->num_tiles)) {
-            Window::wait_condition(self->job_cv, self->job_mtx);
+            SDL_WaitCondition(self->job_cv, self->job_mtx);
         }
         if (self->job_stop) {
-            Window::unlock_mutex(self->job_mtx);
+            SDL_UnlockMutex(self->job_mtx);
             break;
         }
         // if all tiles already taken, loop to wait for next frame
         if (self->job_next_tile >= self->num_tiles) {
-            Window::unlock_mutex(self->job_mtx);
+            SDL_UnlockMutex(self->job_mtx);
             continue;
         }
         const int ord_idx = self->job_next_tile++;
         const int tile_id = self->tile_order[ord_idx];
 
-        Window::unlock_mutex(self->job_mtx);
+        SDL_UnlockMutex(self->job_mtx);
 
         // tile coords
         const int tx = tile_id % self->tile_w;
@@ -432,15 +417,18 @@ int Renderer::workerEntry(void *self_void) {
         for (int y = y0; y < y1; ++y) {
             for (int x = x0; x < x1; ++x) {
                 Ray pr = Ray::primary(self->cam, x, y, self->job_width, self->job_height);
-                Color c = self->scene.trace(pr, 0, self->max_depth, self->eps);
-                self->buf[y * self->job_width + x] = c;
+                opt::Color c = self->scene.trace(pr, 0, self->max_depth, self->eps);
+                self->back_img->SetPixel(x, y, dr4::Color(
+                    opt::Color::encode(c.r),
+                    opt::Color::encode(c.g),
+                    opt::Color::encode(c.b),
+                    255
+                ));
             }
         }
 
-        // publish completion
-        Window::lock_mutex(self->job_mtx);
-        self->tile_done[tile_id] = 1u;
-        Window::unlock_mutex(self->job_mtx);
+        self->tile_done[tile_id].store(1, std::memory_order_release);
+        self->tiles_need_present.store(true, std::memory_order_release);
     }
 
     return 0;

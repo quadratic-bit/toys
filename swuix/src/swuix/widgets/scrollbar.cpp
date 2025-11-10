@@ -1,7 +1,18 @@
+#include "dr4/math/color.hpp"
+#include <cstdio>
 #include <swuix/widgets/scrollbar.hpp>
+#include <swuix/widgets/button.hpp>
 #include <swuix/state.hpp>
 
 const float SCROLL_DELTA_PX = 20.0f;
+
+static inline const Rect2f scrollbarBoxZero() {
+    return {-SCROLLBAR_W, 0, SCROLLBAR_W, 0};
+}
+
+static inline const Rect2f scrollbarBox(Vec2f parent_box) {
+    return {parent_box.x - SCROLLBAR_W, 0, SCROLLBAR_W, parent_box.y};
+}
 
 class ScrollUp : public Action {
     ScrollableWidget *owner;
@@ -9,8 +20,8 @@ class ScrollUp : public Action {
 public:
     ScrollUp(ScrollableWidget *w) : owner(w) {}
 
-    void apply(void *, Widget *) {
-        owner->scroll_y(SCROLL_DELTA_PX);
+    void apply(void*, Widget*) {
+        owner->scrollY(SCROLL_DELTA_PX);
     }
 };
 
@@ -20,88 +31,90 @@ class ScrollDown : public Action {
 public:
     ScrollDown(ScrollableWidget *w) : owner(w) {}
 
-    void apply(void *, Widget *) {
-        owner->scroll_y(-SCROLL_DELTA_PX);
+    void apply(void*, Widget*) {
+        owner->scrollY(-SCROLL_DELTA_PX);
     }
 };
 
-ScrollbarSlider::ScrollbarSlider(Rect2F f, Scrollbar *par, State *st)
-    : Widget(f, par, st), DraggableWidget(f, par, st), scrollbar(par) {}
+VScrollbarSlider::VScrollbarSlider(Rect2f f, VScrollbar *p, State *s)
+        : Widget(f, p, s), DraggableWidget(f, p ,s), scrollbar(p) {}
 
-void ScrollbarSlider::render(Window *window, float off_x, float off_y) {
-    window->clear_rect(frame, off_x, off_y, RGB(CLR_BORDER));
-    window->outline(frame, off_x, off_y, RGB(CLR_BORDER_SUBTLE), 1);
-}
+void VScrollbarSlider::draw() {
+    texture->Clear(Color(CLR_BORDER_SUBTLE, 255));
 
-DispatchResult ScrollbarSlider::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {
-    (void)e;
-    if (state->mouse.state == MouseState::Dragging && is_dragging) {
+    Rect2f f = frame();
+    Rectangle r{
+        Rect2f(1, 1, f.size.x - 2, f.size.y - 2),
+        Color(CLR_BORDER, 225)
+    };
+    texture->Draw(r); }
+
+// TODO: review
+DispatchResult VScrollbarSlider::onMouseMove(DispatcherCtx ctx, const MouseMoveEvent *e) {
+    if (state->mouse.state == Mouse::State::Dragging && is_dragging) {
         float progress_px = std::min(
-            std::max(ctx.mouseRel.y - start_drag_y + SCROLL_B_H, SCROLL_B_H),
-            parent->frame.h - SCROLL_B_H - frame.h
-        ) - SCROLL_B_H;
-        float progress_per = progress_px / scrollbar->scroll_height();
-        float offset_parent_px = scrollbar->host->frame.h * progress_per;
-        scrollbar->host->frame.y = scrollbar->host->viewport.y - offset_parent_px;
-        scrollbar->host->refresh_layout();
+            std::max(ctx.mouse_rel.y - start_drag_y + SCROLL_BUT_H, SCROLL_BUT_H),
+            parent->texture->GetHeight() - SCROLL_BUT_H - texture->GetHeight()
+        ) - SCROLL_BUT_H;
+        float progress_per = progress_px / scrollbar->scrollHeight();
+        float offset_parent_px = scrollbar->host->texture->GetHeight() * progress_per;
+        scrollbar->host->position.y = scrollbar->host->viewport_pos.y - offset_parent_px;
+        scrollbar->host->requestLayout();
+        requestRedraw();
     }
-    return Widget::on_mouse_move(ctx, e);
+    return Widget::onMouseMove(ctx, e);
 }
 
-DispatchResult ScrollbarSlider::on_mouse_down(DispatcherCtx ctx, const MouseDownEvent *e) {
-    (void)e;
+DispatchResult VScrollbarSlider::onMouseDown(DispatcherCtx ctx, const MouseDownEvent *) {
     if (state->mouse.target == this) {
         is_dragging = true;
-        start_drag_x = ctx.mouseRel.x;
-        start_drag_y = ctx.mouseRel.y - scrollbar->scroll_progress();
+        start_drag_x = ctx.mouse_rel.x;
+        start_drag_y = ctx.mouse_rel.y - scrollbar->scrollProgress();
         return CONSUME;
     }
     return PROPAGATE;
 }
 
-Scrollbar::Scrollbar(State *state_)
-        : Widget(scrollbar_box_zero(), NULL, state_),
-        Control(scrollbar_box_zero(), NULL, state_),
-        WidgetContainer(scrollbar_box_zero(), NULL, state_), host(NULL) {
-    static float h = SCROLL_B_H;
+VScrollbar::VScrollbar(State *state_) : Widget(scrollbarBoxZero(), NULL, state_) {
+    static float h = SCROLL_BUT_H;
 
-    slider = new ScrollbarSlider(frect(0, h, SCROLLBAR_W, 0), this, state);
-
-    Widget *btns[] = { slider };
-    this->append_children(makeChildren(btns));
+    slider = new VScrollbarSlider({0, h, SCROLLBAR_W, 0}, this, state);
+    this->appendChild(slider);
 }
 
-void Scrollbar::attach_to(ControlledWidget *host_) {
-    ScrollableWidget *scrollable = dynamic_cast<ScrollableWidget*>(host_);
-    if (!scrollable) throw new TraitCastError("host_ must be scrollable");
+void VScrollbar::attachTo(ScrollableWidget *scrollable) {
     host = scrollable;
-    host_->attach(this);
+    scrollable->appendChild(this);
 
-    frame = scrollbar_box(host_->frame);
+    Rect2f box = scrollbarBox(scrollable->texture->GetSize());
+    position = box.pos;
+    texture->SetSize(box.size);
 
-    static float h = SCROLL_B_H;
-    Button *btn_up   = new Button(frect(0, 0,           SCROLLBAR_W, h), this, "ʌ", state, new ScrollUp  (host));
-    Button *btn_down = new Button(frect(0, frame.h - h, SCROLLBAR_W, h), this, "v", state, new ScrollDown(host));
+    static float h = SCROLL_BUT_H;
+    const float frameh = texture->GetHeight();
+    Button *btn_up   = new Button({0, 0,          SCROLLBAR_W, h}, this, "ʌ", state, new ScrollUp  (host));
+    Button *btn_down = new Button({0, frameh - h, SCROLLBAR_W, h}, this, "v", state, new ScrollDown(host));
 
-    Widget *btns[] = { btn_up, btn_down };
-    this->append_children(makeChildren(btns));
+    this->appendChild(btn_up);
+    this->appendChild(btn_down);
+
+    host->requestLayout();
+    host->requestRedraw();
 }
 
-float Scrollbar::scroll_progress() {
-    return host->content_progress() / host->frame.h * scroll_height();
+float VScrollbar::scrollProgress() const {
+    return host->contentProgressY() / host->texture->GetHeight() * scrollHeight();
 }
 
-DispatchResult ScrollableWidget::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {
-    (void)e;
-    bool c = contains_mouse(ctx);
+DispatchResult ScrollableWidget::onMouseMove(DispatcherCtx ctx, const MouseMoveEvent *) {
+    bool c = containsMouse(ctx);
     if (!state->mouse.target && c) state->mouse.target = this;
     if (c) state->mouse.wheel_target = this;
     return PROPAGATE;
 }
 
-DispatchResult ScrollableWidget::on_mouse_wheel(DispatcherCtx ctx, const MouseWheelEvent *e) {
-    (void)ctx;
+DispatchResult ScrollableWidget::onMouseWheel(DispatcherCtx, const MouseWheelEvent *e) {
     (void)e->delta.x;
-    if (e->delta.y) scroll_y(e->delta.y * SCROLL_DELTA_PX);
+    if (e->delta.y) scrollY(e->delta.y * SCROLL_DELTA_PX);
     return CONSUME;
 }

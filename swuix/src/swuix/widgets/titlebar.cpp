@@ -1,57 +1,80 @@
+#include <cstdio>
 #include <swuix/widgets/titlebar.hpp>
 #include <swuix/state.hpp>
+
+static const int TITLEBAR_THICK = 2;
 
 class ToggleMinimize : public Action {
     MinimizableWidget *target;
 public:
     ToggleMinimize(MinimizableWidget *w) : target(w) {}
 
-    void apply(void *, Widget *) {
+    void apply(void*, Widget*) {
         target->minimized ^= true;
     }
 };
 
-TitleBar::TitleBar(State *state_)
-    : Widget(handle_box_zero(), NULL, state_),
-        Control(handle_box_zero(), NULL, state_),
-        DraggableWidget(handle_box_zero(), NULL, state_),
-        WidgetContainer(handle_box_zero(), NULL, state_), host(NULL) {
+static inline const Rect2f handleBoxZero() {
+    return {0, -HANDLE_H, 0, HANDLE_H};
+}
+
+static inline const Rect2f handleBox(Vec2f parent_box) {
+    return {0, -HANDLE_H, parent_box.x, HANDLE_H};
+}
+
+TitleBar::TitleBar(State *s) :
+        Widget(handleBoxZero(), nullptr, s),
+        DraggableWidget(handleBoxZero(), nullptr, s),
+        host(nullptr) {
     static float w = 15, h = 10;
-    btn_minimize = new Button(frect(frame.w - w - 5, 5, w, h), this, "-", state);
-    Widget *btns[] = { btn_minimize };
-    this->append_children(makeChildren(btns));
+    // in the ctor, width of titlebar is 0, so no point in computing x
+    btn_minimize = new Button({0, 5, w, h}, this, "-", state);
+    this->appendChild(btn_minimize);
 }
 
-DispatchResult TitleBar::on_mouse_move(DispatcherCtx ctx, const MouseMoveEvent *e) {
-    (void)e;
-    if (state->mouse.state == MouseState::Dragging && is_dragging) {
-        Rect2F new_frame = host->frame;
-        new_frame.x += ctx.mouseRel.x - start_drag_x;
-        new_frame.y += ctx.mouseRel.y - start_drag_y;
-        host->set_frame(new_frame);
+DispatchResult TitleBar::onMouseMove(DispatcherCtx ctx, const MouseMoveEvent *e) {
+    if (state->mouse.state == Mouse::State::Dragging && is_dragging) {
+        host->translate({
+            host->position.x + ctx.mouse_rel.x - start_drag_x,
+            host->position.y + ctx.mouse_rel.y - start_drag_y
+        });
+        host->parent->requestRedraw();
     }
-    return Widget::on_mouse_move(ctx, e);
+    return Widget::onMouseMove(ctx, e);
 }
 
-DispatchResult TitleBar::on_layout(DispatcherCtx, const LayoutEvent *) {
-    frame.w = host->frame.w;
-    btn_minimize->frame.x = frame.w - 20;
-    return PROPAGATE;
+void TitleBar::layout() {
+    btn_minimize->position.x = texture->GetWidth() - 20;
 }
 
-void TitleBar::attach_to(ControlledWidget *host_) {
-    MinimizableWidget *minimizable = dynamic_cast<MinimizableWidget*>(host_);
-    if (!minimizable) throw new TraitCastError("host_ must be minimizable");
+void TitleBar::attachTo(MinimizableWidget *minimizable) {
     host = minimizable;
-    host_->attach(this);
-    btn_minimize->set_action(new ToggleMinimize(host));
-    frame = handle_box(host_->frame);
-    host_->refresh_layout();
+    minimizable->appendChild(this);
+    btn_minimize->setAction(new ToggleMinimize(host));
+
+    Rect2f new_box = handleBox(minimizable->texture->GetSize());
+    position = new_box.pos;
+    texture->SetSize(new_box.size);
+
+    requestLayout();
+    requestRedraw();
 }
 
-void TitleBar::render(Window *window, float off_x, float off_y) {
-    window->clear_rect(frame, off_x, off_y, RGB(CLR_PRIMARY_ACT));
-    window->outline(frame, off_x, off_y, RGB(CLR_BORDER), 2);
-    // TODO: CLR_TEXT_STRONG when inactive
-    window->text(host->title(), frame.x + off_x + 3, frame.y + off_y + 1, RGB(CLR_ON_PRIMARY));
+void TitleBar::draw() {
+    texture->Clear(Color(CLR_BORDER, 255));
+
+    Rect2f f = frame();
+    Rectangle r{
+        Rect2f(TITLEBAR_THICK, TITLEBAR_THICK, f.size.x - TITLEBAR_THICK * 2, f.size.y - TITLEBAR_THICK * 2),
+        Color(CLR_PRIMARY_ACT, 225)
+    };
+    texture->Draw(r);
+
+    Text t;
+    t.text = host->title();
+    t.color = Color(CLR_ON_PRIMARY, 255);
+    t.pos = {3, f.size.y / 2};
+    t.valign = Text::VAlign::MIDDLE;
+    t.font = nullptr;
+    texture->Draw(t);
 }

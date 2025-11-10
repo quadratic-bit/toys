@@ -3,10 +3,9 @@
 
 class FocusableWidget : public virtual Widget {
 public:
-    FocusableWidget(Rect2F content_frame_, Widget *parent_, State *state_)
-        : Widget(content_frame_, parent_, state_) {}
+    FocusableWidget(Rect2f f, Widget *p, State *s) : Widget(f, p, s) {}
 
     virtual void focus() {};
 
-    DispatchResult on_mouse_down(DispatcherCtx ctx, const MouseDownEvent *e);
+    DispatchResult onMouseDown(DispatcherCtx ctx, const MouseDownEvent *e) override;
 };

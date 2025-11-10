@@ -1,78 +1,67 @@
 #pragma once
+#include <cassert>
+
+#include <swuix/window/common.hpp>
 #include <swuix/traits/draggable.hpp>
 #include <swuix/traits/scrollable.hpp>
-#include <swuix/traits/controlled.hpp>
 
-const float SCROLLBAR_W = 10.0f;
-const float SCROLL_B_H  = 10.0f;
+const float SCROLLBAR_W  = 10.0f;
+const float SCROLL_BUT_H = 10.0f;
 
-static inline const Rect2F scrollbar_box(Rect2F parent_box) {
-    Rect2F box;
-    box.x = parent_box.w - SCROLLBAR_W;
-    box.y = 0.0f;
-    box.w = SCROLLBAR_W;
-    box.h = parent_box.h;
-    return box;
-}
+class VScrollbar;
 
-static inline const Rect2F scrollbar_box_zero() {
-    Rect2F box;
-    box.x = -SCROLLBAR_W;
-    box.y = 0.0f;
-    box.w = SCROLLBAR_W;
-    box.h = 0.0f;
-    return box;
-}
-
-class Scrollbar;
-
-class ScrollbarSlider : public DraggableWidget {
-    Scrollbar *scrollbar;
+class VScrollbarSlider final : public DraggableWidget {
+    VScrollbar *scrollbar;
 
 public:
-    ScrollbarSlider(Rect2F f, Scrollbar *par, State *st);
+    VScrollbarSlider(Rect2f, VScrollbar*, State*);
 
-    const char *title() const {
+    const char *title() const override {
         return "Scrollbar slider";
     }
 
-    DispatchResult on_mouse_move(DispatcherCtx, const MouseMoveEvent *);
-    DispatchResult on_mouse_down(DispatcherCtx, const MouseDownEvent *);
+    DispatchResult onMouseMove(DispatcherCtx, const MouseMoveEvent *) override;
+    DispatchResult onMouseDown(DispatcherCtx, const MouseDownEvent *) override;
 
-    void render(Window *window, float off_x, float off_y);
+    void draw() override;
 };
 
-class Scrollbar : public Control, public WidgetContainer {
+class VScrollbar final : public Widget {
 public:
     ScrollableWidget *host;
-    ScrollbarSlider  *slider;
+    VScrollbarSlider *slider;
 
-    Scrollbar(State *state_);
+    VScrollbar(State*);
 
-    const char *title() const {
+    const char *title() const override {
         return "Scrollbar";
     }
 
-    void attach_to(ControlledWidget *host_);
+    void attachTo(ScrollableWidget*);
 
-    float scroll_height() {
-        return frame.h - 2 * SCROLL_B_H;
+    float scrollHeight() const {
+        return texture->GetHeight() - 2 * SCROLL_BUT_H;
     }
 
-    float scroll_progress();
+    float scrollProgress() const;
 
-    void render(Window *window, float off_x, float off_y) {
-        window->clear_rect(frame, off_x, off_y, RGB(CLR_SURFACE_2));
-        window->outline(frame, off_x, off_y, RGB(CLR_BORDER_SUBTLE), 2);
+    void draw() override {
+        texture->Clear(Color(CLR_BORDER_SUBTLE, 255));
+
+        Rect2f f = frame();
+        Rectangle r{
+            Rect2f(2, 2, f.size.x - 4, f.size.y - 4),
+                Color(CLR_SURFACE_2, 225)
+        };
+        texture->Draw(r);
     }
 
-    DispatchResult on_layout(DispatcherCtx, const LayoutEvent *) {
-        if (children.size() < 3) return PROPAGATE;
-        static float h = SCROLL_B_H;
+    void layout() override {
+        assert(children.size() >= 3);
+        static float h = SCROLL_BUT_H;
         Widget *btn_up   = children[1];
         Widget *btn_down = children[2];
-        btn_up->frame.y = 0;
-        btn_down->frame.y = frame.h - h;
-        return PROPAGATE;
+        btn_up->position.y = 0;
+        btn_down->position.y = texture->GetHeight() - h;
     }
 };

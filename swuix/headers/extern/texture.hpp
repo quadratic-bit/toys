@@ -6,6 +6,15 @@
 #include "SDL3_ttf/SDL_ttf.h"
 #include "swuix/geometry.hpp"
 
+inline SDL_FRect frect(float x, float y, float w, float h) {
+    SDL_FRect r;
+    r.x = x;
+    r.y = y;
+    r.w = w;
+    r.h = h;
+    return r;
+}
+
 class SwuixFont : public dr4::Font {
     TTF_Font *font_;
 
@@ -21,7 +30,7 @@ public:
             TTF_CloseFont(font_);
             font_ = NULL;
         }
-        font_ = TTF_OpenFont(path.c_str(), 16);
+        font_ = TTF_OpenFont(path.c_str(), 5);
         if (!font_) {
             throw std::runtime_error(std::string("SwuixFont: TTF_OpenFont failed: ") + SDL_GetError());
         }
@@ -114,9 +123,11 @@ public:
     }
 
     void SetSize(dr4::Vec2f size) {
-        const int w = static_cast<int>(SDL_ceilf(size.x));
-        const int h = static_cast<int>(SDL_ceilf(size.y));
-        if (w <= 0 || h <= 0) {
+        int w = static_cast<int>(SDL_ceilf(size.x));
+        int h = static_cast<int>(SDL_ceilf(size.y));
+        if (w == 0) w = 1;
+        if (h == 0) h = 1;
+        if (w < 0 || h < 0) {
             destroyTexture_();
             size_ = dr4::Vec2f(0, 0);
             return;

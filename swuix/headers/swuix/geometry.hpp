@@ -1,67 +1,24 @@
-#pragma once
 #include <algorithm>
-#include <cassert>
 
-#include <swuix/common.hpp>
+#include <dr4/math/rect.hpp>
 
-inline Rect2F frect(float x, float y, float w, float h) {
-    Rect2F r;
-    r.x = x;
-    r.y = y;
-    r.w = w;
-    r.h = h;
-    return r;
-}
-
-inline Rect2F intersect(const Rect2F &a, const Rect2F &b) {
-    float left  = std::max(a.x, b.x);
-    float top   = std::max(a.y, b.y);
-    float right = std::min(a.x + a.w, b.x + b.w);
-    float btm   = std::min(a.y + a.h, b.y + b.h);
+inline dr4::Rect2f intersect(const dr4::Rect2f &a, const dr4::Rect2f &b) {
+    float left  = std::max(a.pos.x, b.pos.x);
+    float top   = std::max(a.pos.y, b.pos.y);
+    float right = std::min(a.pos.x + a.size.x, b.pos.x + b.size.x);
+    float btm   = std::min(a.pos.y + a.size.y, b.pos.y + b.size.y);
 
     float cross_width = right - left;
     float cross_height = btm - top;
-    if (cross_width <= 0.0 || cross_height <= 0.0) return frect(0, 0, 0, 0);
-    return frect(left, top, cross_width, cross_height);
+    if (cross_width <= 0.0 || cross_height <= 0.0) return dr4::Rect2f(0, 0, 0, 0);
+    return dr4::Rect2f(left, top, cross_width, cross_height);
+}
+
+inline bool dr4::Rect2f::Contains(dr4::Vec2f point) const {
+    return point.x >= pos.x && point.x <= pos.x + size.x
+        && point.y >= pos.y && point.y <= pos.y + size.y;
 }
 
 inline float clamp(float value, float lower, float upper) {
     return std::min(std::max(value, lower), upper);
 }
-
-class Vec2F {
-public:
-    float x;
-    float y;
-
-    Vec2F() : x(0), y(0) {}  // degenerate
-
-    explicit Vec2F(float xx, float yy)
-        : x(xx), y(yy) {}
-
-    Vec2F operator-() const {
-        return Vec2F(-x, -y);
-    }
-
-    Vec2F operator-(const Vec2F &other) const {
-        return Vec2F(x - other.x, y - other.y);
-    }
-
-    Vec2F operator+(const Vec2F &other) const {
-        return Vec2F(x + other.x, y + other.y);
-    }
-
-    void operator+=(const Vec2F &other) {
-        x += other.x;
-        y += other.y;
-    }
-
-    void operator-=(const Vec2F &other) {
-        x -= other.x;
-        y -= other.y;
-    }
-
-    bool operator==(const Vec2F &other) {
-        return x == other.x && y == other.y;
-    }
-};

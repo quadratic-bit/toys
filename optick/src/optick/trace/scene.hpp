@@ -20,14 +20,14 @@ struct TraceContext {
 
 struct Scene {
     std::vector<Object*> objects;
-    Color backgroundTop, backgroundBottom;
+    opt::Color backgroundTop, backgroundBottom;
 
     Scene() : backgroundTop(0.7, 0.85, 1.0), backgroundBottom(0.05, 0.05, 0.1) {}
 
     /**
      * Background color (based on Y component of ray's direction d)
      */
-    Color sampleBackground(const Vector3 &d) const {
+    opt::Color sampleBackground(const Vector3 &d) const {
         double t = 0.5 * (d.y + 1.0); // map y [-1,1] to t [0,1] (d is normalized)
         if (t < 0) t = 0;
         if (t > 1) t = 1;
@@ -75,8 +75,8 @@ struct Scene {
     /**
      * Recursively trace a ray and shade based on materials
      */
-    inline Color trace(const Ray &ray, int depth, int max_depth, double eps) {
-        if (depth > max_depth) return Color(0, 0, 0);
+    inline opt::Color trace(const Ray &ray, int depth, int max_depth, double eps) {
+        if (depth > max_depth) return opt::Color(0, 0, 0);
 
         // find closest hit
         Hit hit = Hit();
