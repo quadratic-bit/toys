@@ -1,6 +1,4 @@
 #pragma once
-#include <SDL3/SDL_keycode.h>
-
 #include <swuix/traits/focusable.hpp>
 #include <swuix/state.hpp>
 
@@ -47,7 +45,7 @@ public:
     DispatchResult onKeyDown(DispatcherCtx, const KeyDownEvent *e) override {
         if (state->getFocus() != this) return PROPAGATE;
 
-        if (e->keycode == SDLK_BACKSPACE) {
+        if (e->keycode == dr4::KeyCode::KEYCODE_BACKSPACE) {
             remove_last_character();
             onValueChange();
             requestRedraw();

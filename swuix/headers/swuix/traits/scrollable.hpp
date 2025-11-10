@@ -14,6 +14,10 @@ public:
         viewport->SetSize(frame.size);
     }
 
+    Rect2f inputClip() const override {
+        return Rect2f(viewport_pos, viewport->GetSize());
+    }
+
     void blit(Texture *target, Vec2f acc) override {
         if (texture_dirty) {
             draw();
@@ -26,14 +30,27 @@ public:
             texture_dirty = false;
         }
 
-        viewport->Draw(*texture, contentOffset());
-        target->Draw(*viewport, acc + viewport_pos);
+        dr4::Vec2f old_pos = tempPos(texture, contentOffset());
+        viewport->Draw(*texture);
+        texture->SetPos(old_pos);
+
+        old_pos = tempPos(viewport, acc + viewport_pos);
+        target->Draw(*viewport);
+        viewport->SetPos(old_pos);
 
         for (int i = children.size() - 1; i >= 0; --i) {
             Widget *child = children[i];
             if (!child->isClipped())
                 child->blit(target, acc + position);
         }
+    }
+
+    void translate(Vec2f new_pos) override {
+        const Vec2f delta = new_pos - position;
+        position = new_pos;
+        viewport_pos += delta;
+        requestLayout();
+        requestRedraw();
     }
 
     Vec2f contentOffset() const {

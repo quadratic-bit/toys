@@ -2,13 +2,12 @@
 #include <SDL3/SDL.h> // TODO: remove SDL
 #include <SDL3/SDL_mutex.h>
 #include <atomic>
-#include <cstdio>
 #include <memory>
 #include <swuix/widgets/titled.hpp>
+#include <swuix/state.hpp>
 
 #include "dr4/math/color.hpp"
 #include "dr4/texture.hpp"
-#include "swuix/manager.hpp"
 #include "trace/camera.hpp"
 #include "trace/scene.hpp"
 #include "trace/cs.hpp"
@@ -141,7 +140,7 @@ class Renderer : public TitledWidget {
         tile_order.resize(num_tiles);
         for (int i = 0; i < num_tiles; ++i) tile_order[i] = i;
 
-        rng_state = (unsigned)(Windownow() * 1e6);
+        rng_state = (unsigned)(state->window->GetTime() * 1e6);
         shuffle(tile_order, rng_state);
 
         job_next_tile = 0;
@@ -195,7 +194,7 @@ class Renderer : public TitledWidget {
                 );
             }
         }
-        texture->Draw(*buf, {0, 0});
+        texture->Draw(*buf);
     }
 
     /**
@@ -210,9 +209,11 @@ class Renderer : public TitledWidget {
         // TODO: check on memory leaks
         front_img = state->window->CreateImage();
         front_img->SetSize({static_cast<float>(vw), static_cast<float>(vh)});
+        front_img->SetPos({0, 0});
 
         back_img = state->window->CreateImage();
         back_img->SetSize({static_cast<float>(vw), static_cast<float>(vh)});
+        back_img->SetPos({0, 0});
 
         if (!texture) texture = state->window->CreateTexture();
         texture->SetSize({static_cast<float>(vw), static_cast<float>(vh)});
@@ -226,7 +227,7 @@ class Renderer : public TitledWidget {
 
         fillBackground(front_img);
         fillBackground(back_img);
-        texture->Draw(*front_img, {0, 0});
+        texture->Draw(*front_img);
 
         startFrameJobs();
         requestRedraw();
@@ -311,7 +312,7 @@ public:
         const int viewH = int(std::floor(frame().size.y));
         ensureInit(viewW, viewH);
 
-        texture->Draw(*front_img, {0, 0});
+        texture->Draw(*front_img);
 
         //window->outline(frame, off_x, off_y, RGB(CLR_BORDER), 2);
     }
@@ -362,7 +363,7 @@ public:
         }
 
         if (any_uploaded) {
-            texture->Draw(*front_img, {0, 0});
+            texture->Draw(*front_img);
             requestRedraw();
         }
 

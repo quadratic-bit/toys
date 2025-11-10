@@ -1,7 +1,7 @@
 #pragma once
 #include "widgets/objview.hpp"
 #include "widgets/toolbox.hpp"
-#include "widgets/objpreview.hpp"
+#include "widgets/objlist.hpp"
 #include <cstdio>
 
 class Desktop final : public Widget {

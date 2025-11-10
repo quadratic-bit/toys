@@ -3,133 +3,165 @@
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
-#include <cstdio>
 #include <optional>
 #include <stdexcept>
 #include <string>
 
 #include "dr4/window.hpp"
-#include "dr4/texture.hpp"
-#include "dr4/math/color.hpp"
+#include "dr4/event.hpp"
+#include "dr4/keycodes.hpp"
+#include "dr4/mouse_buttons.hpp"
 #include "dr4/math/vec2.hpp"
+#include "dr4/math/color.hpp"
 
 #include "texture.hpp"
 
-static inline uint32_t utf8_first_codepoint(const char* s) {
-    if (!s || !*s) return 0;
-    const unsigned char c = static_cast<unsigned char>(s[0]);
-
-    // 1-byte (ASCII)
-    if ((c & 0x80u) == 0x00u) {
-        return c;
+static inline dr4::MouseButtonType MapSDLMouseButton(Uint8 b) {
+    switch (b) {
+        case SDL_BUTTON_LEFT:   return dr4::MouseButtonType::LEFT;
+        case SDL_BUTTON_MIDDLE: return dr4::MouseButtonType::MIDDLE;
+        case SDL_BUTTON_RIGHT:  return dr4::MouseButtonType::RIGHT;
+        default:                return dr4::MouseButtonType::UNKNOWN;
     }
-
-    // 2-byte 110xxxxx 10xxxxxx
-    if ((c & 0xE0u) == 0xC0u) {
-        unsigned char c1 = static_cast<unsigned char>(s[1]);
-        if (c1 == 0 || (c1 & 0xC0u) != 0x80u) return 0;
-        // overlong
-        if (c < 0xC2u) return 0;
-        return (((uint32_t)(c & 0x1Fu)) << 6) | (uint32_t)(c1 & 0x3Fu);
-    }
-
-    // 3-byte 1110xxxx 10xxxxxx 10xxxxxx
-    if ((c & 0xF0u) == 0xE0u) {
-        unsigned char c1 = static_cast<unsigned char>(s[1]);
-        unsigned char c2 = static_cast<unsigned char>(s[2]);
-        if (c1 == 0 || c2 == 0) return 0;
-        if ((c1 & 0xC0u) != 0x80u || (c2 & 0xC0u) != 0x80u) return 0;
-
-        if (c == 0xE0u) {
-            if (c1 < 0xA0u) return 0; // overlong
-        } else if (c == 0xEDu) {
-            if (c1 >= 0xA0u) return 0; // surrogate
-        }
-
-        uint32_t cp = (((uint32_t)(c & 0x0Fu)) << 12) |
-                      (((uint32_t)(c1 & 0x3Fu)) << 6) |
-                      ((uint32_t)(c2 & 0x3Fu));
-        return cp;
-    }
-
-    // 4-byte 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-    if ((c & 0xF8u) == 0xF0u) {
-        unsigned char c1 = static_cast<unsigned char>(s[1]);
-        unsigned char c2 = static_cast<unsigned char>(s[2]);
-        unsigned char c3 = static_cast<unsigned char>(s[3]);
-        if (c1 == 0 || c2 == 0 || c3 == 0) return 0;
-        if ((c1 & 0xC0u) != 0x80u || (c2 & 0xC0u) != 0x80u || (c3 & 0xC0u) != 0x80u) return 0;
-
-        if (c == 0xF0u) {
-            if (c1 < 0x90u) return 0; // overlong
-        } else if (c == 0xF4u) {
-            if (c1 > 0x8Fu) return 0; // beyond U+10FFFF
-        } else if (c > 0xF4u) {
-            return 0; // invalid first byte
-        }
-
-        uint32_t cp = (((uint32_t)(c & 0x07u)) << 18) |
-                      (((uint32_t)(c1 & 0x3Fu)) << 12) |
-                      (((uint32_t)(c2 & 0x3Fu)) << 6) |
-                      ((uint32_t)(c3 & 0x3Fu));
-        if (cp > 0x10FFFFu) return 0;
-        return cp;
-    }
-
-    return 0;
 }
 
-class SwuixWindow : public dr4::Window {
+static inline uint16_t MapSDLModToDR4(Uint16 sdlmods) {
+    using dr4::KeyMode;
+    uint16_t out = dr4::KEYMOD_NONE;
+    if (sdlmods & SDL_KMOD_LSHIFT) out |= dr4::KEYMOD_LSHIFT;
+    if (sdlmods & SDL_KMOD_RSHIFT) out |= dr4::KEYMOD_RSHIFT;
+    if (sdlmods & SDL_KMOD_LCTRL)  out |= dr4::KEYMOD_LCTRL;
+    if (sdlmods & SDL_KMOD_RCTRL)  out |= dr4::KEYMOD_RCTRL;
+    if (sdlmods & SDL_KMOD_LALT)   out |= dr4::KEYMOD_LALT;
+    if (sdlmods & SDL_KMOD_RALT)   out |= dr4::KEYMOD_RALT;
+    if (sdlmods & SDL_KMOD_CAPS)   out |= dr4::KEYMOD_CAPS;
+    return out;
+}
+
+static inline dr4::KeyCode MapSDLKey(SDL_Keycode key) {
+    using namespace dr4;
+    switch (key) {
+        // Letters
+        case SDLK_A: return KEYCODE_A; case SDLK_B: return KEYCODE_B; case SDLK_C: return KEYCODE_C;
+        case SDLK_D: return KEYCODE_D; case SDLK_E: return KEYCODE_E; case SDLK_F: return KEYCODE_F;
+        case SDLK_G: return KEYCODE_G; case SDLK_H: return KEYCODE_H; case SDLK_I: return KEYCODE_I;
+        case SDLK_J: return KEYCODE_J; case SDLK_K: return KEYCODE_K; case SDLK_L: return KEYCODE_L;
+        case SDLK_M: return KEYCODE_M; case SDLK_N: return KEYCODE_N; case SDLK_O: return KEYCODE_O;
+        case SDLK_P: return KEYCODE_P; case SDLK_Q: return KEYCODE_Q; case SDLK_R: return KEYCODE_R;
+        case SDLK_S: return KEYCODE_S; case SDLK_T: return KEYCODE_T; case SDLK_U: return KEYCODE_U;
+        case SDLK_V: return KEYCODE_V; case SDLK_W: return KEYCODE_W; case SDLK_X: return KEYCODE_X;
+        case SDLK_Y: return KEYCODE_Y; case SDLK_Z: return KEYCODE_Z;
+
+        // Numbers (row)
+        case SDLK_0: return KEYCODE_NUM0; case SDLK_1: return KEYCODE_NUM1; case SDLK_2: return KEYCODE_NUM2;
+        case SDLK_3: return KEYCODE_NUM3; case SDLK_4: return KEYCODE_NUM4; case SDLK_5: return KEYCODE_NUM5;
+        case SDLK_6: return KEYCODE_NUM6; case SDLK_7: return KEYCODE_NUM7; case SDLK_8: return KEYCODE_NUM8;
+        case SDLK_9: return KEYCODE_NUM9;
+
+        // Editing / control
+        case SDLK_ESCAPE:       return KEYCODE_ESCAPE;
+        case SDLK_LCTRL:        return KEYCODE_LCONTROL;
+        case SDLK_LSHIFT:       return KEYCODE_LSHIFT;
+        case SDLK_LALT:         return KEYCODE_LALT;
+        case SDLK_LGUI:         return KEYCODE_LSYSTEM;
+        case SDLK_RCTRL:        return KEYCODE_RCONTROL;
+        case SDLK_RSHIFT:       return KEYCODE_RSHIFT;
+        case SDLK_RALT:         return KEYCODE_RALT;
+        case SDLK_RGUI:         return KEYCODE_RSYSTEM;
+        case SDLK_MENU:         return KEYCODE_MENU;
+        case SDLK_LEFTBRACKET:  return KEYCODE_LBRACKET;
+        case SDLK_RIGHTBRACKET: return KEYCODE_RBRACKET;
+        case SDLK_SEMICOLON:    return KEYCODE_SEMICOLON;
+        case SDLK_COMMA:        return KEYCODE_COMMA;
+        case SDLK_PERIOD:       return KEYCODE_PERIOD;
+        case SDLK_APOSTROPHE:   return KEYCODE_QUOTE;
+        case SDLK_SLASH:        return KEYCODE_SLASH;
+        case SDLK_BACKSLASH:    return KEYCODE_BACKSLASH;
+        case SDLK_GRAVE:        return KEYCODE_TILDE;
+        case SDLK_EQUALS:       return KEYCODE_EQUAL;
+        case SDLK_MINUS:        return KEYCODE_HYPHEN;
+        case SDLK_SPACE:        return KEYCODE_SPACE;
+        case SDLK_RETURN:       return KEYCODE_ENTER;
+        case SDLK_BACKSPACE:    return KEYCODE_BACKSPACE;
+        case SDLK_TAB:          return KEYCODE_TAB;
+        case SDLK_PAGEUP:       return KEYCODE_PAGEUP;
+        case SDLK_PAGEDOWN:     return KEYCODE_PAGEDOWN;
+        case SDLK_END:          return KEYCODE_END;
+        case SDLK_HOME:         return KEYCODE_HOME;
+        case SDLK_INSERT:       return KEYCODE_INSERT;
+        case SDLK_DELETE:       return KEYCODE_DELETE;
+
+        // Numpad
+        case SDLK_KP_0: return KEYCODE_NUMPAD0; case SDLK_KP_1: return KEYCODE_NUMPAD1;
+        case SDLK_KP_2: return KEYCODE_NUMPAD2; case SDLK_KP_3: return KEYCODE_NUMPAD3;
+        case SDLK_KP_4: return KEYCODE_NUMPAD4; case SDLK_KP_5: return KEYCODE_NUMPAD5;
+        case SDLK_KP_6: return KEYCODE_NUMPAD6; case SDLK_KP_7: return KEYCODE_NUMPAD7;
+        case SDLK_KP_8: return KEYCODE_NUMPAD8; case SDLK_KP_9: return KEYCODE_NUMPAD9;
+
+        // Arrows
+        case SDLK_LEFT:  return KEYCODE_LEFT;
+        case SDLK_RIGHT: return KEYCODE_RIGHT;
+        case SDLK_UP:    return KEYCODE_UP;
+        case SDLK_DOWN:  return KEYCODE_DOWN;
+
+        // Function keys
+        case SDLK_F1:  return KEYCODE_F1;  case SDLK_F2:  return KEYCODE_F2;
+        case SDLK_F3:  return KEYCODE_F3;  case SDLK_F4:  return KEYCODE_F4;
+        case SDLK_F5:  return KEYCODE_F5;  case SDLK_F6:  return KEYCODE_F6;
+        case SDLK_F7:  return KEYCODE_F7;  case SDLK_F8:  return KEYCODE_F8;
+        case SDLK_F9:  return KEYCODE_F9;  case SDLK_F10: return KEYCODE_F10;
+        case SDLK_F11: return KEYCODE_F11; case SDLK_F12: return KEYCODE_F12;
+        case SDLK_F13: return KEYCODE_F13; case SDLK_F14: return KEYCODE_F14;
+        case SDLK_F15: return KEYCODE_F15;
+
+        case SDLK_PAUSE: return KEYCODE_PAUSE;
+        default: return KEYCODE_UNKNOWN;
+    }
+}
+
+class SwuixWindow final : public dr4::Window {
 public:
     explicit SwuixWindow(dr4::Vec2f size,
-                         std::string title = "swuix",
-                         const char *font_path = "/usr/share/fonts/TTF/CaskaydiaCoveNerdFontMono-Regular.ttf",
-                         int font_px = 16)
-        : window_(NULL),
-          renderer_(NULL),
-          text_engine_(NULL),
-          font_(NULL),
+                         std::string title = "swuix")
+        : window_(nullptr),
+          renderer_(nullptr),
+          text_engine_(nullptr),
           size_(size),
-          title_(title),
-          font_path_(font_path),
-          font_px_(font_px),
+          title_(std::move(title)),
           is_open_(false) {}
 
-    ~SwuixWindow() {
-        Close();
-    }
+    ~SwuixWindow() override { Close(); }
 
     // ------------- dr4::Window -------------
 
-    void SetTitle(const std::string &title) {
+    void SetTitle(const std::string &title) override {
         title_ = title;
         if (window_) SDL_SetWindowTitle(window_, title_.c_str());
     }
 
-    const std::string &GetTitle() const {
-        return title_;
-    }
+    const std::string &GetTitle() const override { return title_; }
 
-    dr4::Vec2f GetSize() const {
+    dr4::Vec2f GetSize() const override {
         if (!window_) return size_;
         int w = 0, h = 0;
         SDL_GetWindowSize(window_, &w, &h);
         return dr4::Vec2f(static_cast<float>(w), static_cast<float>(h));
     }
 
-    void SetSize(const ::dr4::Vec2f& size) {
+    void SetSize(dr4::Vec2f size) override {
         size_ = size;
         if (window_) {
-            SDL_SetWindowSize(window_, static_cast<int>(SDL_ceilf(size.x)),
-                                       static_cast<int>(SDL_ceilf(size.y)));
+            SDL_SetWindowSize(window_,
+                              static_cast<int>(SDL_ceilf(size.x)),
+                              static_cast<int>(SDL_ceilf(size.y)));
         }
     }
 
-    void Open() {
+    void Open() override {
         if (is_open_) return;
 
         if (!SDL_Init(SDL_INIT_VIDEO)) {
-            throw std::runtime_error(SDL_GetError());
+            throw std::runtime_error(std::string("SDL_Init failed: ") + SDL_GetError());
         }
 
         if (!SDL_CreateWindowAndRenderer(
@@ -137,8 +169,7 @@ public:
                 static_cast<int>(size_.x),
                 static_cast<int>(size_.y),
                 SDL_WINDOW_RESIZABLE,
-                &window_, &renderer_
-        )) {
+                &window_, &renderer_)) {
             std::string err = SDL_GetError();
             SDL_Quit();
             throw std::runtime_error(err);
@@ -148,32 +179,20 @@ public:
             std::string err = SDL_GetError();
             SDL_DestroyRenderer(renderer_);
             SDL_DestroyWindow(window_);
-            window_ = NULL;
-            renderer_ = NULL;
+            window_ = nullptr;
+            renderer_ = nullptr;
             SDL_Quit();
             throw std::runtime_error(err);
         }
+
         text_engine_ = TTF_CreateRendererTextEngine(renderer_);
         if (!text_engine_) {
             std::string err = SDL_GetError();
             TTF_Quit();
             SDL_DestroyRenderer(renderer_);
             SDL_DestroyWindow(window_);
-            window_ = NULL;
-            renderer_ = NULL;
-            SDL_Quit();
-            throw std::runtime_error(err);
-        }
-        font_ = TTF_OpenFont(font_path_, font_px_);
-        if (!font_) {
-            std::string err = SDL_GetError();
-            TTF_DestroyRendererTextEngine(text_engine_);
-            text_engine_ = NULL;
-            TTF_Quit();
-            SDL_DestroyRenderer(renderer_);
-            SDL_DestroyWindow(window_);
-            window_ = NULL;
-            renderer_ = NULL;
+            window_ = nullptr;
+            renderer_ = nullptr;
             SDL_Quit();
             throw std::runtime_error(err);
         }
@@ -181,83 +200,74 @@ public:
         is_open_ = true;
     }
 
-    bool IsOpen() const {
-        return is_open_;
-    }
+    bool IsOpen() const override { return is_open_; }
 
-    void Close() {
+    void Close() override {
         if (!is_open_) return;
 
-        if (font_) {
-            TTF_CloseFont(font_);
-            font_ = NULL;
-        }
         if (text_engine_) {
             TTF_DestroyRendererTextEngine(text_engine_);
-            text_engine_ = NULL;
+            text_engine_ = nullptr;
         }
         TTF_Quit();
 
-        if (renderer_) {
-            SDL_DestroyRenderer(renderer_);
-            renderer_ = NULL;
-        }
-        if (window_) {
-            SDL_DestroyWindow(window_);
-            window_ = NULL;
-        }
+        if (renderer_) { SDL_DestroyRenderer(renderer_); renderer_ = nullptr; }
+        if (window_)   { SDL_DestroyWindow(window_);     window_   = nullptr; }
         SDL_Quit();
 
         is_open_ = false;
     }
 
-    void Clear(const dr4::Color &color) {
+    void Clear(dr4::Color color) override {
         ensureOpen_();
         SDL_SetRenderDrawBlendMode(renderer_, SDL_BLENDMODE_BLEND);
-        SDL_SetRenderDrawColor(
-            renderer_,
-            toU8(color.r),
-            toU8(color.g),
-            toU8(color.b),
-            toU8(color.a)
-        );
+        SDL_SetRenderDrawColor(renderer_, color.r, color.g, color.b, color.a);
         SDL_RenderClear(renderer_);
     }
 
-    void Draw(const dr4::Texture &texture, dr4::Vec2f pos) {
+    void Draw(const dr4::Texture &texture, dr4::Vec2f) override {
         ensureOpen_();
 
         const SwuixTexture *sw = static_cast<const SwuixTexture*>(&texture);
-        if (!sw) return;
-
-        SDL_Texture *sdltex = sw->GetSDLTexture();
-        if (!sdltex) return;
+        if (!sw || !sw->GetSDLTexture()) return;
 
         float tw = 0, th = 0;
-        SDL_GetTextureSize(sdltex, &tw, &th);
+        SDL_GetTextureSize(sw->GetSDLTexture(), &tw, &th);
+
+        dr4::Vec2f pos = texture.GetPos();
         SDL_FRect dst{ pos.x, pos.y, tw, th };
-        SDL_SetTextureBlendMode(sdltex, SDL_BLENDMODE_BLEND);
-        SDL_RenderTexture(renderer_, sdltex, NULL, &dst);
+        SDL_SetTextureBlendMode(sw->GetSDLTexture(), SDL_BLENDMODE_BLEND);
+        SDL_RenderTexture(renderer_, sw->GetSDLTexture(), nullptr, &dst);
     }
 
-    void Display() {
+    void Display() override {
         ensureOpen_();
         SDL_RenderPresent(renderer_);
     }
 
-    dr4::Texture *CreateTexture() {
-        return new SwuixTexture(renderer_, text_engine_, font_);
+    double GetTime() override {
+        return static_cast<double>(SDL_GetTicks()) / 1000.0;
     }
 
-    dr4::Image *CreateImage() {
-        return new SwuixImage();
+    dr4::Texture   *CreateTexture()   override { return new SwuixTexture(renderer_, text_engine_); }
+    dr4::Image     *CreateImage()     override { return new SwuixImage(); }
+    dr4::Font      *CreateFont()      override { return new SwuixFont(); }
+    dr4::Line      *CreateLine()      override { return new SwuixLine(); }
+    dr4::Circle    *CreateCircle()    override { return new SwuixCircle(); }
+    dr4::Rectangle *CreateRectangle() override { return new SwuixRectangle(); }
+    dr4::Text      *CreateText()      override { return new SwuixText(); }
+
+    void StartTextInput() override {
+        ensureOpen_();
+        SDL_StartTextInput(window_);
     }
 
-    dr4::Font *CreateFont() {
-        return new SwuixFont();
+    void StopTextInput() override {
+        ensureOpen_();
+        SDL_StopTextInput(window_);
     }
 
-    std::optional<dr4::Event> PollEvent() {
+    std::optional<dr4::Event> PollEvent() override {
         ensureOpen_();
 
         SDL_Event e;
@@ -295,7 +305,7 @@ public:
             out.type = (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
                        ? dr4::Event::Type::MOUSE_DOWN
                        : dr4::Event::Type::MOUSE_UP;
-            out.mouseButton.button = static_cast<dr4::MouseCode>(e.button.button);
+            out.mouseButton.button = MapSDLMouseButton(e.button.button);
             out.mouseButton.pos = dr4::Vec2f(
                 static_cast<float>(e.button.x),
                 static_cast<float>(e.button.y)
@@ -307,14 +317,14 @@ public:
             out.type = dr4::Event::Type::MOUSE_WHEEL;
             float mx = 0.f, my = 0.f;
             SDL_GetMouseState(&mx, &my);
-            out.mouseWheel.delta = static_cast<int>(e.wheel.y);
-            out.mouseWheel.pos   = dr4::Vec2f(mx, my);
+            out.mouseWheel.deltaX = e.wheel.x;
+            out.mouseWheel.deltaY = e.wheel.y;
+            out.mouseWheel.pos    = dr4::Vec2f(mx, my);
             return out;
         }
         case SDL_EVENT_TEXT_INPUT: {
             out.type = dr4::Event::Type::TEXT_EVENT;
-            const char *txt = e.text.text;
-            out.text.unicode = utf8_first_codepoint(txt);
+            out.text.unicode = e.text.text;
             return out;
         }
 
@@ -323,8 +333,8 @@ public:
             out.type = (e.type == SDL_EVENT_KEY_DOWN)
                      ? dr4::Event::Type::KEY_DOWN
                      : dr4::Event::Type::KEY_UP;
-            out.key.sym = static_cast<dr4::KeyCode>(e.key.key);
-            out.key.mod = static_cast<dr4::KeyMode>(SDL_GetModState());
+            out.key.sym  = MapSDLKey(e.key.key);
+            out.key.mods = MapSDLModToDR4(SDL_GetModState());
             return out;
         }
 
@@ -335,36 +345,18 @@ public:
         return std::nullopt;
     }
 
-    void StartInput() {
-        SDL_StartTextInput(window_);
-    }
-
-    void StopInput() {
-        SDL_StartTextInput(window_);
-    }
-
     SDL_Renderer   *GetRenderer()   const { return renderer_; }
     SDL_Window     *GetSDLWindow()  const { return window_; }
     TTF_TextEngine *GetTextEngine() const { return text_engine_; }
-    TTF_Font       *GetFont()       const { return font_; }
 
 private:
     SDL_Window     *window_;
     SDL_Renderer   *renderer_;
     TTF_TextEngine *text_engine_;
-    TTF_Font       *font_;
 
     dr4::Vec2f   size_;
     std::string  title_;
-    const char  *font_path_;
-    int          font_px_;
     bool         is_open_;
-
-    static Uint8 toU8(int v) {
-        if (v < 0) return 0;
-        if (v > 255) return 255;
-        return static_cast<Uint8>(v);
-    }
 
     void ensureOpen_() const {
         if (!is_open_ || !window_ || !renderer_) {

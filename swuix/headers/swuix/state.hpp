@@ -32,16 +32,20 @@ struct State {
     Mouse      mouse;
     bool       exit_requested;
     Window     *window;
+    dr4::Font  *appfont;
 
-    State(Time now_, Window *w) : now(now_), mouse(), exit_requested(false), window(w) {}
+    State(Time now_, Window *w) : now(now_), mouse(), exit_requested(false), window(w) {
+        appfont = w->CreateFont();
+        appfont->LoadFromFile("/usr/share/fonts/TTF/CaskaydiaCoveNerdFontMono-Regular.ttf");
+    }
 
     void focus(FocusableWidget *target) {
-        if (!mouse.focus) window->StartInput();
+        if (!mouse.focus) window->StartTextInput();
         mouse.focus = target;
     }
 
     void unfocus() {
-        if (mouse.focus) window->StopInput();
+        if (mouse.focus) window->StopTextInput();
         mouse.focus = nullptr;
     }
 

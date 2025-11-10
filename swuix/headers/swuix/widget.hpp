@@ -1,5 +1,4 @@
 #pragma once
-#include <cstdio>
 #include <vector>
 
 #include <swuix/common.hpp>
@@ -161,7 +160,10 @@ public:
 
     // ============ Positioning ============
 
-    virtual bool isClipped() { return true; }
+    virtual bool isClipped() const { return true; }
+
+    // What area should clip input at this level
+    virtual Rect2f inputClip() const { return frame(); }
 
     virtual void translate(Vec2f new_pos) {
         position = new_pos;
@@ -201,7 +203,9 @@ public:
             texture_dirty = false;
         }
 
-        if (target != texture) target->Draw(*texture, acc + position);
+        dr4::Vec2f old_pos = tempPos(texture, acc + position);
+        if (target != texture) target->Draw(*texture);
+        texture->SetPos(old_pos);
 
         for (int i = children.size() - 1; i >= 0; --i) {
             Widget *child = children[i];
@@ -209,6 +213,8 @@ public:
                 child->blit(target, acc + position);
         }
     }
+
+    DispatcherCtx resolveContext() const;
 
     void requestRedraw() {
         texture_dirty = true;

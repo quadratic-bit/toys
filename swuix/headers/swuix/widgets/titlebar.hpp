@@ -16,7 +16,7 @@ public:
         return "Titlebar";
     }
 
-    bool isClipped() override { return false; }
+    bool isClipped() const override { return false; }
 
     void attachTo(MinimizableWidget*);
 

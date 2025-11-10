@@ -46,14 +46,9 @@ public:
     float scrollProgress() const;
 
     void draw() override {
-        texture->Clear(Color(CLR_BORDER_SUBTLE, 255));
-
         Rect2f f = frame();
-        Rectangle r{
-            Rect2f(2, 2, f.size.x - 4, f.size.y - 4),
-                Color(CLR_SURFACE_2, 225)
-        };
-        texture->Draw(r);
+        Rectangle *r = rectBorder(state->window, f, {CLR_SURFACE_2}, 2, {CLR_BORDER});
+        texture->Draw(*r);
     }
 
     void layout() override {

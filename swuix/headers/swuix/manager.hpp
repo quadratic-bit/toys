@@ -1,48 +1,12 @@
 #pragma once
+#include <chrono>
 #include <cstdio>
 #include <optional>
-
-#include <SDL3/SDL_timer.h> // FIXME: sdl!!!!
 
 #include <swuix/window/common.hpp>
 #include <swuix/state.hpp>
 #include <swuix/traits/focusable.hpp>
-
-// TODO: time in window
-
-inline Time Windownow() {
-    return (double)SDL_GetTicksNS() / (double)1e9;
-}
-
-inline size_t utf8_encode(uint32_t cp, char out[5]) {
-    if (cp > 0x10FFFFu) return 0;
-    if (cp >= 0xD800u && cp <= 0xDFFFu) return 0;
-
-    if (cp <= 0x7Fu) {
-        out[0] = static_cast<char>(cp);
-        out[1] = '\0';
-        return 1;
-    }
-    if (cp <= 0x7FFu) {
-        out[0] = static_cast<char>(0xC0u | (cp >> 6));
-        out[1] = static_cast<char>(0x80u | (cp & 0x3Fu));
-        out[2] = '\0';
-        return 2;
-    }
-    if (cp <= 0xFFFFu) {
-        out[0] = static_cast<char>(0xE0u | (cp >> 12));
-        out[1] = static_cast<char>(0x80u | ((cp >> 6) & 0x3Fu));
-        out[2] = static_cast<char>(0x80u | (cp & 0x3Fu));
-        out[3] = '\0';
-        return 3;
-    }
-    out[0] = static_cast<char>(0xF0u | (cp >> 18));
-    out[1] = static_cast<char>(0x80u | ((cp >> 12) & 0x3Fu));
-    out[2] = static_cast<char>(0x80u | ((cp >> 6) & 0x3Fu));
-    out[3] = static_cast<char>(0x80u | (cp & 0x3Fu));
-    out[4] = '\0';
-    return 4;
-}
+#include <thread>
 
 class EventManager {
     State *state;
@@ -53,8 +17,12 @@ class EventManager {
 
     inline Time frameDuration() const { return 1.0 / static_cast<Time>(FPS); }
 
+    inline Time time() {
+        return state->window->GetTime();
+    }
+
     Time advanceFrame() {
-        const Time now = Windownow();
+        const Time now = time();
         state->now = now;
 
         Time dt_s = now - last_tick;
@@ -92,38 +60,33 @@ class EventManager {
         } break;
 
         case dr4::Event::Type::KEY_DOWN: {
-            // TODO: repeat
-            KeyDownEvent we(ev.key.sym, ev.key.mod, false);
-            // TODO: resolveContext
-            //if (state->getFocus()) {
-            //    FocusableWidget *capturer = state->getFocus();
-            //    DispatcherCtx ctx = capturer->resolveContext(state->window);
-            //    capturer->broadcast(ctx, &we);
-            //} else {
+            KeyDownEvent we(ev.key.sym, ev.key.mods, false);
+            if (state->getFocus()) {
+                FocusableWidget *capturer = state->getFocus();
+                DispatcherCtx ctx = capturer->resolveContext();
+                capturer->broadcast(ctx, &we);
+            } else {
                 DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame(), state);
                 root->broadcast(ctx, &we);
-            //}
+            }
         } break;
 
         case dr4::Event::Type::KEY_UP: {
-            KeyUpEvent we(ev.key.sym, ev.key.mod);
+            KeyUpEvent we(ev.key.sym, ev.key.mods);
             DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame(), state);
             root->broadcast(ctx, &we);
         } break;
 
         case dr4::Event::Type::TEXT_EVENT: {
-            // TODO: multiple symbols????
-            char buf[5];
-            utf8_encode(ev.text.unicode, buf);
-            InputEvent we(buf);
-            //if (state->get_focus()) {
-            //    FocusableWidget *capturer = state->get_focus();
-            //    DispatcherCtx ctx = capturer->resolve_context(state->window);
-            //    capturer->broadcast(ctx, &we);
-            //} else {
+            InputEvent we(ev.text.unicode);
+            if (state->getFocus()) {
+                FocusableWidget *capturer = state->getFocus();
+                DispatcherCtx ctx = capturer->resolveContext();
+                capturer->broadcast(ctx, &we);
+            } else {
                 DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame(), state);
                 root->broadcast(ctx, &we);
-            //}
+            }
         } break;
 
         case dr4::Event::Type::MOUSE_MOVE:
@@ -136,14 +99,14 @@ class EventManager {
             state->unfocus();
             syncMousePos(state->mouse.pos, root);
             MouseDownEvent we(state->mouse.pos);
-            //if (state->mouse.capture) {
-            //    Widget *capturer = state->mouse.capture;
-            //    DispatcherCtx ctx = capturer->resolve_context(state->window);
-            //    capturer->broadcast(ctx, &we);
-            //} else {
+            if (state->mouse.capture) {
+                Widget *capturer = state->mouse.capture;
+                DispatcherCtx ctx = capturer->resolveContext();
+                capturer->broadcast(ctx, &we);
+            } else {
                 DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame(), state);
                 root->broadcast(ctx, &we);
-            //}
+            }
             if (state->getFocus()) state->getFocus()->focus();
         } break;
 
@@ -152,27 +115,26 @@ class EventManager {
             state->mouse.pos = Vec2f(ev.mouseButton.pos.x, ev.mouseButton.pos.y);
             syncMousePos(state->mouse.pos, root);
             MouseUpEvent we;
-            //if (state->mouse.capture) {
-            //    Widget *capturer = state->mouse.capture;
-            //    DispatcherCtx ctx = capturer->resolve_context(state->window);
-            //    capturer->broadcast(ctx, &we);
-            //} else {
+            if (state->mouse.capture) {
+                Widget *capturer = state->mouse.capture;
+                DispatcherCtx ctx = capturer->resolveContext();
+                capturer->broadcast(ctx, &we);
+            } else {
                 DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame(), state);
                 root->broadcast(ctx, &we);
-            //}
+            }
         } break;
 
         case dr4::Event::Type::MOUSE_WHEEL: {
-        //    // TODO: horizontal delta
-        //    state->mouse.pos = Vec2f(ev.mouseWheel.pos.x, ev.mouseWheel.pos.y);
-        //    syncMousePos(state->mouse.pos, root);
-        //    Vec2f scrolled = Vec2f(0, ev.mouseWheel.delta);
-        //    MouseWheelEvent we(scrolled);
-        //    if (!state->mouse.wheel_target) break;
-        //    Widget *capturer = state->mouse.wheel_target;
-        //    DispatcherCtx ctx = capturer->resolve_context(state->window);
-        //    capturer->broadcast(ctx, &we);
-        //    forceSyncMousePos(state->mouse.pos, root);
+            state->mouse.pos = Vec2f(ev.mouseWheel.pos.x, ev.mouseWheel.pos.y);
+            syncMousePos(state->mouse.pos, root);
+            Vec2f scrolled = Vec2f(0, ev.mouseWheel.deltaY);
+            MouseWheelEvent we(scrolled);
+            if (!state->mouse.wheel_target) break;
+            Widget *capturer = state->mouse.wheel_target;
+            DispatcherCtx ctx = capturer->resolveContext();
+            capturer->broadcast(ctx, &we);
+            forceSyncMousePos(state->mouse.pos, root);
         } break;
 
         case dr4::Event::Type::UNKNOWN: break;
@@ -185,7 +147,7 @@ class EventManager {
 public:
     EventManager(State *state_, int fps) : state(state_), FPS(fps) {
         const Time f = frameDuration();
-        const Time now = Windownow();
+        const Time now = time();
         last_tick = now;
         next_frame = now + f;
     }
@@ -200,7 +162,7 @@ public:
     void prepareEvents() {
         const Time f = frameDuration();
         next_frame += f;
-        const Time now = Windownow();
+        const Time now = time();
 
         if (now > next_frame + f) {
             const Time behind = now - next_frame;
@@ -212,7 +174,7 @@ public:
 
     void idle(Widget *root) {
         const Time dt_s = advanceFrame();
-        const Time now = Windownow();
+        const Time now = time();
 
         // timer granularity
         static const Time SAFETY_MARGIN_S = 0.001;
@@ -231,7 +193,7 @@ public:
     bool exhaustEvents(Widget *root) {
         std::optional<dr4::Event> ev;
 
-        const Time now = Windownow();
+        const Time now = time();
         state->now = now;
         if (now >= next_frame) return true; // deadline reached
 
@@ -252,7 +214,7 @@ public:
         }
 
         const int wait_ms = static_cast<int>(std::min<int64_t>(remaining_ms, MAX_EVENT_WAIT_MS));
-        SDL_Delay(wait_ms);
+        std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
 
         // drain anything else already queued
         while ((ev = state->window->PollEvent())) {

@@ -1,4 +1,3 @@
-#include <cstdio>
 #include <swuix/widgets/titlebar.hpp>
 #include <swuix/state.hpp>
 
@@ -61,20 +60,10 @@ void TitleBar::attachTo(MinimizableWidget *minimizable) {
 }
 
 void TitleBar::draw() {
-    texture->Clear(Color(CLR_BORDER, 255));
-
     Rect2f f = frame();
-    Rectangle r{
-        Rect2f(TITLEBAR_THICK, TITLEBAR_THICK, f.size.x - TITLEBAR_THICK * 2, f.size.y - TITLEBAR_THICK * 2),
-        Color(CLR_PRIMARY_ACT, 225)
-    };
-    texture->Draw(r);
+    Rectangle *r = rectBorder(state->window, f, {CLR_PRIMARY_ACT}, TITLEBAR_THICK, {CLR_BORDER});
+    texture->Draw(*r);
 
-    Text t;
-    t.text = host->title();
-    t.color = Color(CLR_ON_PRIMARY, 255);
-    t.pos = {3, f.size.y / 2};
-    t.valign = Text::VAlign::MIDDLE;
-    t.font = nullptr;
-    texture->Draw(t);
+    Text *t = textAligned(state->window, host->title(), {3, f.size.y / 2}, {CLR_ON_PRIMARY}, state->appfont);
+    texture->Draw(*t);
 }

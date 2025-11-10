@@ -1,5 +1,4 @@
 #pragma once
-#include <cstdio>
 #include <swuix/widget.hpp>
 #include <swuix/window/common.hpp>
 
@@ -51,41 +50,7 @@ public:
         return label;
     }
 
-    virtual void draw() override {
-        Rect2f f = frame();
-        // TODO: color without alpha
-        texture->Clear(Color(CLR_BORDER, 255));
-
-        Rectangle r;
-        if (pressed) {
-            const RGBu8 darkened = OKLabDarken(RGB(CLR_SURFACE_2), 0.10);
-            r = {
-                Rect2f(BTN_THICK, BTN_THICK, f.size.x - BTN_THICK * 2, f.size.y - BTN_THICK * 2),
-                Color(darkened.r, darkened.g, darkened.b, 225)
-            };
-        } else if (hovered) {
-            const RGBu8 darkened = OKLabDarken(RGB(CLR_SURFACE_2), 0.06);
-            r = {
-                Rect2f(BTN_THICK, BTN_THICK, f.size.x - BTN_THICK * 2, f.size.y - BTN_THICK * 2),
-                Color(darkened.r, darkened.g, darkened.b, 225)
-            };
-        } else {
-            r = {
-                Rect2f(BTN_THICK, BTN_THICK, f.size.x - BTN_THICK * 2, f.size.y - BTN_THICK * 2),
-                Color(CLR_SURFACE_2, 225)
-            };
-        }
-        texture->Draw(r);
-
-        Text t;
-        t.text = label;
-        t.color = Color(CLR_TEXT_STRONG, 255);
-        // TODO: align t.pos = {f.size.x / 2, f.size.y / 2};
-        t.pos = {5, 5};
-        t.valign = Text::VAlign::MIDDLE;
-        t.font = nullptr;
-        texture->Draw(t);
-    }
+    virtual void draw() override;
 
     DispatchResult onMouseMove(DispatcherCtx, const MouseMoveEvent *) override;
     DispatchResult onMouseDown(DispatcherCtx, const MouseDownEvent *) override;

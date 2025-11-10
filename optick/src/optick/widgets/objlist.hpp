@@ -22,6 +22,8 @@ public:
 
 class ObjectPreview final : public Widget {
     friend class ObjectsList;
+    friend class ObjectView;
+    friend class ObjectViewName;
     Object *obj;
 
 public:
@@ -36,16 +38,19 @@ public:
 	}
 
 	void draw() override {
-        //if (obj->selected()) {
-        //    //                                       TODO: move into a constant (soft-selection)
-        //    window->clear_rect(frame, off_x, off_y, OKLabDarken(RGB(CLR_SURFACE_2), 0.18));
-        //} else {
-        //    window->clear_rect(frame, off_x, off_y, RGB(CLR_SURFACE_2));
-        //}
+        Rect2f f = frame();
+        Rectangle *r;
+        if (obj->selected()) {
+            // TODO: move into a constant (soft-selection)
+            const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.18);
+            r = rectBorder(state->window, f, {d.r, d.g, d.b}, 2, {CLR_BORDER});
+        } else {
+            r = rectBorder(state->window, f, {CLR_SURFACE_2}, 2, {CLR_BORDER});
+        }
+        texture->Draw(*r);
 
-		//window->text(title(), frame.x + off_x + 5, frame.y + off_y + 5, RGB(CLR_TEXT_STRONG));
-
-		//window->outline(frame, off_x, off_y, RGB(CLR_BORDER), 2);
+        Text *t = textAligned(state->window, title(), {5, f.size.y / 2}, Color(CLR_TEXT_STRONG), state->appfont);
+        texture->Draw(*t);
 	}
 };
 
@@ -71,8 +76,11 @@ public:
         bool toggled = preview->obj->toggleSelect();
 
         if (toggled) {
-            if (selected) selected->obj->unselect();
-            view->populate(preview->obj);
+            if (selected) {
+                selected->obj->unselect();
+                selected->requestRedraw();
+            }
+            view->populate(preview);
             selected = preview;
         } else {
             assert(selected == preview);
@@ -88,15 +96,54 @@ public:
 	}
 
 	void draw() override {
-        texture->Clear(dr4::Color(CLR_BORDER, 255));
+        texture->Clear({CLR_SURFACE_2});
         Rect2f f = frame();
-        Rectangle r{
-            Rect2f(2, 2, f.size.x - 4, f.size.y - 4),
-            Color(CLR_SURFACE_2, 255)
-        };
-        texture->Draw(r);
+        Rectangle *r = rectBorder(state->window, f, {CLR_SURFACE_2}, 2, {CLR_BORDER});
+        texture->Draw(*r);
 	}
 };
+
+class ObjectViewName final : public TextInput {
+    ObjectPreview *prev;
+
+public:
+    ObjectViewName(ObjectPreview *preview, Rect2f f, Widget *p, State *s)
+            : Widget(f, p, s),
+            FocusableWidget(f, p, s),
+            TextInput(f, p, s), prev(preview) {
+        setText(preview->obj->name);
+    }
+
+    const char *title() const override {
+        return "ObjectView name edit";
+    }
+
+    void onValueChange() override {
+        prev->obj->name = value;
+        prev->requestRedraw();
+    }
+
+    void draw() override {
+        Rect2f f = frame();
+        Rectangle *r = rectBorder(state->window, f, {CLR_SURFACE_2}, 2, {CLR_BORDER});
+        texture->Draw(*r);
+
+        Text *t = textAligned(state->window, getText().c_str(), {5, f.size.y / 2}, Color(CLR_TEXT_STRONG), state->appfont);
+        texture->Draw(*t);
+    }
+};
+
+inline void ObjectView::populate(ObjectPreview *prev) {
+    unpopulate();
+
+    ObjectViewName *objname = new ObjectViewName(prev, {5, 5, 125, 24}, NULL, state);
+    this->appendChild(objname);
+
+    ObjectViewPropertyList *objprops = new ObjectViewPropertyList(prev->obj, {5, 50, frame().size.x - 10, frame().size.y - 55}, NULL, state);
+    this->appendChild(objprops);
+
+    requestRedraw();
+}
 
 inline void Select::apply(void *, Widget *) {
     list->toggleSelect(preview);

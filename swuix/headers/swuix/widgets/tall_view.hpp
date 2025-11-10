@@ -21,7 +21,7 @@ public:
 
     void blit(Texture *target, Vec2f acc) override {
         if (!minimized) return ScrollableWidget::blit(target, acc);
-        titlebar->blit(target, acc);
+        titlebar->blit(target, acc + position);
     }
 
     void layout() override {
@@ -32,5 +32,7 @@ public:
         scrollbar->slider->texture->SetSize({scrollbar->slider->texture->GetWidth(), scrollbar->scrollHeight() * (viewport->GetHeight() / texture->GetHeight())});
         scrollbar->slider->position.y = SCROLL_BUT_H + scrollbar->scrollProgress();
         scrollbar->layout();
+        scrollbar->slider->layout();
+        scrollbar->slider->requestRedraw();
     }
 };

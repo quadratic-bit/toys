@@ -40,16 +40,10 @@ VScrollbarSlider::VScrollbarSlider(Rect2f f, VScrollbar *p, State *s)
         : Widget(f, p, s), DraggableWidget(f, p ,s), scrollbar(p) {}
 
 void VScrollbarSlider::draw() {
-    texture->Clear(Color(CLR_BORDER_SUBTLE, 255));
+    Rectangle *r = rectBorder(state->window, frame(), {CLR_BORDER}, 1, {CLR_BORDER_SUBTLE});
+    texture->Draw(*r);
+}
 
-    Rect2f f = frame();
-    Rectangle r{
-        Rect2f(1, 1, f.size.x - 2, f.size.y - 2),
-        Color(CLR_BORDER, 225)
-    };
-    texture->Draw(r); }
-
-// TODO: review
 DispatchResult VScrollbarSlider::onMouseMove(DispatcherCtx ctx, const MouseMoveEvent *e) {
     if (state->mouse.state == Mouse::State::Dragging && is_dragging) {
         float progress_px = std::min(
