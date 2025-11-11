@@ -41,7 +41,9 @@ int main(int argc, char **argv) {
     window->Open();
     window->SetSize(bbox.size);
 
-    OptickState state = OptickState(window);
+    dr4::Font *appfont = window->CreateFont();
+    appfont->LoadFromFile("/usr/share/fonts/TTF/CaskaydiaCoveNerdFontMono-Regular.ttf");
+    OptickState state = OptickState(window, appfont);
     EventManager evmgr(&state, FPS);
 
     { // start of `root` scope

@@ -34,10 +34,9 @@ struct State {
     Window     *window;
     dr4::Font  *appfont;
 
-    State(Time now_, Window *w) : now(now_), mouse(), exit_requested(false), window(w) {
-        appfont = w->CreateFont();
-        appfont->LoadFromFile("/usr/share/fonts/TTF/CaskaydiaCoveNerdFontMono-Regular.ttf");
-    }
+    State(Window *w, dr4::Font *font) :
+        now(w->GetTime()), mouse(), exit_requested(false), window(w),
+        appfont(font) {}
 
     void focus(FocusableWidget *target) {
         if (!mouse.focus) window->StartTextInput();
