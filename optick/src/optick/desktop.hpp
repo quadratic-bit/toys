@@ -6,8 +6,7 @@
 
 class Desktop final : public Widget {
 public:
-    Desktop(Rect2f f, Widget *p, State *s)
-            : Widget(f, p, s) {
+    Desktop(Rect2f f, Widget *p, State *s) : Widget(f, p, s) {
         Renderer *renderer = new Renderer({185, 50, 800, 600}, NULL, state);
         ControlPanel *toolbox = new ControlPanel(renderer, {5, 25, 175, 150}, NULL, state);
         ObjectView *objview = new ObjectView({5, 200, 175, 175}, NULL, state);

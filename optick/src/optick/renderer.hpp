@@ -8,6 +8,7 @@
 
 #include "dr4/math/color.hpp"
 #include "dr4/texture.hpp"
+#include "swuix/common.hpp"
 #include "trace/camera.hpp"
 #include "trace/scene.hpp"
 #include "trace/cs.hpp"
@@ -272,10 +273,9 @@ public:
         return &cam;
     }
 
-    static void drawWireframe(
+    void drawWireframe(
             const AABB &bbox,
-            const Camera &cam,
-            int view_x, int view_y, int view_w, int view_h, double eps,
+            int view_w, int view_h,
             uint8_t r, uint8_t g, uint8_t b
     ) {
         Vector3 v[8] = {
@@ -297,24 +297,33 @@ public:
             int a = E[e][0];
             int c = E[e][1];
             if (!ok[a] || !ok[c]) continue;
-            // TODO: draw line, that's really hard lol
-            (void)view_x;
-            (void)view_y;
-            (void)r;
-            (void)g;
-            (void)b;
-            //window->draw_line_rgb(view_x + sx[a], view_y + sy[a], view_x + sx[c], view_y + sy[c], 1, RGBu8(r, g, b));
+            dr4::Line *line = thickLine(
+                    state->window,
+                    {static_cast<float>(sx[a]),
+                     static_cast<float>(sy[a])},
+                    {static_cast<float>(sx[c]),
+                     static_cast<float>(sy[c])},
+            {r, g, b}, 1);
+            texture->Draw(*line);
         }
     }
 
     void draw() override {
-        const int viewW = int(std::floor(frame().size.x));
-        const int viewH = int(std::floor(frame().size.y));
+        const int viewW = std::floor(frame().size.x);
+        const int viewH = std::floor(frame().size.y);
         ensureInit(viewW, viewH);
 
         texture->Draw(*front_img);
 
-        //window->outline(frame, off_x, off_y, RGB(CLR_BORDER), 2);
+        for (size_t i = 0; i < scene.objects.size(); ++i) {
+            const Object *obj = scene.objects[i];
+            if (!obj->selected()) continue;
+            AABB box;
+            if (!obj->worldAABB(&box)) continue;
+            drawWireframe(box, viewW, viewH, 255, 80, 0);
+        }
+
+        outline(state->window, frame(), 2, {CLR_BORDER});
     }
 
     void blit(Texture *target, Vec2f acc) override {

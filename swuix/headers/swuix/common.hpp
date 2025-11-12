@@ -13,6 +13,17 @@ inline dr4::Vec2f tempPos(dr4::Texture *tex, dr4::Vec2f temp_pos) {
     return old_pos;
 }
 
+inline dr4::Line *thickLine(dr4::Window *w, dr4::Vec2f start, dr4::Vec2f end, dr4::Color c, float thick) {
+    dr4::Line *l = w->CreateLine();
+    l->SetPos({0, 0});
+    l->SetStart(start);
+    l->SetEnd(end);
+    l->SetEnd(end);
+    l->SetThickness(thick);
+    l->SetColor(c);
+    return l;
+}
+
 inline dr4::Rectangle *rectFill(dr4::Window *w, dr4::Rect2f frame, dr4::Color fill) {
     dr4::Rectangle *r = w->CreateRectangle();
     r->SetPos({0, 0});
