@@ -150,6 +150,24 @@ public:
         children.push_back(child);
         child->parent = this;
     }
+
+    bool destroyChild(Widget *w) {
+        for (size_t i = 0; i < children.size(); ++i) {
+            Widget *child = children[i];
+            if (w == child) {
+                delete child;
+                children.erase(children.begin() + i);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void destroy() {
+        if (parent == this) return;
+        parent->requestRedraw();
+        parent->destroyChild(this);
+    }
     
     void clearChildren() {
         for (Widget *child : children) {

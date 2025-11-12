@@ -13,6 +13,18 @@ public:
     }
 };
 
+class Close : public Action {
+    MinimizableWidget *target;
+public:
+    Close(MinimizableWidget *w) : target(w) {}
+
+    void apply(void*, Widget*) {
+        target->destroy();
+    }
+};
+
+static float BTN_W = 15, BTN_H = 10;
+
 static inline const Rect2f handleBoxZero() {
     return {0, -HANDLE_H, 0, HANDLE_H};
 }
@@ -25,10 +37,11 @@ TitleBar::TitleBar(State *s) :
         Widget(handleBoxZero(), nullptr, s),
         DraggableWidget(handleBoxZero(), nullptr, s),
         host(nullptr) {
-    static float w = 15, h = 10;
     // in the ctor, width of titlebar is 0, so no point in computing x
-    btn_minimize = new Button({0, 5, w, h}, this, "-", state);
+    btn_minimize = new Button({0, 5, BTN_W, BTN_H}, this, "-", state);
+    btn_close = new Button({0, 5, BTN_W, BTN_H}, this, "x", state);
     this->appendChild(btn_minimize);
+    this->appendChild(btn_close);
 }
 
 DispatchResult TitleBar::onMouseMove(DispatcherCtx ctx, const MouseMoveEvent *e) {
@@ -43,13 +56,15 @@ DispatchResult TitleBar::onMouseMove(DispatcherCtx ctx, const MouseMoveEvent *e)
 }
 
 void TitleBar::layout() {
-    btn_minimize->position.x = texture->GetWidth() - 20;
+    btn_minimize->position.x = texture->GetWidth() - BTN_W * 2 - 10;
+    btn_close->position.x = texture->GetWidth() - BTN_W - 5;
 }
 
 void TitleBar::attachTo(MinimizableWidget *minimizable) {
     host = minimizable;
     minimizable->appendChild(this);
     btn_minimize->setAction(new ToggleMinimize(host));
+    btn_close->setAction(new Close(host));
 
     Rect2f new_box = handleBox(minimizable->texture->GetSize());
     position = new_box.pos;

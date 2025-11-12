@@ -7,6 +7,7 @@ const float HANDLE_H = 20.0f;
 
 class TitleBar final : public DraggableWidget {
     Button *btn_minimize;
+    Button *btn_close;
     MinimizableWidget *host;
 
 public:
