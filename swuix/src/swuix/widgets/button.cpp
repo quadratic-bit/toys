@@ -39,21 +39,35 @@ DispatchResult Button::onMouseUp(DispatcherCtx, const MouseUpEvent *) {
     return PROPAGATE;
 }
 
-void Button::draw() {
+void Button::draw_hover() {
     Rect2f f = frame();
-
-    Rectangle *r;
-    if (pressed) {
-        const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.10);
-        r = rectBorder(state->window, f, {d.r, d.g, d.b}, 1, {CLR_BORDER});
-    } else if (hovered) {
-        const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.06);
-        r = rectBorder(state->window, f, {d.r, d.g, d.b}, 1, {CLR_BORDER});
-    } else {
-        r = rectBorder(state->window, f, {CLR_SURFACE_2}, 1, {CLR_BORDER});
-    }
+    const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.06);
+    Rectangle *r = rectBorder(state->window, f, {d.r, d.g, d.b}, 1, {CLR_BORDER});
     texture->Draw(*r);
+};
 
-    Text *t = textAligned(state->window, label, f.size / 2.0f, Color(CLR_TEXT_STRONG), state->appfont, 16, HAlign::CENTER);
+void Button::draw_press() {
+    Rect2f f = frame();
+    const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.10);
+    Rectangle *r = rectBorder(state->window, f, {d.r, d.g, d.b}, 1, {CLR_BORDER});
+    texture->Draw(*r);
+}
+
+void Button::draw_idle() {
+    Rect2f f = frame();
+    Rectangle *r = rectBorder(state->window, f, {CLR_SURFACE_2}, 1, {CLR_BORDER});
+    texture->Draw(*r);
+}
+
+void Button::draw_text() {
+    Text *t = textAligned(state->window, label, texture->GetSize() / 2.0f, Color(CLR_TEXT_STRONG), state->appfont, 16, HAlign::CENTER);
     texture->Draw(*t);
+}
+
+void Button::draw() {
+    if      (pressed) draw_press();
+    else if (hovered) draw_hover();
+    else              draw_idle();
+
+    draw_text();
 }

@@ -18,6 +18,15 @@ public:
 };
 
 class MenuButton final : public Button {
+    void _draw_separator() {
+        Rect2f f = frame();
+        dr4::Line *l = thickLine(state->window, {f.size.x - 1, 0}, {f.size.x - 1, f.size.y - 2}, {CLR_BORDER}, 1);
+        texture->Draw(*l);
+
+        l = thickLine(state->window, {0, f.size.y - 1.5f}, {f.size.x, f.size.y - 1.5f}, {CLR_BORDER}, 2);
+        texture->Draw(*l);
+    }
+
 public:
     MenuButton(Rect2f f, Widget *p, const char *l, State *s, Action *a)
         : Button(f, p, l, s, a) {}
@@ -28,29 +37,33 @@ public:
     MenuButton(Rect2f f, Widget *p, const char *l, State *s)
         : Button(f, p, l, s) {}
 
-    void draw() override {
+    void draw_hover() override {
         Rect2f f = frame();
-
         Rectangle *r;
-        if (pressed) {
-            const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.10);
-            r = rectFill(state->window, f, {d.r, d.g, d.b});
-        } else if (hovered) {
-            const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.06);
-            r = rectFill(state->window, f, {d.r, d.g, d.b});
-        } else {
-            r = rectFill(state->window, f, {CLR_SURFACE_2});
-        }
+        const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.06);
+        r = rectFill(state->window, f, {d.r, d.g, d.b});
         texture->Draw(*r);
 
-        dr4::Line *l = thickLine(state->window, {f.size.x - 1, 0}, {f.size.x - 1, f.size.y - 2}, {CLR_BORDER}, 1);
-        texture->Draw(*l);
+        _draw_separator();
+    }
 
-        l = thickLine(state->window, {0, f.size.y - 1.5f}, {f.size.x, f.size.y - 1.5f}, {CLR_BORDER}, 2);
-        texture->Draw(*l);
+    void draw_press() override {
+        Rect2f f = frame();
+        Rectangle *r;
+        const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.10);
+        r = rectFill(state->window, f, {d.r, d.g, d.b});
+        texture->Draw(*r);
 
-        Text *t = textAligned(state->window, label, f.size / 2.0f, Color(CLR_TEXT_STRONG), state->appfont, 16, HAlign::CENTER);
-        texture->Draw(*t);
+        _draw_separator();
+    }
+
+    void draw_idle() override {
+        Rect2f f = frame();
+        Rectangle *r;
+        r = rectFill(state->window, f, {CLR_SURFACE_2});
+        texture->Draw(*r);
+
+        _draw_separator();
     }
 };
 

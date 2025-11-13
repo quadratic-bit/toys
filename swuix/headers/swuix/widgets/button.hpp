@@ -20,13 +20,18 @@ public:
 };
 
 class Button : public Widget {
-protected: // TODO: encapsulate into draw_...
     bool hovered;
     bool pressed;
 
     Action *action;
 
     const char *label;
+
+protected:
+    virtual void draw_hover();
+    virtual void draw_press();
+    virtual void draw_idle();
+    virtual void draw_text();
 
 public:
     Button(Rect2f f, Widget *p, const char *l, State *s, Action *a)
@@ -51,7 +56,7 @@ public:
         return label;
     }
 
-    virtual void draw() override;
+    void draw() override final;
 
     DispatchResult onMouseMove(DispatcherCtx, const MouseMoveEvent *) override;
     DispatchResult onMouseDown(DispatcherCtx, const MouseDownEvent *) override;
