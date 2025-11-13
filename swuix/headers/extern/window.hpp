@@ -225,7 +225,7 @@ public:
         SDL_RenderClear(renderer_);
     }
 
-    void Draw(const dr4::Texture &texture, dr4::Vec2f) override {
+    void Draw(const dr4::Texture &texture) override {
         ensureOpen_();
 
         const SwuixTexture *sw = static_cast<const SwuixTexture*>(&texture);

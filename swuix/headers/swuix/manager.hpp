@@ -155,7 +155,7 @@ public:
     void render(Widget *root) {
         state->window->Clear(Color(CLR_BACKGROUND, 255));
         root->blit(root->texture);
-        state->window->Draw(*root->texture, {0, 0});
+        state->window->Draw(*root->texture);
         state->window->Display();
     }
 

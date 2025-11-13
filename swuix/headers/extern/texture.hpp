@@ -168,7 +168,6 @@ public:
 };
 
 class SwuixCircle final : public dr4::Circle {
-    dr4::Vec2f pos_   {0,0};
     dr4::Vec2f center_{0,0};
     float radius_     {0.0f};
     dr4::Color fill_  {0,0,0,255};
@@ -178,8 +177,8 @@ class SwuixCircle final : public dr4::Circle {
 public:
     ~SwuixCircle() override = default;
 
-    void SetPos(dr4::Vec2f pos) override { pos_ = pos; }
-    dr4::Vec2f GetPos() const override { return pos_; }
+    void SetPos(dr4::Vec2f pos) override { center_ = {pos.x + radius_, pos.y + radius_}; }
+    dr4::Vec2f GetPos() const override { return {center_.x - radius_, center_.y - radius_}; }
 
     void SetCenter(dr4::Vec2f c) override { center_ = c; }
     void SetRadius(float r) override { radius_ = r; }
@@ -276,6 +275,7 @@ class SwuixTexture final : public dr4::Texture {
     SDL_Texture   *tex_;
     dr4::Vec2f     size_;
     dr4::Vec2f     pos_;
+    dr4::Vec2f     zero_;
     TTF_TextEngine *text_engine_;
 
     static Uint8 toU8(unsigned int v) {
@@ -295,7 +295,7 @@ class SwuixTexture final : public dr4::Texture {
 
 public:
     SwuixTexture(SDL_Renderer *renderer, TTF_TextEngine *text_engine = nullptr)
-    : renderer_(renderer), tex_(nullptr), size_(0.f, 0.f), pos_(0.f, 0.f), text_engine_(text_engine) {
+    : renderer_(renderer), tex_(nullptr), size_(0.f, 0.f), pos_(0.f, 0.f), zero_(0.f, 0.f), text_engine_(text_engine) {
         if (!renderer_) throw std::runtime_error("SwuixTexture: renderer is null");
     }
     ~SwuixTexture() override { destroyTexture_(); }
@@ -338,6 +338,9 @@ public:
     float      GetWidth()  const override { return size_.x; }
     float      GetHeight() const override { return size_.y; }
 
+    void       SetZero(dr4::Vec2f pos)       override { zero_ = pos; }
+    dr4::Vec2f GetZero()               const override { return zero_; }
+
     void Clear(dr4::Color color) override {
         ensureTarget_();
         SDL_Texture *prev = SDL_GetRenderTarget(renderer_);
@@ -360,10 +363,9 @@ public:
         float sw = 0.f, sh = 0.f;
         SDL_GetTextureSize(srcTex, &sw, &sh);
 
-        // Draw at src->pos (ignore dst->GetPos)
         SDL_FRect srcRect{
-            src->GetPos().x, // + dst->GetPos().x,
-            src->GetPos().y, // + dst->GetPos().y,
+            src->pos_.x + dst->zero_.x,
+            src->pos_.y + dst->zero_.y,
             sw, sh
         };
 
@@ -392,8 +394,8 @@ inline void SwuixImage::DrawOn(dr4::Texture &texture) const {
     SDL_DestroySurface(surf);
     if (!tmp) return;
 
-    SDL_FRect dst_rect = frect(dst->GetPos().x + this->GetPos().x,
-                               dst->GetPos().y + this->GetPos().y,
+    SDL_FRect dst_rect = frect(this->GetPos().x + dst->GetZero().x,
+                               this->GetPos().y + dst->GetZero().y,
                                static_cast<float>(Width()),
                                static_cast<float>(Height()));
 
@@ -413,8 +415,8 @@ inline void SwuixRectangle::DrawOn(dr4::Texture &texture) const {
     SDL_SetRenderTarget(dst->GetSDLRenderer(), dst->GetSDLTexture());
     SDL_SetRenderDrawBlendMode(dst->GetSDLRenderer(), SDL_BLENDMODE_BLEND);
 
-    const float x = dst->GetPos().x + pos_.x;
-    const float y = dst->GetPos().y + pos_.y;
+    const float x = pos_.x + dst->GetZero().x;
+    const float y = pos_.y + dst->GetZero().y;
     const float w = size_.x;
     const float h = size_.y;
 
@@ -462,8 +464,8 @@ inline void SwuixText::DrawOn(dr4::Texture &texture) const {
     int tw = 0, th = 0;
     TTF_GetTextSize(tt, &tw, &th);
 
-    float draw_x = dst->GetPos().x + pos_.x;
-    float draw_y = dst->GetPos().y + pos_.y;
+    float draw_x = pos_.x + dst->GetZero().x;
+    float draw_y = pos_.y + dst->GetZero().y;
 
     switch (valign_) {
         case VAlign::TOP:      break;
@@ -486,10 +488,10 @@ inline void SwuixLine::DrawOn(dr4::Texture &texture) const {
     SwuixTexture *dst = dynamic_cast<SwuixTexture*>(&texture);
     if (!dst) return;
 
-    const float x1 = dst->GetPos().x + pos_.x + start_.x;
-    const float y1 = dst->GetPos().y + pos_.y + start_.y;
-    const float x2 = dst->GetPos().x + pos_.x + end_.x;
-    const float y2 = dst->GetPos().y + pos_.y + end_.y;
+    const float x1 = pos_.x + start_.x + dst->GetZero().x;
+    const float y1 = pos_.y + start_.y + dst->GetZero().y;
+    const float x2 = pos_.x + end_.x   + dst->GetZero().x;
+    const float y2 = pos_.y + end_.y   + dst->GetZero().y;
 
     SDL_Texture *prev = SDL_GetRenderTarget(dst->GetSDLRenderer());
     SDL_SetRenderTarget(dst->GetSDLRenderer(), dst->GetSDLTexture());
@@ -509,8 +511,8 @@ inline void SwuixCircle::DrawOn(dr4::Texture &texture) const {
     SwuixTexture *dst = dynamic_cast<SwuixTexture*>(&texture);
     if (!dst || radius_ <= 0.0f) return;
 
-    const float cx = dst->GetPos().x + pos_.x + center_.x;
-    const float cy = dst->GetPos().y + pos_.y + center_.y;
+    const float cx = center_.x + dst->GetZero().x;
+    const float cy = center_.y + dst->GetZero().y;
     const int   r  = std::max(0, static_cast<int>(std::floor(radius_)));
 
     SDL_Texture *prev = SDL_GetRenderTarget(dst->GetSDLRenderer());
