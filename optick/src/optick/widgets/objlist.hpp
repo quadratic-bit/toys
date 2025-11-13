@@ -54,14 +54,16 @@ public:
 	}
 };
 
+class Desktop;
+
 class ObjectsList final : public TallView {
     const std::vector<Object*> &objects;
-    ObjectView *view;
+    Desktop *root;
     ObjectPreview *selected;
 
 public:
-	ObjectsList(const std::vector<Object*> &objects_, ObjectView *v, Rect2f f, Vec2f clip, Widget *p, State *s)
-			: Widget(f, p, s), TallView(f, clip, p, s), objects(objects_), view(v), selected(NULL) {
+	ObjectsList(const std::vector<Object*> &objects_, Desktop *d, Rect2f f, Vec2f clip, Widget *p, State *s)
+			: Widget(f, p, s), TallView(f, clip, p, s), objects(objects_), root(d), selected(NULL) {
         for (size_t i = 0; i < objects.size(); ++i) {
             ObjectPreview *obj = new ObjectPreview(objects[i], this, {5, static_cast<float>(5 + 35 * i), frame().size.x - 20, 30}, NULL, state);
             this->appendChild(obj);
@@ -72,24 +74,7 @@ public:
         requestRedraw();
 	}
 
-    void toggleSelect(ObjectPreview *preview) {
-        bool toggled = preview->obj->toggleSelect();
-
-        if (toggled) {
-            if (selected) {
-                selected->obj->unselect();
-                selected->requestRedraw();
-            }
-            view->populate(preview);
-            selected = preview;
-        } else {
-            assert(selected == preview);
-            assert(selected != NULL);
-            selected->obj->unselect();
-            view->unpopulate();
-            selected = NULL;
-        }
-    }
+    void toggleSelect(ObjectPreview *preview);
 
 	const char *title() const override {
 		return "Objects";
