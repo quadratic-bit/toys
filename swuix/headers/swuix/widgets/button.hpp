@@ -20,6 +20,7 @@ public:
 };
 
 class Button : public Widget {
+protected: // TODO: encapsulate into draw_...
     bool hovered;
     bool pressed;
 

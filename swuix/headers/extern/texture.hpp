@@ -13,7 +13,6 @@
 #include "dr4/texture.hpp"
 #include "dr4/math/vec2.hpp"
 #include "dr4/math/color.hpp"
-#include "swuix/widget.hpp"
 
 inline SDL_FRect frect(float x, float y, float w, float h) {
     SDL_FRect r;

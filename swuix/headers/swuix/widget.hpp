@@ -151,6 +151,11 @@ public:
         child->parent = this;
     }
 
+    void prependChild(Widget *child) {
+        children.insert(children.begin(), child);
+        child->parent = this;
+    }
+
     bool destroyChild(Widget *w) {
         for (size_t i = 0; i < children.size(); ++i) {
             Widget *child = children[i];

@@ -45,12 +45,12 @@ void Button::draw() {
     Rectangle *r;
     if (pressed) {
         const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.10);
-        r = rectBorder(state->window, f, {d.r, d.g, d.b}, 2, {CLR_BORDER});
+        r = rectBorder(state->window, f, {d.r, d.g, d.b}, 1, {CLR_BORDER});
     } else if (hovered) {
         const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.06);
-        r = rectBorder(state->window, f, {d.r, d.g, d.b}, 2, {CLR_BORDER});
+        r = rectBorder(state->window, f, {d.r, d.g, d.b}, 1, {CLR_BORDER});
     } else {
-        r = rectBorder(state->window, f, {CLR_SURFACE_2}, 2, {CLR_BORDER});
+        r = rectBorder(state->window, f, {CLR_SURFACE_2}, 1, {CLR_BORDER});
     }
     texture->Draw(*r);
 
