@@ -46,10 +46,7 @@ TitleBar::TitleBar(State *s) :
 
 DispatchResult TitleBar::onMouseMove(DispatcherCtx ctx, const MouseMoveEvent *e) {
     if (state->mouse.state == Mouse::State::Dragging && is_dragging) {
-        host->translate({
-            host->position.x + ctx.mouse_rel.x - start_drag_x,
-            host->position.y + ctx.mouse_rel.y - start_drag_y
-        });
+        host->translate(host->position + ctx.mouse_rel - start_drag);
         host->parent->requestRedraw();
     }
     return Widget::onMouseMove(ctx, e);

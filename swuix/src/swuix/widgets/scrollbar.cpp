@@ -47,7 +47,7 @@ void VScrollbarSlider::draw() {
 DispatchResult VScrollbarSlider::onMouseMove(DispatcherCtx ctx, const MouseMoveEvent *e) {
     if (state->mouse.state == Mouse::State::Dragging && is_dragging) {
         float progress_px = std::min(
-            std::max(ctx.mouse_rel.y - start_drag_y + SCROLL_BUT_H, SCROLL_BUT_H),
+            std::max(ctx.mouse_rel.y - start_drag.y + SCROLL_BUT_H, SCROLL_BUT_H),
             parent->texture->GetHeight() - SCROLL_BUT_H - texture->GetHeight()
         ) - SCROLL_BUT_H;
         float progress_per = progress_px / scrollbar->scrollHeight();
@@ -62,8 +62,7 @@ DispatchResult VScrollbarSlider::onMouseMove(DispatcherCtx ctx, const MouseMoveE
 DispatchResult VScrollbarSlider::onMouseDown(DispatcherCtx ctx, const MouseDownEvent *) {
     if (state->mouse.target == this) {
         is_dragging = true;
-        start_drag_x = ctx.mouse_rel.x;
-        start_drag_y = ctx.mouse_rel.y - scrollbar->scrollProgress();
+        start_drag = {ctx.mouse_rel.x, ctx.mouse_rel.y - scrollbar->scrollProgress()};
         return CONSUME;
     }
     return PROPAGATE;
