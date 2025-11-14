@@ -6,6 +6,7 @@
 #include "swuix/window/common.hpp"
 
 class Desktop;
+class Renderer;
 
 class LaunchObjView : public Action {
     Desktop *root;
@@ -13,6 +14,15 @@ class LaunchObjView : public Action {
 
 public:
     LaunchObjView(Desktop *r, State *s) : root(r), state(s) {}
+
+    void apply(void *, Widget *);
+};
+
+class ToggleRender : public Action {
+    Desktop *root;
+
+public:
+    ToggleRender(Desktop *r) : root(r) {}
 
     void apply(void *, Widget *);
 };
@@ -69,11 +79,14 @@ public:
 
 class MenuBar final : public Widget {
     Button *view;
+    Button *toggle;
 
 public:
     MenuBar(Rect2f f, Widget *p, State *s, Desktop *r) : Widget(f, p, s) {
         view = new MenuButton({0, 0, 100, f.size.y}, this, "Properties", state, new LaunchObjView(r, state));
+        toggle = new MenuButton({100, 0, 70, f.size.y}, this, "Toggle", state, new ToggleRender(r));
         appendChild(view);
+        appendChild(toggle);
     }
 
     const char *title() const override {

@@ -93,7 +93,7 @@ static inline Scene makeDemoScene() {
 
 #define N_WORKERS 4
 
-class Renderer : public TitledWidget {
+class Renderer final : public TitledWidget {
     Scene  scene;
     Camera cam;
     ViewCS cs;
@@ -129,6 +129,8 @@ class Renderer : public TitledWidget {
     unsigned rng_state;  // simple per-frame RNG for shuffling
 
     static int workerEntry(void *self_void);
+
+    bool alive = true;
 
     void buildTiles() {
         tile_w = (back_img->GetWidth() + TILE - 1) / TILE;
@@ -333,8 +335,13 @@ public:
         TitledWidget::blit(target, acc);
     }
 
-    DispatchResult onIdle(DispatcherCtx ctx, const IdleEvent *ev) override {
-        (void)ctx;
+    void enableRender()  { alive = true; }
+    void disableRender() { alive = false; }
+    void toggleRender()  { alive ^= true; }
+
+    DispatchResult onIdle(DispatcherCtx, const IdleEvent *ev) override {
+        if (!alive) return PROPAGATE;
+
         const int viewW = int(std::floor(frame().size.x));
         const int viewH = int(std::floor(frame().size.y));
         ensureInit(viewW, viewH);
