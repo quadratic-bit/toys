@@ -1,5 +1,4 @@
 #pragma once
-#include <SDL3/SDL.h> // TODO: remove SDL
 #include <SDL3/SDL_mutex.h>
 #include <atomic>
 #include <memory>

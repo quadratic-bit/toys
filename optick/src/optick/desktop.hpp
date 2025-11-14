@@ -1,4 +1,5 @@
 #pragma once
+#include "widgets/canvas.hpp"
 #include "widgets/objview.hpp"
 #include "widgets/toolbox.hpp"
 #include "widgets/objlist.hpp"
@@ -11,6 +12,9 @@ public:
         ControlPanel *toolbox = new ControlPanel(renderer, {5, 50, 175, 150}, NULL, state);
         ObjectsList *objlist = new ObjectsList(renderer->getScene().objects, this, {1000, 225, 250, 200}, {250, 175}, NULL, state);
         MenuBar *menu = new MenuBar({0, 0, f.size.x, 25}, NULL, state, this);
+
+        Canvas *c = new Canvas({0, 0, renderer->texture->GetWidth(), renderer->texture->GetHeight()}, NULL, state);
+        renderer->appendChild(c);
 
         Widget *arr[] = { toolbox, objlist, renderer, menu };
         for (Widget *w : arr) {
