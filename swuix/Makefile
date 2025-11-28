@@ -15,6 +15,9 @@ LIB_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(LIB_SRC))
 LIB_STATIC := $(BUILD_DIR)/libswuix.a
 LIB_SHARED := $(BUILD_DIR)/libswuix.so
 
+PP_LINE_SRC := src/plugins/pp_line_tool.cpp
+PP_LINE_SO  := build/libpptool_line.so
+
 DIST_DIR := dist/plugin
 
 MODE ?= debug   # debug | release
@@ -96,11 +99,12 @@ $(EXAMPLE_BIN): $(EXAMPLE_OBJ)
 run-example: $(EXAMPLE_BIN)
 	LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) ./$(EXAMPLE_BIN)
 
-plugin: $(PLUGIN_SO)
+plugin: $(PLUGIN_SO) $(PP_LINE_SO)
 
 plugin-dist: plugin
 	$(MKDIR_P) $(DIST_DIR)
 	cp -a $(PLUGIN_SO) $(DIST_DIR)/
+	cp -a $(PP_LINE_SO) $(DIST_DIR)/
 	if [ -n "$(SDL_TTF_LIBDIR)" ];  then cp -a $(SDL_TTF_LIBDIR)/libSDL3_ttf.so* $(DIST_DIR)/; fi
 	if [ -n "$(SDL_GFX_LIBDIR)" ];  then cp -a $(SDL_GFX_LIBDIR)/libSDL3_gfx.so* $(DIST_DIR)/; fi
 	if [ -n "$(SDL_CORE_LIBDIR)" ]; then cp -a $(SDL_CORE_LIBDIR)/libSDL3.so*    $(DIST_DIR)/; fi
@@ -108,5 +112,8 @@ plugin-dist: plugin
 
 $(PLUGIN_SO): $(PLUGIN_SRC) | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -fPIC $(SDL_CFLAGS) -shared -o $@ $< $(SDL_LDLIBS) $(RPATH_ORIGIN) -Wl,-soname,libswuix_sdl3.so
+
+$(PP_LINE_SO): $(PP_LINE_SRC) | build
+	$(CXX) $(CXXFLAGS) -fPIC $(SDL_CFLAGS) -shared -o $@ $< $(SDL_LDLIBS)
 
 -include $(LIB_OBJS:.o=.d)

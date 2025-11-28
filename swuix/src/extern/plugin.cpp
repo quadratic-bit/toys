@@ -1,5 +1,7 @@
 #include "extern/plugin.hpp"
+#include "cum/plugin.hpp"
 
-extern "C" dr4::DR4Backend *CreateDR4Backend(void) {
+extern "C" cum::Plugin *CreatePlugin();
+extern "C" cum::Plugin *CreatePlugin() {
     return new SwuixBackend();
 }
