@@ -5,12 +5,15 @@
 #include <swuix/widgets/titled.hpp>
 #include <swuix/state.hpp>
 
+#include "cum/ifc/pp.hpp"
+#include "cum/manager.hpp"
 #include "dr4/math/color.hpp"
 #include "dr4/texture.hpp"
 #include "swuix/common.hpp"
 #include "trace/camera.hpp"
 #include "trace/scene.hpp"
 #include "trace/cs.hpp"
+#include "widgets/canvas.hpp"
 
 static inline unsigned lcg(unsigned &s) {
     s = 1664525u * s + 1013904223u;
@@ -130,7 +133,9 @@ class Renderer final : public TitledWidget {
 
     static int workerEntry(void *self_void);
 
+    cum::Manager *mgr;
     bool alive = true;
+    Canvas *canvas = nullptr;
 
     void buildTiles() {
         tile_w = (back_img->GetWidth() + TILE - 1) / TILE;
@@ -237,10 +242,10 @@ class Renderer final : public TitledWidget {
     }
 
 public:
-    Renderer(Rect2f rect, Widget *p, State *s)
+    Renderer(Rect2f rect, Widget *p, State *s, cum::Manager *mgr_)
             : Widget(rect, p, s), TitledWidget(rect, p, s),
             cam(Vector3(0, 2, 2.5), 45.0, rect.size.x, rect.size.y),
-            initialized(false), max_depth(5), eps(1e-4) {
+            initialized(false), max_depth(5), eps(1e-4), mgr(mgr_) {
         scene = makeDemoScene();
 
         job_mtx      = SDL_CreateMutex();
@@ -335,9 +340,29 @@ public:
         TitledWidget::blit(target, acc);
     }
 
-    void enableRender()  { alive = true; }
-    void disableRender() { alive = false; }
-    void toggleRender()  { alive ^= true; }
+    void enableRender()  {
+        destroyChild(canvas);
+        alive = true;
+    }
+
+    void disableRender() {
+        canvas = new Canvas({0, 0, texture->GetWidth(), texture->GetHeight()}, NULL, state);
+        std::vector<std::unique_ptr<pp::Tool>> tools;
+        auto toolPlugins = mgr->GetAllOfType<cum::PPToolPlugin>();
+        for (auto *pl : toolPlugins) {
+            auto created = pl->CreateTools(canvas);
+            for (auto &t : created) tools.emplace_back(std::move(t));
+        }
+        canvas->setTools(std::move(tools));
+        canvas->setActiveTool(0);
+        appendChild(canvas);
+        alive = false;
+    }
+
+    void toggleRender() {
+        if (alive) disableRender();
+        else enableRender();
+    }
 
     DispatchResult onIdle(DispatcherCtx, const IdleEvent *ev) override {
         if (!alive) return PROPAGATE;

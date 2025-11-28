@@ -1,41 +1,38 @@
 #include <cstdio>
-#include <memory>
 #include <swuix/manager.hpp>
-#include <misc/dr4_ifc.hpp>
 #include <dlfcn.h>
+
+#include <cum/manager.hpp>
+#include <cum/ifc/dr4.hpp>
+#include <cum/ifc/pp.hpp>
 
 #include "desktop.hpp"
 #include "state.hpp"
 
 static const int FPS = 60;
 
-using CreateFn = dr4::DR4Backend *(*)();
-
-#define MS(s) ((s) * (double)1000)
-
 int main(int argc, char **argv) {
     if (argc < 2) {
         std::cerr << "usage: " << argv[0] << " /path/to/libdr4backend.so\n";
         return 2;
     }
-    const char *plugin_path = argv[1];
-    void *handle = dlopen(plugin_path, RTLD_NOW);
-    if (!handle) {
-        std::cerr << "dlopen failed: " << dlerror() << "\n";
-        return 1;
-    }
-    dlerror();
 
-    CreateFn create = reinterpret_cast<CreateFn>(dlsym(handle, "CreateDR4Backend"));
-    const char *err = dlerror();
-    if (err || !create) {
-        std::cerr << "dlsym(CreateDR4Backend) failed: " << (err ? err : "null") << "\n";
-        dlclose(handle);
+    cum::Manager mgr;
+
+    cum::Plugin *backendBase = mgr.LoadFromFile(argv[1]);
+    auto *backend = dynamic_cast<cum::DR4BackendPlugin*>(backendBase);
+    if (!backend) {
+        std::cerr << "Plugin " << argv[1] << " is not a DR4 backend\n";
         return 1;
     }
 
-    std::unique_ptr<dr4::DR4Backend> backend(create());
-    dr4::Window *window(backend->CreateWindow());
+    for (int i = 2; i < argc; ++i) {
+        mgr.LoadFromFile(argv[i]);
+    }
+
+    mgr.TriggerAfterLoad();
+
+    dr4::Window *window = backend->CreateWindow();
 
     Rect2f bbox {0, 0, 1280, 720};
     window->Open();
@@ -48,7 +45,7 @@ int main(int argc, char **argv) {
 
     { // start of `root` scope
 
-    Desktop root(bbox, NULL, &state);
+    Desktop root(bbox, NULL, &state, &mgr);
 
     for (;;) {
         evmgr.prepareEvents();
