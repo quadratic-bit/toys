@@ -249,6 +249,14 @@ public:
         return static_cast<double>(SDL_GetTicks()) / 1000.0;
     }
 
+    void Sleep(double time) override {
+        if (time <= 0.0)
+            return;
+
+        const Uint32 ms = static_cast<Uint32>(time * 1000.0);
+        SDL_Delay(ms);
+    }
+
     dr4::Texture   *CreateTexture()   override { return new SwuixTexture(renderer_, text_engine_); }
     dr4::Image     *CreateImage()     override { return new SwuixImage(); }
     dr4::Font      *CreateFont()      override { return new SwuixFont(); }
@@ -317,9 +325,11 @@ public:
             out.type = dr4::Event::Type::MOUSE_WHEEL;
             float mx = 0.f, my = 0.f;
             SDL_GetMouseState(&mx, &my);
-            out.mouseWheel.deltaX = e.wheel.x;
-            out.mouseWheel.deltaY = e.wheel.y;
-            out.mouseWheel.pos    = dr4::Vec2f(mx, my);
+            out.mouseWheel.delta = dr4::Vec2f(
+                static_cast<float>(e.wheel.x),
+                static_cast<float>(e.wheel.y)
+            );
+            out.mouseWheel.pos = dr4::Vec2f(mx, my);
             return out;
         }
         case SDL_EVENT_TEXT_INPUT: {

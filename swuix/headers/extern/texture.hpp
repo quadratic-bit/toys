@@ -181,13 +181,22 @@ public:
     dr4::Vec2f GetPos() const override { return {center_.x - radius_, center_.y - radius_}; }
 
     void SetCenter(dr4::Vec2f c) override { center_ = c; }
-    void SetRadius(float r) override { radius_ = r; }
+    void SetRadius(dr4::Vec2f r) override {
+        // interpret circle radius as max of components
+        radius_ = std::max(r.x, r.y);
+    }
+    void SetRadius(float r) { radius_ = r; }
+
     void SetFillColor(dr4::Color c) override { fill_ = c; }
     void SetBorderColor(dr4::Color c) override { border_ = c; }
     void SetBorderThickness(float t) override { border_t_ = t; }
 
     dr4::Vec2f GetCenter() const override { return center_; }
-    float GetRadius() const override { return radius_; }
+
+    dr4::Vec2f GetRadius() const override {
+        return dr4::Vec2f(radius_, radius_);
+    }
+
     dr4::Color GetFillColor() const override { return fill_; }
     dr4::Color GetBorderColor() const override { return border_; }
     float GetBorderThickness() const override { return border_t_; }
@@ -262,9 +271,8 @@ public:
     dr4::Color GetColor() const override { return color_; }
     float GetFontSize() const override { return font_size_; }
     VAlign GetVAlign() const override { return valign_; }
-    const dr4::Font &GetFont() const override {
-        if (!font_) throw std::runtime_error("SwuixText: font not set");
-        return *font_;
+    const dr4::Font *GetFont() const override {
+        return font_;
     }
 
     void DrawOn(dr4::Texture &texture) const override;
@@ -278,9 +286,8 @@ class SwuixTexture final : public dr4::Texture {
     dr4::Vec2f     zero_;
     TTF_TextEngine *text_engine_;
 
-    static Uint8 toU8(unsigned int v) {
-        return static_cast<Uint8>(v > 255u ? 255u : v);
-    }
+    dr4::Rect2f clip_rect_{};
+    bool has_clip_rect_{false};
 
     void ensureTarget_() const {
         if (!tex_) throw std::runtime_error("SwuixTexture not initialized: call SetSize() first");
@@ -341,14 +348,56 @@ public:
     void       SetZero(dr4::Vec2f pos)       override { zero_ = pos; }
     dr4::Vec2f GetZero()               const override { return zero_; }
 
+    void SetClipRect(dr4::Rect2f rect) override {
+        clip_rect_ = rect;
+        has_clip_rect_ = true;
+    }
+
+    void RemoveClipRect() override {
+        has_clip_rect_ = false;
+    }
+
+    dr4::Rect2f GetClipRect() const override {
+        return clip_rect_;
+    }
+
+    bool HasClipRect() const { return has_clip_rect_; }
+    dr4::Rect2f ClipRect() const { return clip_rect_; }
+
     void Clear(dr4::Color color) override {
         ensureTarget_();
-        SDL_Texture *prev = SDL_GetRenderTarget(renderer_);
-        SDL_SetRenderTarget(renderer_, tex_);
-        SDL_SetRenderDrawBlendMode(renderer_, SDL_BLENDMODE_BLEND);
-        SDL_SetRenderDrawColor(renderer_, color.r, color.g, color.b, color.a);
-        SDL_RenderClear(renderer_);
-        SDL_SetRenderTarget(renderer_, prev);
+
+        SDL_Renderer *ren = renderer_;
+        SDL_Texture  *prev = SDL_GetRenderTarget(ren);
+
+        SDL_Rect old_clip;
+        const bool had_old_clip = SDL_GetRenderClipRect(ren, &old_clip);
+
+        SDL_SetRenderTarget(ren, tex_);
+        SDL_SetRenderDrawBlendMode(ren, SDL_BLENDMODE_BLEND);
+
+        if (has_clip_rect_) {
+            SDL_Rect r{
+                static_cast<int>(clip_rect_.pos.x),
+                static_cast<int>(clip_rect_.pos.y),
+                static_cast<int>(clip_rect_.size.x),
+                static_cast<int>(clip_rect_.size.y)
+            };
+            SDL_SetRenderClipRect(ren, &r);
+        } else {
+            SDL_SetRenderClipRect(ren, nullptr);
+        }
+
+        SDL_SetRenderDrawColor(ren, color.r, color.g, color.b, color.a);
+        SDL_RenderClear(ren);
+
+        if (had_old_clip) {
+            SDL_SetRenderClipRect(ren, &old_clip);
+        } else {
+            SDL_SetRenderClipRect(ren, nullptr);
+        }
+
+        SDL_SetRenderTarget(ren, prev);
     }
 
     void DrawOn(dr4::Texture &texture) const override {
@@ -363,16 +412,41 @@ public:
         float sw = 0.f, sh = 0.f;
         SDL_GetTextureSize(srcTex, &sw, &sh);
 
-        SDL_FRect srcRect{
+        SDL_FRect dstRect{
             src->pos_.x + dst->zero_.x,
             src->pos_.y + dst->zero_.y,
             sw, sh
         };
 
         SDL_Texture *prev = SDL_GetRenderTarget(ren);
+
+        SDL_Rect old_clip;
+        const bool had_old_clip = SDL_GetRenderClipRect(ren, &old_clip);
+
         SDL_SetRenderTarget(ren, dstTex);
+
+        if (dst->HasClipRect()) {
+            dr4::Rect2f cr = dst->ClipRect();
+            SDL_Rect r{
+                static_cast<int>(cr.pos.x),
+                static_cast<int>(cr.pos.y),
+                static_cast<int>(cr.size.x),
+                static_cast<int>(cr.size.y)
+            };
+            SDL_SetRenderClipRect(ren, &r);
+        } else {
+            SDL_SetRenderClipRect(ren, nullptr);
+        }
+
         SDL_SetTextureBlendMode(srcTex, SDL_BLENDMODE_BLEND);
-        SDL_RenderTexture(ren, srcTex, nullptr, &srcRect);
+        SDL_RenderTexture(ren, srcTex, nullptr, &dstRect);
+
+        if (had_old_clip) {
+            SDL_SetRenderClipRect(ren, &old_clip);
+        } else {
+            SDL_SetRenderClipRect(ren, nullptr);
+        }
+
         SDL_SetRenderTarget(ren, prev);
     }
 
@@ -394,16 +468,43 @@ inline void SwuixImage::DrawOn(dr4::Texture &texture) const {
     SDL_DestroySurface(surf);
     if (!tmp) return;
 
+    SDL_Renderer *ren = dst->GetSDLRenderer();
+
     SDL_FRect dst_rect = frect(this->GetPos().x + dst->GetZero().x,
                                this->GetPos().y + dst->GetZero().y,
                                static_cast<float>(Width()),
                                static_cast<float>(Height()));
 
-    SDL_Texture *prev = SDL_GetRenderTarget(dst->GetSDLRenderer());
-    SDL_SetRenderTarget(dst->GetSDLRenderer(), dst->GetSDLTexture());
+    SDL_Texture *prev = SDL_GetRenderTarget(ren);
+
+    SDL_Rect old_clip;
+    const bool had_old_clip = SDL_GetRenderClipRect(ren, &old_clip);
+
+    SDL_SetRenderTarget(ren, dst->GetSDLTexture());
+
+    if (dst->HasClipRect()) {
+        dr4::Rect2f cr = dst->ClipRect();
+        SDL_Rect r{
+            static_cast<int>(cr.pos.x),
+            static_cast<int>(cr.pos.y),
+            static_cast<int>(cr.size.x),
+            static_cast<int>(cr.size.y)
+        };
+        SDL_SetRenderClipRect(ren, &r);
+    } else {
+        SDL_SetRenderClipRect(ren, nullptr);
+    }
+
     SDL_SetTextureBlendMode(tmp, SDL_BLENDMODE_BLEND);
-    SDL_RenderTexture(dst->GetSDLRenderer(), tmp, nullptr, &dst_rect);
-    SDL_SetRenderTarget(dst->GetSDLRenderer(), prev);
+    SDL_RenderTexture(ren, tmp, nullptr, &dst_rect);
+
+    if (had_old_clip) {
+        SDL_SetRenderClipRect(ren, &old_clip);
+    } else {
+        SDL_SetRenderClipRect(ren, nullptr);
+    }
+
+    SDL_SetRenderTarget(ren, prev);
     SDL_DestroyTexture(tmp);
 }
 
@@ -411,9 +512,27 @@ inline void SwuixRectangle::DrawOn(dr4::Texture &texture) const {
     SwuixTexture *dst = dynamic_cast<SwuixTexture*>(&texture);
     if (!dst) return;
 
-    SDL_Texture *prev = SDL_GetRenderTarget(dst->GetSDLRenderer());
-    SDL_SetRenderTarget(dst->GetSDLRenderer(), dst->GetSDLTexture());
-    SDL_SetRenderDrawBlendMode(dst->GetSDLRenderer(), SDL_BLENDMODE_BLEND);
+    SDL_Renderer *ren = dst->GetSDLRenderer();
+    SDL_Texture  *prev = SDL_GetRenderTarget(ren);
+
+    SDL_Rect old_clip;
+    const bool had_old_clip = SDL_GetRenderClipRect(ren, &old_clip);
+
+    SDL_SetRenderTarget(ren, dst->GetSDLTexture());
+    SDL_SetRenderDrawBlendMode(ren, SDL_BLENDMODE_BLEND);
+
+    if (dst->HasClipRect()) {
+        dr4::Rect2f cr = dst->ClipRect();
+        SDL_Rect r{
+            static_cast<int>(cr.pos.x),
+            static_cast<int>(cr.pos.y),
+            static_cast<int>(cr.size.x),
+            static_cast<int>(cr.size.y)
+        };
+        SDL_SetRenderClipRect(ren, &r);
+    } else {
+        SDL_SetRenderClipRect(ren, nullptr);
+    }
 
     const float x = pos_.x + dst->GetZero().x;
     const float y = pos_.y + dst->GetZero().y;
@@ -421,25 +540,31 @@ inline void SwuixRectangle::DrawOn(dr4::Texture &texture) const {
     const float h = size_.y;
 
     if (fill_.a != 0 && w > 0 && h > 0) {
-        SDL_SetRenderDrawColor(dst->GetSDLRenderer(), fill_.r, fill_.g, fill_.b, fill_.a);
+        SDL_SetRenderDrawColor(ren, fill_.r, fill_.g, fill_.b, fill_.a);
         SDL_FRect r = frect(x, y, w, h);
-        SDL_RenderFillRect(dst->GetSDLRenderer(), &r);
+        SDL_RenderFillRect(ren, &r);
     }
 
     if (border_t_ > 0.0f && border_.a != 0 && w > 0 && h > 0) {
-        SDL_SetRenderDrawColor(dst->GetSDLRenderer(), border_.r, border_.g, border_.b, border_.a);
+        SDL_SetRenderDrawColor(ren, border_.r, border_.g, border_.b, border_.a);
         const float t    = border_t_;
         SDL_FRect top    = frect(x,         y,         w, t);
         SDL_FRect bottom = frect(x,         y + h - t, w, t);
         SDL_FRect left   = frect(x,         y,         t, h);
         SDL_FRect right  = frect(x + w - t, y,         t, h);
-        if (top.w    > 0 && top.h    > 0) SDL_RenderFillRect(dst->GetSDLRenderer(), &top);
-        if (bottom.w > 0 && bottom.h > 0) SDL_RenderFillRect(dst->GetSDLRenderer(), &bottom);
-        if (left.w   > 0 && left.h   > 0) SDL_RenderFillRect(dst->GetSDLRenderer(), &left);
-        if (right.w  > 0 && right.h  > 0) SDL_RenderFillRect(dst->GetSDLRenderer(), &right);
+        if (top.w    > 0 && top.h    > 0) SDL_RenderFillRect(ren, &top);
+        if (bottom.w > 0 && bottom.h > 0) SDL_RenderFillRect(ren, &bottom);
+        if (left.w   > 0 && left.h   > 0) SDL_RenderFillRect(ren, &left);
+        if (right.w  > 0 && right.h  > 0) SDL_RenderFillRect(ren, &right);
     }
 
-    SDL_SetRenderTarget(dst->GetSDLRenderer(), prev);
+    if (had_old_clip) {
+        SDL_SetRenderClipRect(ren, &old_clip);
+    } else {
+        SDL_SetRenderClipRect(ren, nullptr);
+    }
+
+    SDL_SetRenderTarget(ren, prev);
 }
 
 inline void SwuixText::DrawOn(dr4::Texture &texture) const {
@@ -475,10 +600,36 @@ inline void SwuixText::DrawOn(dr4::Texture &texture) const {
         default:               break;
     }
 
-    SDL_Texture *prev = SDL_GetRenderTarget(dst->GetSDLRenderer());
-    SDL_SetRenderTarget(dst->GetSDLRenderer(), dst->GetSDLTexture());
+    SDL_Renderer *ren = dst->GetSDLRenderer();
+    SDL_Texture  *prev = SDL_GetRenderTarget(ren);
+
+    SDL_Rect old_clip;
+    const bool had_old_clip = SDL_GetRenderClipRect(ren, &old_clip);
+
+    SDL_SetRenderTarget(ren, dst->GetSDLTexture());
+
+    if (dst->HasClipRect()) {
+        dr4::Rect2f cr = dst->ClipRect();
+        SDL_Rect r{
+            static_cast<int>(cr.pos.x),
+            static_cast<int>(cr.pos.y),
+            static_cast<int>(cr.size.x),
+            static_cast<int>(cr.size.y)
+        };
+        SDL_SetRenderClipRect(ren, &r);
+    } else {
+        SDL_SetRenderClipRect(ren, nullptr);
+    }
+
     TTF_DrawRendererText(tt, draw_x, draw_y);
-    SDL_SetRenderTarget(dst->GetSDLRenderer(), prev);
+
+    if (had_old_clip) {
+        SDL_SetRenderClipRect(ren, &old_clip);
+    } else {
+        SDL_SetRenderClipRect(ren, nullptr);
+    }
+
+    SDL_SetRenderTarget(ren, prev);
 
     TTF_DestroyText(tt);
     if (prev_px != static_cast<int>(font_size_)) TTF_SetFontSize(use, prev_px);
@@ -493,18 +644,42 @@ inline void SwuixLine::DrawOn(dr4::Texture &texture) const {
     const float x2 = pos_.x + end_.x   + dst->GetZero().x;
     const float y2 = pos_.y + end_.y   + dst->GetZero().y;
 
-    SDL_Texture *prev = SDL_GetRenderTarget(dst->GetSDLRenderer());
-    SDL_SetRenderTarget(dst->GetSDLRenderer(), dst->GetSDLTexture());
+    SDL_Renderer *ren = dst->GetSDLRenderer();
+    SDL_Texture  *prev = SDL_GetRenderTarget(ren);
+
+    SDL_Rect old_clip;
+    const bool had_old_clip = SDL_GetRenderClipRect(ren, &old_clip);
+
+    SDL_SetRenderTarget(ren, dst->GetSDLTexture());
+
+    if (dst->HasClipRect()) {
+        dr4::Rect2f cr = dst->ClipRect();
+        SDL_Rect r{
+            static_cast<int>(cr.pos.x),
+            static_cast<int>(cr.pos.y),
+            static_cast<int>(cr.size.x),
+            static_cast<int>(cr.size.y)
+        };
+        SDL_SetRenderClipRect(ren, &r);
+    } else {
+        SDL_SetRenderClipRect(ren, nullptr);
+    }
 
     if (thickness_ > 1.0f) {
-        thickLineRGBA(dst->GetSDLRenderer(), x1, y1, x2, y2, thickness_,
+        thickLineRGBA(ren, x1, y1, x2, y2, thickness_,
                       color_.r, color_.g, color_.b, color_.a);
     } else {
-        lineRGBA(dst->GetSDLRenderer(), x1, y1, x2, y2,
+        lineRGBA(ren, x1, y1, x2, y2,
                  color_.r, color_.g, color_.b, color_.a);
     }
 
-    SDL_SetRenderTarget(dst->GetSDLRenderer(), prev);
+    if (had_old_clip) {
+        SDL_SetRenderClipRect(ren, &old_clip);
+    } else {
+        SDL_SetRenderClipRect(ren, nullptr);
+    }
+
+    SDL_SetRenderTarget(ren, prev);
 }
 
 inline void SwuixCircle::DrawOn(dr4::Texture &texture) const {
@@ -515,12 +690,30 @@ inline void SwuixCircle::DrawOn(dr4::Texture &texture) const {
     const float cy = center_.y + dst->GetZero().y;
     const int   r  = std::max(0, static_cast<int>(std::floor(radius_)));
 
-    SDL_Texture *prev = SDL_GetRenderTarget(dst->GetSDLRenderer());
-    SDL_SetRenderTarget(dst->GetSDLRenderer(), dst->GetSDLTexture());
+    SDL_Renderer *ren = dst->GetSDLRenderer();
+    SDL_Texture  *prev = SDL_GetRenderTarget(ren);
+
+    SDL_Rect old_clip;
+    const bool had_old_clip = SDL_GetRenderClipRect(ren, &old_clip);
+
+    SDL_SetRenderTarget(ren, dst->GetSDLTexture());
+
+    if (dst->HasClipRect()) {
+        dr4::Rect2f cr = dst->ClipRect();
+        SDL_Rect clip{
+            static_cast<int>(cr.pos.x),
+            static_cast<int>(cr.pos.y),
+            static_cast<int>(cr.size.x),
+            static_cast<int>(cr.size.y)
+        };
+        SDL_SetRenderClipRect(ren, &clip);
+    } else {
+        SDL_SetRenderClipRect(ren, nullptr);
+    }
 
     // Fill
     if (fill_.a != 0) {
-        filledCircleRGBA(dst->GetSDLRenderer(),
+        filledCircleRGBA(ren,
                          cx, cy, r,
                          fill_.r, fill_.g, fill_.b, fill_.a);
     }
@@ -530,11 +723,17 @@ inline void SwuixCircle::DrawOn(dr4::Texture &texture) const {
         const int t = std::max(1, static_cast<int>(std::floor(border_t_)));
         for (int i = 0; i < t; ++i) {
             const int rr = std::max(0, r - i);
-            circleRGBA(dst->GetSDLRenderer(),
+            circleRGBA(ren,
                        cx, cy, rr,
                        border_.r, border_.g, border_.b, border_.a);
         }
     }
 
-    SDL_SetRenderTarget(dst->GetSDLRenderer(), prev);
+    if (had_old_clip) {
+        SDL_SetRenderClipRect(ren, &old_clip);
+    } else {
+        SDL_SetRenderClipRect(ren, nullptr);
+    }
+
+    SDL_SetRenderTarget(ren, prev);
 }

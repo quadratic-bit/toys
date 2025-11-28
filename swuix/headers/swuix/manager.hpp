@@ -128,7 +128,7 @@ class EventManager {
         case dr4::Event::Type::MOUSE_WHEEL: {
             state->mouse.pos = Vec2f(ev.mouseWheel.pos.x, ev.mouseWheel.pos.y);
             syncMousePos(state->mouse.pos, root);
-            Vec2f scrolled = Vec2f(0, ev.mouseWheel.deltaY);
+            Vec2f scrolled = Vec2f(0, ev.mouseWheel.delta.y);
             MouseWheelEvent we(scrolled);
             if (!state->mouse.wheel_target) break;
             Widget *capturer = state->mouse.wheel_target;
