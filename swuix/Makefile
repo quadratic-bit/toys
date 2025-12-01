@@ -114,6 +114,6 @@ $(PLUGIN_SO): $(PLUGIN_SRC) | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -fPIC $(SDL_CFLAGS) -shared -o $@ $< $(SDL_LDLIBS) $(RPATH_ORIGIN) -Wl,-soname,libswuix_sdl3.so
 
 $(PP_LINE_SO): $(PP_LINE_SRC) | build
-	$(CXX) $(CXXFLAGS) -fPIC $(SDL_CFLAGS) -shared -o $@ $< $(SDL_LDLIBS)
+	$(CXX) -std=c++17 $(CXXFLAGS_release) -fPIC -shared -o $@ $<
 
 -include $(LIB_OBJS:.o=.d)
