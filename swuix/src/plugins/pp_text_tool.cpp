@@ -2,6 +2,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <cmath>
 
 #include <pp/shape.hpp>
 #include <pp/canvas.hpp>
@@ -36,6 +37,7 @@ class TextShape final : public pp::Shape {
 
     bool  selected_{false};
     bool  editing_{false};
+    bool  caretVisible_{true};
 
     mutable bool  boundsDirty_{true};
     mutable Vec2f cachedBounds_{0.f, 0.f}; // width, height
@@ -161,6 +163,8 @@ public:
         cachedBounds_ = t->GetBounds();
         boundsDirty_  = false;
 
+        auto theme = canvas_->GetControlsTheme();
+
         if (selected_) {
             Vec2f size = cachedBounds_;
 
@@ -171,8 +175,6 @@ public:
             if (r) {
                 r->SetPos(pos_);
                 r->SetSize(size);
-
-                auto theme = canvas_->GetControlsTheme();
 
                 dr4::Color transparent(0, 0, 0, 0);
                 r->SetFillColor(transparent);
@@ -185,6 +187,24 @@ public:
                 r->SetBorderColor(borderColor);
 
                 r->DrawOn(tex);
+            }
+        }
+
+        if (editing_ && caretVisible_) {
+            Vec2f size = cachedBounds_;
+            if (size.y <= 0.f) size.y = fontSize_;
+
+            float caretX = pos_.x + size.x;
+            float caretTop = pos_.y;
+            float caretBottom = pos_.y + size.y;
+
+            std::unique_ptr<dr4::Line> caret(wnd->CreateLine());
+            if (caret) {
+                caret->SetStart({caretX, caretTop});
+                caret->SetEnd({caretX, caretBottom});
+                caret->SetColor(theme.textColor);
+                caret->SetThickness(1.0f);
+                caret->DrawOn(tex);
             }
         }
     }
@@ -220,6 +240,23 @@ public:
         return true;
     }
 
+    bool OnIdle(const pp::IdleEvent &evt) override {
+        if (!editing_) return false;
+
+        // 0.5s on, 0.5s off
+        constexpr double halfPeriod = 0.5; // seconds
+        double t = evt.absTime;
+        bool visible = std::fmod(t, 2.0 * halfPeriod) < halfPeriod;
+
+        if (visible != caretVisible_) {
+            caretVisible_ = visible;
+            if (canvas_) {
+                canvas_->ShapeChanged(this);
+            }
+        }
+        return true;
+    }
+
     void OnSelect() override {
         selected_ = true;
     }
@@ -228,6 +265,7 @@ public:
         selected_ = false;
         editing_  = false;
         dragging_ = false;
+        caretVisible_ = true;
     }
 
     void SetEditing(bool e) {

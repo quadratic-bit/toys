@@ -228,4 +228,17 @@ public:
 
         return PROPAGATE;
     }
+
+    DispatchResult onIdle(DispatcherCtx, const IdleEvent *e) override {
+        pp::IdleEvent idle{state->window->GetTime(), e->dt_s};
+
+        if (activeTool_) {
+            activeTool_->OnIdle(idle);
+        }
+
+        for (auto &s : shapes_) {
+            s->OnIdle(idle);
+        }
+        return PROPAGATE;
+    }
 };
