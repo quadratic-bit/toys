@@ -1,6 +1,7 @@
 #pragma once
 #include <SDL3/SDL_mutex.h>
 #include <atomic>
+#include <cstdio>
 #include <memory>
 #include <swuix/widgets/titled.hpp>
 #include <swuix/state.hpp>
@@ -341,6 +342,7 @@ public:
     }
 
     void enableRender()  {
+        state->unfocus();
         destroyChild(canvas);
         alive = true;
     }
@@ -351,11 +353,15 @@ public:
         auto toolPlugins = mgr->GetAllOfType<cum::PPToolPlugin>();
         for (auto *pl : toolPlugins) {
             auto created = pl->CreateTools(canvas);
-            for (auto &t : created) tools.emplace_back(std::move(t));
+            for (auto &t : created) {
+                printf("[debug] added tool %s\n", t->Name().data());
+                tools.emplace_back(std::move(t));
+            }
         }
         canvas->setTools(std::move(tools));
         canvas->setActiveTool(0);
         appendChild(canvas);
+        state->focus(canvas);
         alive = false;
     }
 

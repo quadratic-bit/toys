@@ -1,0 +1,517 @@
+#include <cstdio>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include <pp/shape.hpp>
+#include <pp/canvas.hpp>
+#include <pp/tool.hpp>
+
+#include <dr4/event.hpp>
+#include <dr4/math/vec2.hpp>
+#include <dr4/math/color.hpp>
+#include <dr4/texture.hpp>
+
+#include <cum/ifc/pp.hpp>
+#include <cum/plugin.hpp>
+
+#include "../swuix/pp_text_font.inl"
+const size_t g_TextToolFontSize = g_TextToolFontData_len;
+
+namespace {
+
+using dr4::Vec2f;
+using dr4::Color;
+
+class TextShape final : public pp::Shape {
+    pp::Canvas      *canvas_{nullptr};
+    Vec2f            pos_{0.f, 0.f};
+    std::string      text_;
+    Color            color_{255, 255, 255, 255};
+    float            fontSize_{16.f};
+    const dr4::Font *font_{nullptr};
+
+    bool  dragging_{false};
+    Vec2f dragOffset_{0.f, 0.f};
+
+    bool  selected_{false};
+    bool  editing_{false};
+
+    mutable bool  boundsDirty_{true};
+    mutable Vec2f cachedBounds_{0.f, 0.f}; // width, height
+
+    Vec2f measureText() const {
+        if (!canvas_) return cachedBounds_;
+        if (!boundsDirty_) return cachedBounds_;
+
+        dr4::Window *wnd = canvas_->GetWindow();
+        if (!wnd) return cachedBounds_;
+
+        std::unique_ptr<dr4::Text> t(wnd->CreateText());
+        if (!t) return cachedBounds_;
+
+        if (font_) t->SetFont(font_);
+        t->SetText(text_);
+        t->SetFontSize(fontSize_);
+        t->SetVAlign(dr4::Text::VAlign::TOP);
+
+        cachedBounds_ = t->GetBounds();
+        boundsDirty_  = false;
+        return cachedBounds_;
+    }
+
+    void markDirty() {
+        boundsDirty_ = true;
+        if (canvas_) {
+            canvas_->ShapeChanged(this);
+        }
+    }
+
+    static bool isInside(Vec2f p, Vec2f origin, Vec2f size) {
+        const float x0 = origin.x;
+        const float y0 = origin.y;
+        const float x1 = origin.x + size.x;
+        const float y1 = origin.y + size.y;
+        return (p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1);
+    }
+
+public:
+    TextShape(pp::Canvas *canvas,
+              Vec2f pos,
+              Color color,
+              float fontSize,
+              const dr4::Font *font,
+              std::string initialText = {})
+        : canvas_(canvas)
+        , pos_(pos)
+        , text_(std::move(initialText))
+        , color_(color)
+        , fontSize_(fontSize)
+        , font_(font) {}
+
+    void AppendUtf8(const char *utf8) {
+        if (!utf8) return;
+        text_ += utf8;
+        markDirty();
+    }
+
+    void BackspaceUtf8() {
+        if (text_.empty()) return;
+
+        std::size_t i = text_.size();
+        do {
+            --i;
+            unsigned char c = static_cast<unsigned char>(text_[i]);
+            if ((c & 0xC0u) != 0x80u) {
+                break;
+            }
+        } while (i > 0);
+
+        text_.erase(i);
+        markDirty();
+    }
+
+    const std::string &GetText() const {
+        return text_;
+    }
+
+    void SetColor(Color c) {
+        color_ = c;
+        markDirty();
+    }
+
+    void SetFontSize(float s) {
+        fontSize_ = s;
+        markDirty();
+    }
+
+    bool HitTest(Vec2f p) const {
+        Vec2f size = measureText();
+        if (size.x <= 0.f) size.x = fontSize_ * 0.5f;
+        if (size.y <= 0.f) size.y = fontSize_;
+        return isInside(p, pos_, size);
+    }
+
+    void SetPos(Vec2f pos) override {
+        pos_ = pos;
+        markDirty();
+    }
+
+    Vec2f GetPos() const override {
+        return pos_;
+    }
+
+    void DrawOn(dr4::Texture &tex) const override {
+        if (!canvas_) return;
+        dr4::Window *wnd = canvas_->GetWindow();
+        if (!wnd) return;
+
+        std::unique_ptr<dr4::Text> t(wnd->CreateText());
+        if (!t) return;
+
+        if (font_) t->SetFont(font_);
+        t->SetText(text_);
+        t->SetColor(color_);
+        t->SetFontSize(fontSize_);
+        t->SetVAlign(dr4::Text::VAlign::TOP);
+        t->SetPos(pos_);
+
+        t->DrawOn(tex);
+
+        cachedBounds_ = t->GetBounds();
+        boundsDirty_  = false;
+
+        if (selected_) {
+            Vec2f size = cachedBounds_;
+
+            if (size.x <= 0.f) size.x = fontSize_ * 0.5f;
+            if (size.y <= 0.f) size.y = fontSize_;
+
+            std::unique_ptr<dr4::Rectangle> r(wnd->CreateRectangle());
+            if (r) {
+                r->SetPos(pos_);
+                r->SetSize(size);
+
+                auto theme = canvas_->GetControlsTheme();
+
+                dr4::Color transparent(0, 0, 0, 0);
+                r->SetFillColor(transparent);
+                r->SetBorderThickness(1.0f);
+
+                dr4::Color borderColor =
+                    editing_ ? theme.lineColor   // red
+                             : theme.textColor;  // white
+
+                r->SetBorderColor(borderColor);
+
+                r->DrawOn(tex);
+            }
+        }
+    }
+
+    bool OnMouseDown(const dr4::Event::MouseButton &evt) override {
+        using MBT = dr4::MouseButtonType;
+        if (evt.button != MBT::LEFT) return false;
+
+        Vec2f size = measureText();
+        if (size.x <= 0.f) size.x = fontSize_ * 0.5f;
+        if (size.y <= 0.f) size.y = fontSize_;
+
+        if (!isInside(evt.pos, pos_, size))
+            return false;
+
+        dragging_   = true;
+        dragOffset_ = evt.pos - pos_;
+        return true;
+    }
+
+    bool OnMouseMove(const dr4::Event::MouseMove &evt) override {
+        if (!dragging_) return false;
+        SetPos(evt.pos - dragOffset_);
+        return true;
+    }
+
+    bool OnMouseUp(const dr4::Event::MouseButton &evt) override {
+        using MBT = dr4::MouseButtonType;
+        if (evt.button != MBT::LEFT) return false;
+        if (!dragging_) return false;
+
+        dragging_ = false;
+        return true;
+    }
+
+    void OnSelect() override {
+        selected_ = true;
+    }
+
+    void OnDeselect() override {
+        selected_ = false;
+        editing_  = false;
+        dragging_ = false;
+    }
+
+    void SetEditing(bool e) {
+        if (editing_ == e) return;
+        editing_ = e;
+        if (canvas_) {
+            canvas_->ShapeChanged(this);
+        }
+    }
+};
+
+class TextTool final : public pp::Tool {
+    pp::Canvas *canvas_{nullptr};
+    TextShape  *current_{nullptr};  // owned by canvas
+    TextShape  *dragging_{nullptr};
+    bool        editing_{false};
+
+    std::unique_ptr<dr4::Font> font_;
+
+    dr4::Window *window() const {
+        return canvas_ ? canvas_->GetWindow() : nullptr;
+    }
+
+    const dr4::Font *ensureFont() {
+        if (font_) return font_.get();
+
+        auto *w = window();
+        if (!w) return nullptr;
+
+        font_.reset(w->CreateFont());
+        if (!font_) return nullptr;
+
+        font_->LoadFromBuffer(g_TextToolFontData, g_TextToolFontSize);
+        return font_.get();
+    }
+
+public:
+    explicit TextTool(pp::Canvas *cvs) : canvas_(cvs) {}
+
+    // ---- metadata ----
+    std::string_view Icon() const override {
+        static constexpr std::string_view icon = u8"󰊄";
+        return icon;
+    }
+
+    std::string_view Name() const override {
+        static constexpr std::string_view name = "Text";
+        return name;
+    }
+
+    bool IsCurrentlyDrawing() const override {
+        return editing_;
+    }
+
+    void OnStart() override {}
+
+    void OnEnd() override {
+        if (editing_ && current_) {
+            current_->SetEditing(false);
+        }
+        if (editing_) {
+            if (current_ && current_->GetText().empty()) {
+                canvas_->DelShape(current_);
+            }
+            editing_ = false;
+            current_ = nullptr;
+        }
+
+        dragging_ = nullptr;
+
+        if (auto *w = window()) {
+            w->StopTextInput();
+        }
+    }
+
+    void OnBreak() override {
+        if (editing_ && current_) {
+            current_->SetEditing(false);
+        }
+        if (editing_) {
+            if (current_ && current_->GetText().empty()) {
+                canvas_->DelShape(current_);
+            }
+            editing_ = false;
+            current_ = nullptr;
+        }
+
+        dragging_ = nullptr;
+
+        if (auto *w = window()) {
+            w->StopTextInput();
+        }
+    }
+
+    bool OnMouseDown(const dr4::Event::MouseButton &evt) override {
+        using MBT = dr4::MouseButtonType;
+
+        if (evt.button != MBT::LEFT) return false;
+
+        if (!editing_) {
+            if (auto *selected = dynamic_cast<TextShape*>(canvas_->GetSelectedShape())) {
+                if (selected->HitTest(evt.pos)) {
+                    if (selected->OnMouseDown(evt)) {
+                        dragging_ = selected;
+                        return true; // event consumed by move
+                    }
+                }
+            }
+        }
+
+        auto theme = canvas_->GetControlsTheme();
+
+        const dr4::Font *font = ensureFont();
+
+        auto *shape = new TextShape(canvas_,
+                                    evt.pos,
+                                    theme.textColor,
+                                    theme.baseFontSize,
+                                    font);
+
+        canvas_->AddShape(shape);
+        canvas_->SetSelectedShape(shape);
+        canvas_->ShapeChanged(shape);
+
+        current_  = shape;
+        editing_  = true;
+        shape->SetEditing(true);
+        dragging_ = nullptr;
+
+        if (auto *w = window()) {
+            w->StartTextInput();
+        }
+
+        return true;
+    }
+
+    bool OnMouseMove(const dr4::Event::MouseMove &evt) override {
+        if (dragging_) {
+            dragging_->OnMouseMove(evt);
+            return true;
+        }
+        return false;
+    }
+
+    bool OnMouseUp(const dr4::Event::MouseButton &evt) override {
+        using MBT = dr4::MouseButtonType;
+        if (evt.button != MBT::LEFT) return false;
+
+        if (dragging_) {
+            dragging_->OnMouseUp(evt);
+            dragging_ = nullptr;
+            return true;
+        }
+
+        return false;
+    }
+
+    bool OnText(const dr4::Event::TextEvent &evt) override {
+        if (!editing_ || !current_) return false;
+        current_->AppendUtf8(evt.unicode);
+        return true;
+    }
+
+    bool OnKeyDown(const dr4::Event::KeyEvent &evt) override {
+        switch (evt.sym) {
+        case dr4::KEYCODE_DELETE: {
+            auto *shape = dynamic_cast<TextShape*>(canvas_->GetSelectedShape());
+            if (!shape) break;
+
+            if (editing_ && current_ == shape) {
+                shape->SetEditing(false);
+                editing_ = false;
+                current_ = nullptr;
+                dragging_ = nullptr;
+                if (auto *w = window()) {
+                    w->StopTextInput();
+                }
+            }
+
+            canvas_->DelShape(shape);
+            return true;
+        }
+
+        case dr4::KEYCODE_ESCAPE: {
+            // stop editing, if any
+            if (editing_) {
+                if (current_) {
+                    current_->SetEditing(false);
+                }
+                editing_ = false;
+                current_ = nullptr;
+                dragging_ = nullptr;
+                if (auto *w = window()) {
+                    w->StopTextInput();
+                }
+            }
+
+            if (canvas_->GetSelectedShape()) {
+                canvas_->SetSelectedShape(nullptr);
+                return true;
+            }
+
+            return false;
+        }
+
+        default:
+            break;
+        }
+
+        if (!editing_) {
+            if (evt.sym == dr4::KEYCODE_ENTER || evt.sym == dr4::KEYCODE_F2) {
+                if (auto *shape = dynamic_cast<TextShape*>(canvas_->GetSelectedShape())) {
+                    current_ = shape;
+                    editing_ = true;
+                    shape->SetEditing(true);
+                    if (auto *w = window()) {
+                        w->StartTextInput();
+                    }
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        if (!current_) return false;
+
+        switch (evt.sym) {
+            case dr4::KEYCODE_BACKSPACE:
+                current_->BackspaceUtf8();
+                return true;
+
+            case dr4::KEYCODE_ENTER:
+                if (current_) {
+                    current_->SetEditing(false);
+                }
+                editing_ = false;
+                current_ = nullptr;
+                if (auto *w = window()) {
+                    w->StopTextInput();
+                }
+                return true;
+
+            default:
+                break;
+        }
+
+        return false;
+    }
+};
+
+class TextToolPlugin : public cum::PPToolPlugin {
+public:
+    std::string_view GetIdentifier() const override {
+        return "pp.tools.text";
+    }
+
+    std::string_view GetName() const override {
+        return "Text drawing tool";
+    }
+
+    std::string_view GetDescription() const override {
+        return "Tool for placing editable, draggable text on a pp::Canvas.";
+    }
+
+    std::vector<std::string_view> GetDependencies() const override {
+        return {};
+    }
+
+    std::vector<std::string_view> GetConflicts() const override {
+        return {};
+    }
+
+    void AfterLoad() override {}
+
+    std::vector<std::unique_ptr<pp::Tool>> CreateTools(pp::Canvas *cvs) override {
+        std::vector<std::unique_ptr<pp::Tool>> tools;
+        tools.emplace_back(std::make_unique<TextTool>(cvs));
+        return tools;
+    }
+};
+
+} // namespace
+
+extern "C" cum::Plugin *CreatePlugin();
+extern "C" cum::Plugin *CreatePlugin() {
+    return new TextToolPlugin();
+}

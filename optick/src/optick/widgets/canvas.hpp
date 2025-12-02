@@ -2,13 +2,16 @@
 #include <cstdio>
 #include <memory>
 
+#include "dr4/keycodes.hpp"
+#include "extern/window.hpp"
+#include "swuix/traits/focusable.hpp"
 #include "swuix/widget.hpp"
 #include "swuix/state.hpp"
 
 #include "pp/canvas.hpp"
 #include "pp/tool.hpp"
 
-class Canvas final : public Widget, public pp::Canvas {
+class Canvas final : public pp::Canvas, public FocusableWidget {
     // owned by this canvas
     std::vector<std::unique_ptr<pp::Shape>> shapes_;
     pp::Shape *selected_{nullptr};
@@ -21,7 +24,7 @@ class Canvas final : public Widget, public pp::Canvas {
 
 public:
     Canvas(Rect2f frame, Widget *p, State *s)
-        : Widget(frame, p, s)
+        : Widget(frame, p, s), FocusableWidget(frame, p, s)
     {
         theme_.shapeColor   = dr4::Color(255, 255, 255, 255);
         theme_.lineColor    = dr4::Color(255, 0,   0,   255);
@@ -109,11 +112,23 @@ public:
 
     DispatchResult onMouseDown(DispatcherCtx ctx, const MouseDownEvent *) override {
         if (state->mouse.target != this) return PROPAGATE;
-        if (!activeTool_) return PROPAGATE;
+        state->focus(this);
 
         dr4::Event::MouseButton mev{};
         mev.pos    = ctx.mouse_rel;
         mev.button = dr4::MouseButtonType::LEFT;
+
+        // give shapes a chance first (topmost first)
+        for (auto it = shapes_.rbegin(); it != shapes_.rend(); ++it) {
+            pp::Shape *shape = it->get();
+            if (shape->OnMouseDown(mev)) {
+                SetSelectedShape(shape);
+                return CONSUME;
+            }
+        }
+
+        // if no shape grabbed it, let the active tool handle it
+        if (!activeTool_) return PROPAGATE;
 
         if (activeTool_->OnMouseDown(mev))
             return CONSUME;
@@ -123,14 +138,23 @@ public:
 
     DispatchResult onMouseUp(DispatcherCtx ctx, const MouseUpEvent *) override {
         if (state->mouse.target != this) return PROPAGATE;
-        if (!activeTool_) return PROPAGATE;
 
         dr4::Event::MouseButton mev{};
         mev.pos    = ctx.mouse_rel;
         mev.button = dr4::MouseButtonType::LEFT;
 
-        if (activeTool_->OnMouseUp(mev))
-            return CONSUME;
+        if (activeTool_) {
+            requestRedraw();
+            if (activeTool_->OnMouseUp(mev))
+                return CONSUME;
+        }
+
+        // finishing drags
+        if (selected_) {
+            requestRedraw();
+            if (selected_->OnMouseUp(mev))
+                return CONSUME;
+        }
 
         return PROPAGATE;
     }
@@ -147,6 +171,61 @@ public:
             }
         }
 
+        if (selected_) {
+            requestRedraw();
+            if (selected_->OnMouseMove(mev)) {
+                Widget::onMouseMove(ctx, e);
+                return CONSUME;
+            }
+        }
+
         return Widget::onMouseMove(ctx, e);
+    }
+
+    DispatchResult onKeyDown(DispatcherCtx, const KeyDownEvent *e) override {
+        if (state->getFocus() != this) return PROPAGATE;
+        dr4::Event::KeyEvent kev{};
+        kev.sym = (dr4::KeyCode)e->keycode;
+        kev.mods = e->mods;
+
+        if (activeTool_) {
+            requestRedraw();
+            if (activeTool_->OnKeyDown(kev)) {
+                return CONSUME;
+            }
+        }
+
+        return PROPAGATE;
+    }
+
+    DispatchResult onKeyUp(DispatcherCtx, const KeyUpEvent *e) override {
+        if (state->getFocus() != this) return PROPAGATE;
+        dr4::Event::KeyEvent kev{};
+        kev.sym = MapSDLKey(e->keycode);
+        kev.mods = e->mods;
+
+        if (activeTool_) {
+            requestRedraw();
+            if (activeTool_->OnKeyUp(kev)) {
+                return CONSUME;
+            }
+        }
+
+        return PROPAGATE;
+    }
+
+    DispatchResult onInput(DispatcherCtx, const InputEvent *e) override {
+        if (state->getFocus() != this) return PROPAGATE;
+        dr4::Event::TextEvent tev{};
+        tev.unicode = e->text;
+
+        if (activeTool_) {
+            requestRedraw();
+            if (activeTool_->OnText(tev)) {
+                return CONSUME;
+            }
+        }
+
+        return PROPAGATE;
     }
 };

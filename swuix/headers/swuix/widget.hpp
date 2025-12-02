@@ -105,7 +105,7 @@ struct InputEvent : Event {
 };
 
 struct KeyEvent : Event {
-    uint32_t keycode;
+    int keycode;
 
     uint16_t mods;  // bitmask
 
