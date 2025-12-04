@@ -400,6 +400,48 @@ public:
         SDL_SetRenderTarget(ren, prev);
     }
 
+    dr4::Image *GetImage() const override {
+        ensureTarget_();
+
+        SDL_Renderer *ren        = renderer_;
+        SDL_Texture  *prevTarget = SDL_GetRenderTarget(ren);
+
+        SDL_SetRenderTarget(ren, tex_);
+        SDL_Surface *surf = SDL_RenderReadPixels(ren, nullptr);
+        SDL_SetRenderTarget(ren, prevTarget);
+
+        if (!surf)
+            return nullptr;
+
+        SDL_Surface *conv = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_RGBA32);
+        SDL_DestroySurface(surf);
+
+        if (!conv)
+            return nullptr;
+
+        auto *img = new SwuixImage();
+        img->SetSize(dr4::Vec2f(static_cast<float>(conv->w), static_cast<float>(conv->h)));
+
+        void *dstPixels = const_cast<void*>(img->Pixels());
+        if (dstPixels && conv->pixels) {
+            const int w         = conv->w;
+            const int h         = conv->h;
+            const int dstPitch  = img->Pitch();
+            const int srcPitch  = conv->pitch;
+            auto     *dstBytes  = static_cast<Uint8*>(dstPixels);
+            auto     *srcBytes  = static_cast<Uint8*>(conv->pixels);
+
+            for (int y = 0; y < h; ++y) {
+                SDL_memcpy(dstBytes + y * dstPitch,
+                           srcBytes + y * srcPitch,
+                           static_cast<size_t>(w) * 4u);
+            }
+        }
+
+        SDL_DestroySurface(conv);
+        return img;
+    }
+
     void DrawOn(dr4::Texture &texture) const override {
         const SwuixTexture *src = this;
         SwuixTexture *dst = dynamic_cast<SwuixTexture*>(&texture);

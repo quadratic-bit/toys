@@ -26,11 +26,14 @@ public:
     Canvas(Rect2f frame, Widget *p, State *s)
         : Widget(frame, p, s), FocusableWidget(frame, p, s)
     {
-        theme_.shapeColor   = dr4::Color(255, 255, 255, 255);
-        theme_.lineColor    = dr4::Color(255, 0,   0,   255);
-        theme_.textColor    = dr4::Color(255, 255, 255, 255);
-        theme_.baseFontSize = 16.0f;
-        theme_.handleColor  = dr4::Color(255, 0, 0, 255);
+        theme_.shapeBorderColor  = dr4::Color(255, 255, 255, 255);
+        theme_.shapeFillColor    = dr4::Color(255, 0,   0,   255);
+        theme_.selectColor       = dr4::Color(0,   255, 0,   255);
+        theme_.textColor         = dr4::Color(255, 255, 255, 255);
+        theme_.baseFontSize      = 16.0f;
+        theme_.handleColor       = dr4::Color(255, 0, 0, 255);
+        theme_.handleHoverColor  = dr4::Color(255, 0, 0, 255);
+        theme_.handleActiveColor = dr4::Color(255, 0, 0, 255);
     }
 
     const char *title() const override {

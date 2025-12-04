@@ -120,7 +120,7 @@ public:
         auto theme = canvas_->GetControlsTheme();
 
         auto *shape = new LineShape(startPos_, startPos_,
-                                    theme.lineColor,
+                                    theme.shapeFillColor,
                                     3.0f, canvas_);
         canvas_->AddShape(shape);
         canvas_->SetSelectedShape(shape);

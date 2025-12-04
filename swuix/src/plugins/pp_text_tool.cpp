@@ -181,8 +181,8 @@ public:
                 r->SetBorderThickness(1.0f);
 
                 dr4::Color borderColor =
-                    editing_ ? theme.lineColor   // red
-                             : theme.textColor;  // white
+                    editing_ ? theme.shapeFillColor
+                             : theme.textColor;
 
                 r->SetBorderColor(borderColor);
 

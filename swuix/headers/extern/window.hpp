@@ -265,6 +265,20 @@ public:
     dr4::Rectangle *CreateRectangle() override { return new SwuixRectangle(); }
     dr4::Text      *CreateText()      override { return new SwuixText(); }
 
+    void SetDefaultFont(const dr4::Font *font) override { default_font_ = font; }
+    const dr4::Font *GetDefaultFont() override { return default_font_; }
+
+    void SetClipboard(const std::string& s) override {
+        SDL_SetClipboardText(s.c_str());
+    }
+
+    std::string GetClipboard() override {
+        char *t = SDL_GetClipboardText();
+        std::string out = t ? t : "";
+        if (t) SDL_free(t);
+        return out;
+    }
+
     void StartTextInput() override {
         ensureOpen_();
         SDL_StartTextInput(window_);
@@ -360,9 +374,10 @@ public:
     TTF_TextEngine *GetTextEngine() const { return text_engine_; }
 
 private:
-    SDL_Window     *window_;
-    SDL_Renderer   *renderer_;
-    TTF_TextEngine *text_engine_;
+    SDL_Window      *window_;
+    SDL_Renderer    *renderer_;
+    TTF_TextEngine  *text_engine_;
+    const dr4::Font *default_font_ = nullptr;
 
     dr4::Vec2f   size_;
     std::string  title_;
