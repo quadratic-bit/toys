@@ -36,6 +36,8 @@ public:
         theme_.handleActiveColor = dr4::Color(255, 0, 0, 255);
     }
 
+    dr4::Texture *getTexture() const { return texture; }
+
     const char *title() const override {
         return "Canvas";
     }
@@ -84,12 +86,11 @@ public:
     }
 
     void setTools(std::vector<std::unique_ptr<pp::Tool>> &&tools) {
-        // End old active tool
         if (activeTool_)
             activeTool_->OnEnd();
 
         tools_ = std::move(tools);
-        activeTool_ = nullptr; // no tool selected by default
+        activeTool_ = nullptr;
     }
 
     const std::vector<std::unique_ptr<pp::Tool>> &tools() const { return tools_; }
@@ -118,7 +119,6 @@ public:
         mev.pos    = ctx.mouse_rel;
         mev.button = dr4::MouseButtonType::LEFT;
 
-        // give shapes a chance first (topmost first)
         for (auto it = shapes_.rbegin(); it != shapes_.rend(); ++it) {
             pp::Shape *shape = it->get();
             if (shape->OnMouseDown(mev)) {
@@ -127,7 +127,6 @@ public:
             }
         }
 
-        // if no shape grabbed it, let the active tool handle it
         if (!activeTool_) return PROPAGATE;
 
         if (activeTool_->OnMouseDown(mev))
@@ -149,7 +148,6 @@ public:
                 return CONSUME;
         }
 
-        // finishing drags
         if (selected_) {
             requestRedraw();
             if (selected_->OnMouseUp(mev))
@@ -186,11 +184,15 @@ public:
         return Widget::onMouseMove(ctx, e);
     }
 
-    DispatchResult onKeyDown(DispatcherCtx, const KeyDownEvent *e) override {
+    DispatchResult onKeyDown(DispatcherCtx ctx, const KeyDownEvent *e) override {
         if (state->getFocus() != this) return PROPAGATE;
         dr4::Event::KeyEvent kev{};
         kev.sym = (dr4::KeyCode)e->keycode;
         kev.mods = e->mods;
+
+        if ((e->mods & dr4::KEYMOD_CTRL) && e->keycode == dr4::KEYCODE_P) {
+            parent->onKeyDown(ctx, e);
+        }
 
         if (activeTool_) {
             requestRedraw();

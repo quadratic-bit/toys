@@ -47,7 +47,6 @@ public:
         Rectangle *r;
 
         if (isActive()) {
-            // Stronger accent for active tool
             const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.18);
             r = rectBorder(state->window, f, {d.r, d.g, d.b}, 2, {CLR_BORDER});
         } else {
@@ -114,12 +113,10 @@ public:
     void draw() override {
         Rect2f f = frame();
 
-        // bg + borders
         texture->Clear({CLR_SURFACE_2});
         Rectangle *r = rectBorder(state->window, f, {CLR_SURFACE_2}, 2, {CLR_BORDER});
         texture->Draw(*r);
 
-        // group headers
         for (size_t i = 0; i < groups_.size() && i < groupLabelY_.size(); ++i) {
             float y = groupLabelY_[i];
             Text *t = textAligned(
@@ -185,13 +182,12 @@ private:
 
                 auto *act = new SelectToolAction(canvas_, this, globalToolIndex);
 
-                Button *btn = new ToolButton( // or Button if you didn't subclass
+                Button *btn = new ToolButton(
                     bf, this, label, state, act, canvas_, globalToolIndex
                 );
 
                 appendChild(btn);
 
-                // ---- add this ----
                 RegisterToolButton(globalToolIndex, btn);
 
                 y += btnHeight + btnSpacing;

@@ -84,7 +84,6 @@ public:
     }
 
     bool OnMouseMove(const dr4::Event::MouseMove &evt) override {
-        // dragging has priority
         if (drag_ == DragMode::START) {
             start_ = evt.pos;
             return true;
@@ -94,18 +93,15 @@ public:
             return true;
         }
 
-        // hover state update
         bool hs = HandleRect(start_).Contains(evt.pos);
         bool he = HandleRect(end_).Contains(evt.pos);
 
         if (hs != hoverStart_ || he != hoverEnd_) {
             hoverStart_ = hs;
             hoverEnd_   = he;
-            // let the canvas know visuals changed
             canvas_->ShapeChanged(this);
         }
 
-        // consume move only when hovering a handle
         return hoverStart_ || hoverEnd_;
     }
 
@@ -115,7 +111,6 @@ public:
 
         if (drag_ != DragMode::NONE) {
             drag_ = DragMode::NONE;
-            // force hover recompute on next move
             hoverStart_ = false;
             hoverEnd_ = false;
             return true;
@@ -123,7 +118,6 @@ public:
         return false;
     }
 
-    // ---- dr4::Drawable ----
     void SetPos(Vec2f pos) override {
         Vec2f delta = pos - start_;
         start_ += delta;
@@ -169,7 +163,7 @@ public:
 
 class LineTool : public pp::Tool {
     pp::Canvas *canvas_{nullptr};
-    LineShape  *current_{nullptr};  // owned by canvas
+    LineShape  *current_{nullptr};
     Vec2f       startPos_{0.f, 0.f};
     bool        drawing_{false};
 
@@ -184,7 +178,6 @@ class LineTool : public pp::Tool {
 public:
     explicit LineTool(pp::Canvas *cvs) : canvas_(cvs) {}
 
-    // ---- metadata ----
     std::string_view Icon() const override {
         static constexpr std::string_view icon = u8"󰕞";
         return icon;
@@ -199,24 +192,19 @@ public:
         return drawing_;
     }
 
-    // ---- lifecycle ----
     void OnBreak() override {
-        // ESC while drawing => cancel the line
         if (drawing_ && current_) {
             canvas_->DelShape(current_);
-            // Canvas is responsible for deleting the shape.
             current_ = nullptr;
             drawing_ = false;
         }
     }
 
     void OnEnd() override {
-        // Tool deselected; stop drawing but keep the last line
         drawing_ = false;
         current_ = nullptr;
     }
 
-    // ---- events ----
     bool OnMouseDown(const dr4::Event::MouseButton &evt) override {
         using MBT = dr4::MouseButtonType;
 
@@ -233,7 +221,7 @@ public:
 
         current_ = shape;
         drawing_ = true;
-        return true;   // event consumed
+        return true;
     }
 
     bool OnMouseMove(const dr4::Event::MouseMove &evt) override {

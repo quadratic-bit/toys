@@ -1,3 +1,6 @@
+#ifndef TEXT_TOOL
+#define TEXT_TOOL
+
 #include <cstdio>
 #include <memory>
 #include <string>
@@ -40,15 +43,14 @@ class TextShape final : public pp::Shape {
     bool  editing_{false};
     bool  caretVisible_{true};
 
-    // caret + selection (byte indices in UTF-8 string)
     size_t caret_{0};
     bool   selectingText_{false};
     size_t selAnchor_{0};
 
-    static constexpr float Padding = 3.0f; // extra margin around text box
+    static constexpr float Padding = 3.0f;
 
     mutable bool  boundsDirty_{true};
-    mutable Vec2f cachedBounds_{0.f, 0.f}; // width, height
+    mutable Vec2f cachedBounds_{0.f, 0.f};
 
     Vec2f measureText() const {
         if (!canvas_) return cachedBounds_;
@@ -115,15 +117,12 @@ class TextShape final : public pp::Shape {
         i = std::min(i, text_.size());
         if (i == 0) return 0;
 
-        // step to previous codepoint first
         i = prevCodepoint(i);
 
-        // skip whitespace to the left
         while (i > 0 && std::isspace(static_cast<unsigned char>(text_[i]))) {
             i = prevCodepoint(i);
         }
 
-        // move left over non-whitespace until start or whitespace
         while (i > 0) {
             size_t pi = prevCodepoint(i);
             if (std::isspace(static_cast<unsigned char>(text_[pi])))
@@ -137,19 +136,16 @@ class TextShape final : public pp::Shape {
     size_t nextWord(size_t i) const {
         i = std::min(i, text_.size());
 
-        // skip whitespace at/after caret
         while (i < text_.size() &&
                std::isspace(static_cast<unsigned char>(text_[i]))) {
             i = nextCodepoint(i);
         }
 
-        // skip the current word
         while (i < text_.size() &&
                !std::isspace(static_cast<unsigned char>(text_[i]))) {
             i = nextCodepoint(i);
         }
 
-        // skip whitespace to the start of next word
         while (i < text_.size() &&
                std::isspace(static_cast<unsigned char>(text_[i]))) {
             i = nextCodepoint(i);
@@ -189,7 +185,6 @@ class TextShape final : public pp::Shape {
         markDirty();
     }
 
-    // Map mouse X to caret index by measuring prefixes (simple & reliable)
     size_t indexFromX(float x) const {
         auto *wnd = canvas_ ? canvas_->GetWindow() : nullptr;
         if (!wnd) return 0;
@@ -379,7 +374,7 @@ public:
                     sel->SetSize({std::max(0.f, x1 - x0), h});
 
                     Color c = theme.selectColor;
-                    c.a = 90; // translucent highlight
+                    c.a = 90;
                     sel->SetFillColor(c);
                     sel->SetBorderThickness(0.0f);
                     sel->SetBorderColor(c);
@@ -424,7 +419,6 @@ public:
         if (!isInside(evt.pos, boxPos, size))
             return false;
 
-        // If editing: place caret and start selecting text
         if (editing_) {
             caret_ = indexFromX(evt.pos.x);
             selAnchor_ = caret_;
@@ -433,7 +427,6 @@ public:
             return true;
         }
 
-        // Otherwise: drag the whole shape
         dragging_   = true;
         dragOffset_ = evt.pos - pos_;
         return true;
@@ -472,8 +465,7 @@ public:
     bool OnIdle(const pp::IdleEvent &evt) override {
         if (!editing_) return false;
 
-        // 0.5s on, 0.5s off
-        constexpr double halfPeriod = 0.5; // seconds
+        constexpr double halfPeriod = 0.5;
         double t = evt.absTime;
         bool visible = std::fmod(t, 2.0 * halfPeriod) < halfPeriod;
 
@@ -528,7 +520,7 @@ public:
 
 class TextTool final : public pp::Tool {
     pp::Canvas *canvas_{nullptr};
-    TextShape  *current_{nullptr};  // owned by canvas
+    TextShape  *current_{nullptr};
     TextShape  *dragging_{nullptr};
     bool        editing_{false};
 
@@ -557,7 +549,6 @@ class TextTool final : public pp::Tool {
 public:
     explicit TextTool(pp::Canvas *cvs) : canvas_(cvs) {}
 
-    // ---- metadata ----
     std::string_view Icon() const override {
         static constexpr std::string_view icon = u8"󰊄";
         return icon;
@@ -622,7 +613,7 @@ public:
                 if (selected->HitTest(evt.pos)) {
                     if (selected->OnMouseDown(evt)) {
                         dragging_ = selected;
-                        return true; // event consumed by move
+                        return true;
                     }
                 }
             }
@@ -702,7 +693,6 @@ public:
         }
 
         case dr4::KEYCODE_ESCAPE: {
-            // stop editing, if any
             if (editing_) {
                 if (current_) {
                     current_->SetEditing(false);
@@ -727,7 +717,6 @@ public:
             break;
         }
 
-        // Clipboard shortcuts work when a text shape is selected
         if (hasCtrl(evt.mods)) {
             if (evt.sym == dr4::KEYCODE_C) {
                 auto *shape = dynamic_cast<TextShape*>(canvas_->GetSelectedShape());
@@ -750,7 +739,6 @@ public:
                     w->SetClipboard(sel);
                 }
 
-                // ensure we can actually modify the shape
                 if (!editing_) {
                     current_ = shape;
                     editing_ = true;
@@ -774,7 +762,6 @@ public:
                 if (auto *w = window()) {
                     std::string clip = w->GetClipboard();
                     if (!clip.empty()) {
-                        // if we're not editing this yet, start editing it
                         if (!editing_) {
                             current_ = shape;
                             editing_ = true;
@@ -846,3 +833,5 @@ public:
     }
 };
 }
+
+#endif

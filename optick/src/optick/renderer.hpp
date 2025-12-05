@@ -6,6 +6,10 @@
 #include <swuix/widgets/titled.hpp>
 #include <swuix/state.hpp>
 
+#include <chrono>
+#include <sstream>
+#include <iomanip>
+
 #include "cum/ifc/pp.hpp"
 #include "cum/manager.hpp"
 #include "dr4/math/color.hpp"
@@ -16,6 +20,59 @@
 #include "trace/cs.hpp"
 #include "widgets/canvas.hpp"
 #include "./widgets/canvas_toolbar.hpp"
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_STATIC
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#pragma GCC diagnostic ignored "-Wmissing-declarations"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#include "./widgets/stb_image_write.h"
+#pragma GCC diagnostic pop
+
+static bool SaveImageAsPNG(const dr4::Image *img, const std::string &path) {
+    if (!img) return false;
+
+    const size_t w = static_cast<size_t>(img->GetWidth());
+    const size_t h = static_cast<size_t>(img->GetHeight());
+    if (!w || !h) return false;
+
+    std::vector<unsigned char> px(w * h * 4);
+
+    for (size_t y = 0; y < h; ++y) {
+        for (size_t x = 0; x < w; ++x) {
+            dr4::Color c = img->GetPixel(x, y);
+            const size_t i = (y * w + x) * 4;
+            px[i + 0] = c.r;
+            px[i + 1] = c.g;
+            px[i + 2] = c.b;
+            px[i + 3] = c.a;
+        }
+    }
+
+    return stbi_write_png(path.c_str(),
+                          static_cast<int>(w),
+                          static_cast<int>(h),
+                          4,
+                          px.data(),
+                          static_cast<int>(w * 4)) != 0;
+}
+
+static std::string MakeTimestampedName() {
+    using namespace std::chrono;
+    auto now = system_clock::now();
+    std::time_t t = system_clock::to_time_t(now);
+
+    std::tm tm{};
+    localtime_r(&t, &tm);
+
+    std::ostringstream ss;
+    ss << "canvas_"
+       << std::put_time(&tm, "%Y%m%d_%H%M%S")
+       << ".png";
+    return ss.str();
+}
+
 
 static inline unsigned lcg(unsigned &s) {
     s = 1664525u * s + 1013904223u;
@@ -394,6 +451,27 @@ public:
     void toggleRender() {
         if (alive) disableRender();
         else enableRender();
+    }
+
+    DispatchResult onKeyDown(DispatcherCtx, const KeyDownEvent *e) override {
+        printf("fuck me\n");
+        if ((e->mods & dr4::KEYMOD_CTRL) && e->keycode == dr4::KEYCODE_P) {
+            printf("twice\n");
+            // make sure both textures are up to date
+            this->draw();
+            if (canvas) canvas->draw();
+
+            // composite overlay into renderer texture
+            if (canvas && canvas->getTexture()) {
+                texture->Draw(*canvas->getTexture());
+            }
+
+            if (auto *img = texture->GetImage()) {
+                SaveImageAsPNG(img, MakeTimestampedName());
+            }
+            return CONSUME;
+        }
+        return PROPAGATE;
     }
 
     DispatchResult onIdle(DispatcherCtx, const IdleEvent *ev) override {
