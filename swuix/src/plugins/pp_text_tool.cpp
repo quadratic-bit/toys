@@ -1,7 +1,6 @@
 #include <cstdio>
 #include <memory>
 #include <string>
-#include <vector>
 #include <cmath>
 #include <algorithm>
 #include <cctype>
@@ -846,41 +845,4 @@ public:
         return false;
     }
 };
-
-class TextToolPlugin : public cum::PPToolPlugin {
-public:
-    std::string_view GetIdentifier() const override {
-        return "pp.tools.text";
-    }
-
-    std::string_view GetName() const override {
-        return "Text drawing tool";
-    }
-
-    std::string_view GetDescription() const override {
-        return "Tool for placing editable, draggable text on a pp::Canvas.";
-    }
-
-    std::vector<std::string_view> GetDependencies() const override {
-        return {};
-    }
-
-    std::vector<std::string_view> GetConflicts() const override {
-        return {};
-    }
-
-    void AfterLoad() override {}
-
-    std::vector<std::unique_ptr<pp::Tool>> CreateTools(pp::Canvas *cvs) override {
-        std::vector<std::unique_ptr<pp::Tool>> tools;
-        tools.emplace_back(std::make_unique<TextTool>(cvs));
-        return tools;
-    }
-};
-
-} // namespace
-
-extern "C" cum::Plugin *CreatePlugin();
-extern "C" cum::Plugin *CreatePlugin() {
-    return new TextToolPlugin();
 }

@@ -89,10 +89,7 @@ public:
             activeTool_->OnEnd();
 
         tools_ = std::move(tools);
-        activeTool_ = tools_.empty() ? nullptr : tools_.front().get();
-
-        if (activeTool_)
-            activeTool_->OnStart();
+        activeTool_ = nullptr; // no tool selected by default
     }
 
     const std::vector<std::unique_ptr<pp::Tool>> &tools() const { return tools_; }

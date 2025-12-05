@@ -12,24 +12,83 @@
 #include "canvas.hpp"
 #include "tool_group.hpp"
 
+class CanvasToolBar;
+
 class SelectToolAction final : public Action {
-    Canvas *canvas_;
-    size_t toolIndex_;
+    Canvas        *canvas_;
+    CanvasToolBar *toolbar_;
+    size_t         toolIndex_;
 
 public:
-    SelectToolAction(Canvas *c, size_t idx)
-        : canvas_(c), toolIndex_(idx) {}
+    SelectToolAction(Canvas *c, CanvasToolBar *tb, size_t idx)
+        : canvas_(c), toolbar_(tb), toolIndex_(idx) {}
 
-    void apply(void *, Widget *) override {
-        if (!canvas_) return;
-        canvas_->setActiveTool(toolIndex_);
-        canvas_->requestRedraw();
+    void apply(void *, Widget *) override;
+};
+
+class ToolButton final : public Button {
+    Canvas *canvas_;
+    size_t index_;
+
+    bool isActive() const {
+        if (!canvas_) return false;
+        const auto &ts = canvas_->tools();
+        if (index_ >= ts.size()) return false;
+        return canvas_->activeTool() == ts[index_].get();
+    }
+
+public:
+    ToolButton(Rect2f f, Widget *p, const char *l, State *s,
+               Action *a, Canvas *c, size_t idx)
+        : Button(f, p, l, s, a), canvas_(c), index_(idx) {}
+
+    void draw_idle() override {
+        Rect2f f = frame();
+        Rectangle *r;
+
+        if (isActive()) {
+            // Stronger accent for active tool
+            const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.18);
+            r = rectBorder(state->window, f, {d.r, d.g, d.b}, 2, {CLR_BORDER});
+        } else {
+            r = rectBorder(state->window, f, {CLR_SURFACE_2}, 2, {CLR_BORDER});
+        }
+        texture->Draw(*r);
+    }
+
+    void draw_hover() override {
+        Rect2f f = frame();
+        Rectangle *r;
+
+        const float amt = isActive() ? 0.22f : 0.08f;
+        const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), amt);
+        r = rectFill(state->window, f, {d.r, d.g, d.b});
+        texture->Draw(*r);
+
+        r = outline(state->window, f, 1, {CLR_BORDER});
+        texture->Draw(*r);
+    }
+
+    void draw_press() override {
+        Rect2f f = frame();
+        Rectangle *r;
+
+        const float amt = isActive() ? 0.28f : 0.12f;
+        const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), amt);
+        r = rectFill(state->window, f, {d.r, d.g, d.b});
+        texture->Draw(*r);
+
+        r = outline(state->window, f, 1, {CLR_BORDER});
+        texture->Draw(*r);
     }
 };
 
 class CanvasToolBar final : public TitledWidget {
     Canvas *canvas_;
     std::vector<ToolGroupDesc> groups_;
+
+    std::vector<Widget*> toolButtonsByIndex_;
+    size_t lastActiveIndex_ = static_cast<size_t>(-1);
 
     // Y coordinate for each group header label
     std::vector<float> groupLabelY_;
@@ -74,6 +133,27 @@ public:
         }
     }
 
+    void RegisterToolButton(size_t idx, Widget *btn) {
+        if (idx >= toolButtonsByIndex_.size())
+            toolButtonsByIndex_.resize(idx + 1, nullptr);
+        toolButtonsByIndex_[idx] = btn;
+    }
+
+    void NotifyToolSwitched(size_t newIdx) {
+        if (lastActiveIndex_ != static_cast<size_t>(-1) &&
+            lastActiveIndex_ < toolButtonsByIndex_.size() &&
+            toolButtonsByIndex_[lastActiveIndex_]) {
+            toolButtonsByIndex_[lastActiveIndex_]->requestRedraw();
+        }
+
+        if (newIdx < toolButtonsByIndex_.size() &&
+            toolButtonsByIndex_[newIdx]) {
+            toolButtonsByIndex_[newIdx]->requestRedraw();
+        }
+
+        lastActiveIndex_ = newIdx;
+    }
+
 private:
     void buildButtons() {
         groupLabelY_.clear();
@@ -102,14 +182,17 @@ private:
                         : tool->Name().data();
 
                 Rect2f bf { x, y, w, btnHeight };
-                Button *btn = new Button(
-                    bf,
-                    this,
-                    label,
-                    state,
-                    new SelectToolAction(canvas_, globalToolIndex)
+
+                auto *act = new SelectToolAction(canvas_, this, globalToolIndex);
+
+                Button *btn = new ToolButton( // or Button if you didn't subclass
+                    bf, this, label, state, act, canvas_, globalToolIndex
                 );
+
                 appendChild(btn);
+
+                // ---- add this ----
+                RegisterToolButton(globalToolIndex, btn);
 
                 y += btnHeight + btnSpacing;
                 ++globalToolIndex;

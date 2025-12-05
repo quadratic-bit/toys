@@ -262,37 +262,4 @@ public:
     }
 };
 
-class LineToolPlugin : public cum::PPToolPlugin {
-public:
-    // ----- cum::Plugin -----
-    std::string_view GetIdentifier() const override {
-        return "pp.tools.line";
-    }
-
-    std::string_view GetName() const override {
-        return "Line drawing tool";
-    }
-
-    std::string_view GetDescription() const override {
-        return "Simple line-drawing tool for pp::Canvas";
-    }
-
-    std::vector<std::string_view> GetDependencies() const override { return {}; }
-    std::vector<std::string_view> GetConflicts() const override { return {}; }
-
-    void AfterLoad() override {}
-
-    // ----- cum::PPToolPlugin -----
-    std::vector<std::unique_ptr<pp::Tool>> CreateTools(pp::Canvas *cvs) override {
-        std::vector<std::unique_ptr<pp::Tool>> tools;
-        tools.emplace_back(std::make_unique<LineTool>(cvs));
-        return tools;
-    }
-};
-
-}
-
-extern "C" cum::Plugin *CreatePlugin();
-extern "C" cum::Plugin *CreatePlugin() {
-    return new LineToolPlugin();
 }
