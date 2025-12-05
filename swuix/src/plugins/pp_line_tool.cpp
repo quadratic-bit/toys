@@ -1,14 +1,15 @@
 #include <memory>
 
-#include "pp/shape.hpp"
-#include "pp/canvas.hpp"
-#include "pp/tool.hpp"
+#include <pp/shape.hpp>
+#include <pp/canvas.hpp>
+#include <pp/tool.hpp>
 
-#include "dr4/math/vec2.hpp"
-#include "dr4/math/color.hpp"
+#include <dr4/math/vec2.hpp>
+#include <dr4/math/color.hpp>
+#include <dr4/math/rect.hpp>
 
-#include "cum/ifc/pp.hpp"
-#include "cum/plugin.hpp"
+#include <cum/ifc/pp.hpp>
+#include <cum/plugin.hpp>
 
 namespace {
 
@@ -21,6 +22,33 @@ class LineShape final : public pp::Shape {
     Color color_{255, 255, 255, 255};
     float thickness_{1.0f};
     pp::Canvas *canvas_;
+
+    bool hoverStart_{false};
+    bool hoverEnd_{false};
+
+    enum class DragMode { NONE, START, END };
+    DragMode drag_{DragMode::NONE};
+
+    static constexpr float HandleSize = 8.0f;
+
+    static Color WithAlpha(Color c, uint8_t a) {
+        c.a = a;
+        return c;
+    }
+
+    dr4::Rect2f HandleRect(Vec2f p) const {
+        return dr4::Rect2f(
+            p.x - HandleSize * 0.5f,
+            p.y - HandleSize * 0.5f,
+            HandleSize,
+            HandleSize
+        );
+    }
+
+    static float dist2(Vec2f a, Vec2f b) {
+        Vec2f d = a - b;
+        return d.x * d.x + d.y * d.y;
+    }
 
 public:
     LineShape(const Vec2f &a,
@@ -37,6 +65,62 @@ public:
     void SetEndpoints(const Vec2f &a, const Vec2f &b) {
         start_ = a;
         end_   = b;
+    }
+
+    bool OnMouseDown(const dr4::Event::MouseButton &evt) override {
+        using MBT = dr4::MouseButtonType;
+        if (evt.button != MBT::LEFT) return false;
+
+        if (HandleRect(start_).Contains(evt.pos)) {
+            drag_ = DragMode::START;
+            return true;
+        }
+        if (HandleRect(end_).Contains(evt.pos)) {
+            drag_ = DragMode::END;
+            return true;
+        }
+
+        return false;
+    }
+
+    bool OnMouseMove(const dr4::Event::MouseMove &evt) override {
+        // dragging has priority
+        if (drag_ == DragMode::START) {
+            start_ = evt.pos;
+            return true;
+        }
+        if (drag_ == DragMode::END) {
+            end_ = evt.pos;
+            return true;
+        }
+
+        // hover state update
+        bool hs = HandleRect(start_).Contains(evt.pos);
+        bool he = HandleRect(end_).Contains(evt.pos);
+
+        if (hs != hoverStart_ || he != hoverEnd_) {
+            hoverStart_ = hs;
+            hoverEnd_   = he;
+            // let the canvas know visuals changed
+            canvas_->ShapeChanged(this);
+        }
+
+        // consume move only when hovering a handle
+        return hoverStart_ || hoverEnd_;
+    }
+
+    bool OnMouseUp(const dr4::Event::MouseButton &evt) override {
+        using MBT = dr4::MouseButtonType;
+        if (evt.button != MBT::LEFT) return false;
+
+        if (drag_ != DragMode::NONE) {
+            drag_ = DragMode::NONE;
+            // force hover recompute on next move
+            hoverStart_ = false;
+            hoverEnd_ = false;
+            return true;
+        }
+        return false;
     }
 
     // ---- dr4::Drawable ----
@@ -57,6 +141,29 @@ public:
         ln->SetColor(color_);
         ln->SetThickness(thickness_);
         ln->DrawOn(tex);
+
+        auto theme = canvas_->GetControlsTheme();
+
+        auto drawHandle = [&](Vec2f p, bool hovered) {
+            std::unique_ptr<dr4::Rectangle> r(canvas_->GetWindow()->CreateRectangle());
+            if (!r) return;
+
+            auto rect = HandleRect(p);
+
+            r->SetPos(rect.pos);
+            r->SetSize(rect.size);
+
+            const uint8_t a = hovered ? 255 : 110;
+
+            r->SetFillColor(WithAlpha(theme.handleColor, a));
+            r->SetBorderThickness(1.0f);
+            r->SetBorderColor(WithAlpha(theme.selectColor, a));
+
+            r->DrawOn(tex);
+        };
+
+        drawHandle(start_, hoverStart_);
+        drawHandle(end_,   hoverEnd_);
     }
 };
 
@@ -120,10 +227,9 @@ public:
         auto theme = canvas_->GetControlsTheme();
 
         auto *shape = new LineShape(startPos_, startPos_,
-                                    theme.shapeFillColor,
+                                    theme.shapeBorderColor,
                                     3.0f, canvas_);
         canvas_->AddShape(shape);
-        canvas_->SetSelectedShape(shape);
 
         current_ = shape;
         drawing_ = true;

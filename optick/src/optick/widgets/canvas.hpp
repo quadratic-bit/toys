@@ -174,12 +174,16 @@ public:
             }
         }
 
-        if (selected_) {
+        bool any = false;
+        for (auto &s : shapes_) {
+            if (s->OnMouseMove(mev))
+                any = true;
+        }
+
+        if (any) {
             requestRedraw();
-            if (selected_->OnMouseMove(mev)) {
-                Widget::onMouseMove(ctx, e);
-                return CONSUME;
-            }
+            Widget::onMouseMove(ctx, e);
+            return CONSUME;
         }
 
         return Widget::onMouseMove(ctx, e);
