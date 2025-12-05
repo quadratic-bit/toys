@@ -15,6 +15,7 @@
 #include "trace/scene.hpp"
 #include "trace/cs.hpp"
 #include "widgets/canvas.hpp"
+#include "./widgets/canvas_toolbar.hpp"
 
 static inline unsigned lcg(unsigned &s) {
     s = 1664525u * s + 1013904223u;
@@ -348,19 +349,44 @@ public:
     }
 
     void disableRender() {
-        canvas = new Canvas({0, 0, texture->GetWidth(), texture->GetHeight()}, NULL, state);
+        float toolbarWidth = 50.0f;
+
+        canvas = new Canvas(
+                {0, 0,
+                 texture->GetWidth(), texture->GetHeight()},
+                nullptr, state);
+
         std::vector<std::unique_ptr<pp::Tool>> tools;
+        std::vector<ToolGroupDesc> toolGroups;
+
         auto toolPlugins = mgr->GetAllOfType<cum::PPToolPlugin>();
+
         for (auto *pl : toolPlugins) {
+            ToolGroupDesc group;
+            group.label = std::string(pl->GetName());
+
             auto created = pl->CreateTools(canvas);
             for (auto &t : created) {
                 printf("[debug] added tool %s\n", t->Name().data());
+                group.tools.push_back(t.get());
                 tools.emplace_back(std::move(t));
             }
+            toolGroups.emplace_back(std::move(group));
         }
+
         canvas->setTools(std::move(tools));
-        canvas->setActiveTool(0);
+
+        CanvasToolBar *toolbar = new CanvasToolBar(
+            canvas,
+            toolGroups,
+            {canvas->frame().size.x - toolbarWidth, 0, toolbarWidth, texture->GetHeight()},
+            nullptr,
+            state
+        );
+
+        appendChild(toolbar);
         appendChild(canvas);
+
         state->focus(canvas);
         alive = false;
     }
