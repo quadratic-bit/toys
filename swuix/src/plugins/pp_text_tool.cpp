@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <algorithm>
+#include <cctype>
 
 #include <pp/shape.hpp>
 #include <pp/canvas.hpp>
@@ -38,6 +40,13 @@ class TextShape final : public pp::Shape {
     bool  selected_{false};
     bool  editing_{false};
     bool  caretVisible_{true};
+
+    // caret + selection (byte indices in UTF-8 string)
+    size_t caret_{0};
+    bool   selectingText_{false};
+    size_t selAnchor_{0};
+
+    static constexpr float Padding = 3.0f; // extra margin around text box
 
     mutable bool  boundsDirty_{true};
     mutable Vec2f cachedBounds_{0.f, 0.f}; // width, height
@@ -77,7 +86,162 @@ class TextShape final : public pp::Shape {
         return (p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1);
     }
 
+    static bool isCont(uint8_t c) { return (c & 0xC0u) == 0x80u; }
+
+    size_t clampIndex(size_t i) const {
+        return std::min(i, text_.size());
+    }
+
+    size_t prevCodepoint(size_t i) const {
+        if (i == 0) return 0;
+        i = std::min(i, text_.size());
+        do { --i; } while (i > 0 && isCont(static_cast<uint8_t>(text_[i])));
+        return i;
+    }
+
+    size_t nextCodepoint(size_t i) const {
+        i = std::min(i, text_.size());
+        if (i >= text_.size()) return text_.size();
+        ++i;
+        while (i < text_.size() && isCont(static_cast<uint8_t>(text_[i])))
+            ++i;
+        return i;
+    }
+
+    static bool isAsciiWordChar(unsigned char c) {
+        return std::isalnum(c) || c == '_';
+    }
+
+    size_t prevWord(size_t i) const {
+        i = std::min(i, text_.size());
+        if (i == 0) return 0;
+
+        // step to previous codepoint first
+        i = prevCodepoint(i);
+
+        // skip whitespace to the left
+        while (i > 0 && std::isspace(static_cast<unsigned char>(text_[i]))) {
+            i = prevCodepoint(i);
+        }
+
+        // move left over non-whitespace until start or whitespace
+        while (i > 0) {
+            size_t pi = prevCodepoint(i);
+            if (std::isspace(static_cast<unsigned char>(text_[pi])))
+                break;
+            i = pi;
+        }
+
+        return i;
+    }
+
+    size_t nextWord(size_t i) const {
+        i = std::min(i, text_.size());
+
+        // skip whitespace at/after caret
+        while (i < text_.size() &&
+               std::isspace(static_cast<unsigned char>(text_[i]))) {
+            i = nextCodepoint(i);
+        }
+
+        // skip the current word
+        while (i < text_.size() &&
+               !std::isspace(static_cast<unsigned char>(text_[i]))) {
+            i = nextCodepoint(i);
+        }
+
+        // skip whitespace to the start of next word
+        while (i < text_.size() &&
+               std::isspace(static_cast<unsigned char>(text_[i]))) {
+            i = nextCodepoint(i);
+        }
+
+        return i;
+    }
+
+    bool hasSelection() const {
+        return selAnchor_ != caret_;
+    }
+
+    std::pair<size_t,size_t> selRange() const {
+        size_t a = selAnchor_;
+        size_t b = caret_;
+        if (a > b) std::swap(a, b);
+        return {a, b};
+    }
+
+    void clearSelection() {
+        selAnchor_ = caret_;
+    }
+
+    void eraseSelection() {
+        if (!hasSelection()) return;
+        auto [a, b] = selRange();
+        text_.erase(a, b - a);
+        caret_ = a;
+        selAnchor_ = a;
+        markDirty();
+    }
+
+    void insertAtCaret(const std::string &utf8) {
+        text_.insert(caret_, utf8);
+        caret_ += utf8.size();
+        selAnchor_ = caret_;
+        markDirty();
+    }
+
+    // Map mouse X to caret index by measuring prefixes (simple & reliable)
+    size_t indexFromX(float x) const {
+        auto *wnd = canvas_ ? canvas_->GetWindow() : nullptr;
+        if (!wnd) return 0;
+
+        float localX = x - pos_.x;
+        if (localX <= 0.f) return 0;
+
+        std::unique_ptr<dr4::Text> t(wnd->CreateText());
+        if (!t) return 0;
+
+        if (font_) t->SetFont(font_);
+        t->SetFontSize(fontSize_);
+        t->SetVAlign(dr4::Text::VAlign::TOP);
+
+        size_t i = 0;
+        size_t last = 0;
+
+        while (i < text_.size()) {
+            size_t ni = nextCodepoint(i);
+            t->SetText(text_.substr(0, ni));
+            float w = t->GetBounds().x;
+            if (w >= localX) return ni;
+            last = ni;
+            i = ni;
+        }
+        return last;
+    }
+
+    float caretOffsetX() const {
+        auto *wnd = canvas_ ? canvas_->GetWindow() : nullptr;
+        if (!wnd) return 0.f;
+
+        std::unique_ptr<dr4::Text> t(wnd->CreateText());
+        if (!t) return 0.f;
+
+        if (font_) t->SetFont(font_);
+        t->SetFontSize(fontSize_);
+        t->SetVAlign(dr4::Text::VAlign::TOP);
+
+        size_t i = std::min(caret_, text_.size());
+        t->SetText(text_.substr(0, i));
+        return t->GetBounds().x;
+    }
+
 public:
+    std::string selectedText() const {
+        if (!hasSelection()) return {};
+        auto [a, b] = selRange();
+        return text_.substr(a, b - a);
+    }
+
     TextShape(pp::Canvas *canvas,
               Vec2f pos,
               Color color,
@@ -93,23 +257,24 @@ public:
 
     void AppendUtf8(const char *utf8) {
         if (!utf8) return;
-        text_ += utf8;
-        markDirty();
+        if (hasSelection()) eraseSelection();
+        insertAtCaret(utf8);
     }
 
     void BackspaceUtf8() {
         if (text_.empty()) return;
 
-        std::size_t i = text_.size();
-        do {
-            --i;
-            unsigned char c = static_cast<unsigned char>(text_[i]);
-            if ((c & 0xC0u) != 0x80u) {
-                break;
-            }
-        } while (i > 0);
+        if (hasSelection()) {
+            eraseSelection();
+            return;
+        }
 
-        text_.erase(i);
+        size_t prev = prevCodepoint(caret_);
+        if (prev == caret_) return;
+
+        text_.erase(prev, caret_ - prev);
+        caret_ = prev;
+        selAnchor_ = caret_;
         markDirty();
     }
 
@@ -131,7 +296,9 @@ public:
         Vec2f size = measureText();
         if (size.x <= 0.f) size.x = fontSize_ * 0.5f;
         if (size.y <= 0.f) size.y = fontSize_;
-        return isInside(p, pos_, size);
+        size.x += 2 * Padding;
+        size.y += 2 * Padding;
+        return isInside(p, {pos_.x - Padding, pos_.y - Padding}, size);
     }
 
     void SetPos(Vec2f pos) override {
@@ -173,16 +340,16 @@ public:
 
             std::unique_ptr<dr4::Rectangle> r(wnd->CreateRectangle());
             if (r) {
-                r->SetPos(pos_);
-                r->SetSize(size);
+                r->SetPos({pos_.x - Padding, pos_.y - Padding});
+                r->SetSize({size.x + 2 * Padding, size.y + 2 * Padding});
 
                 dr4::Color transparent(0, 0, 0, 0);
                 r->SetFillColor(transparent);
                 r->SetBorderThickness(1.0f);
 
                 dr4::Color borderColor =
-                    editing_ ? theme.shapeFillColor
-                             : theme.textColor;
+                    editing_ ? theme.selectColor
+                             : theme.shapeBorderColor;
 
                 r->SetBorderColor(borderColor);
 
@@ -190,11 +357,44 @@ public:
             }
         }
 
+        if (editing_ && hasSelection()) {
+            auto [a, b] = selRange();
+
+            std::unique_ptr<dr4::Text> mt(wnd->CreateText());
+            if (mt) {
+                if (font_) mt->SetFont(font_);
+                mt->SetFontSize(fontSize_);
+                mt->SetVAlign(dr4::Text::VAlign::TOP);
+
+                mt->SetText(text_.substr(0, a));
+                float x0 = mt->GetBounds().x;
+
+                mt->SetText(text_.substr(0, b));
+                float x1 = mt->GetBounds().x;
+
+                float h = cachedBounds_.y > 0.f ? cachedBounds_.y : fontSize_;
+
+                std::unique_ptr<dr4::Rectangle> sel(wnd->CreateRectangle());
+                if (sel) {
+                    sel->SetPos({pos_.x + x0, pos_.y});
+                    sel->SetSize({std::max(0.f, x1 - x0), h});
+
+                    Color c = theme.selectColor;
+                    c.a = 90; // translucent highlight
+                    sel->SetFillColor(c);
+                    sel->SetBorderThickness(0.0f);
+                    sel->SetBorderColor(c);
+
+                    sel->DrawOn(tex);
+                }
+            }
+        }
+
         if (editing_ && caretVisible_) {
             Vec2f size = cachedBounds_;
             if (size.y <= 0.f) size.y = fontSize_;
 
-            float caretX = pos_.x + size.x;
+            float caretX = pos_.x + caretOffsetX();
             float caretTop = pos_.y;
             float caretBottom = pos_.y + size.y;
 
@@ -217,27 +417,57 @@ public:
         if (size.x <= 0.f) size.x = fontSize_ * 0.5f;
         if (size.y <= 0.f) size.y = fontSize_;
 
-        if (!isInside(evt.pos, pos_, size))
+        size.x += 2 * Padding;
+        size.y += 2 * Padding;
+
+        Vec2f boxPos{pos_.x - Padding, pos_.y - Padding};
+
+        if (!isInside(evt.pos, boxPos, size))
             return false;
 
+        // If editing: place caret and start selecting text
+        if (editing_) {
+            caret_ = indexFromX(evt.pos.x);
+            selAnchor_ = caret_;
+            selectingText_ = true;
+            markDirty();
+            return true;
+        }
+
+        // Otherwise: drag the whole shape
         dragging_   = true;
         dragOffset_ = evt.pos - pos_;
         return true;
     }
 
     bool OnMouseMove(const dr4::Event::MouseMove &evt) override {
-        if (!dragging_) return false;
-        SetPos(evt.pos - dragOffset_);
-        return true;
+        if (selectingText_) {
+            caret_ = indexFromX(evt.pos.x);
+            markDirty();
+            return true;
+        }
+        if (dragging_) {
+            SetPos(evt.pos - dragOffset_);
+            return true;
+        }
+        return false;
     }
 
     bool OnMouseUp(const dr4::Event::MouseButton &evt) override {
         using MBT = dr4::MouseButtonType;
         if (evt.button != MBT::LEFT) return false;
-        if (!dragging_) return false;
 
-        dragging_ = false;
-        return true;
+        if (selectingText_) {
+            selectingText_ = false;
+            return true;
+        }
+
+        if (dragging_) {
+            dragging_ = false;
+            return true;
+        }
+
+        return false;
     }
 
     bool OnIdle(const pp::IdleEvent &evt) override {
@@ -275,6 +505,26 @@ public:
             canvas_->ShapeChanged(this);
         }
     }
+
+    void MoveCaretLeft(bool ctrl, bool shift) {
+        size_t old = caret_;
+        caret_ = ctrl ? prevWord(caret_) : prevCodepoint(caret_);
+        caret_ = clampIndex(caret_);
+        if (!shift) selAnchor_ = caret_;
+        if (old != caret_) markDirty();
+    }
+
+    void MoveCaretRight(bool ctrl, bool shift) {
+        size_t old = caret_;
+        caret_ = ctrl ? nextWord(caret_) : nextCodepoint(caret_);
+        caret_ = clampIndex(caret_);
+        if (!shift) selAnchor_ = caret_;
+        if (old != caret_) markDirty();
+    }
+
+    void DeleteSelectionIfAny() {
+        if (hasSelection()) eraseSelection();
+    }
 };
 
 class TextTool final : public pp::Tool {
@@ -301,6 +551,9 @@ class TextTool final : public pp::Tool {
         font_->LoadFromBuffer(g_TextToolFontData, g_TextToolFontSize);
         return font_.get();
     }
+
+    static bool hasCtrl(uint16_t mods)  { return (mods & dr4::KEYMOD_CTRL)  != 0; }
+    static bool hasShift(uint16_t mods) { return (mods & dr4::KEYMOD_SHIFT) != 0; }
 
 public:
     explicit TextTool(pp::Canvas *cvs) : canvas_(cvs) {}
@@ -475,6 +728,71 @@ public:
             break;
         }
 
+        // Clipboard shortcuts work when a text shape is selected
+        if (hasCtrl(evt.mods)) {
+            if (evt.sym == dr4::KEYCODE_C) {
+                auto *shape = dynamic_cast<TextShape*>(canvas_->GetSelectedShape());
+                if (!shape) return false;
+
+                if (auto *w = window()) {
+                    w->SetClipboard(shape->selectedText());
+                }
+                return true;
+            }
+
+            if (evt.sym == dr4::KEYCODE_X) {
+                auto *shape = dynamic_cast<TextShape*>(canvas_->GetSelectedShape());
+                if (!shape) return false;
+
+                std::string sel = shape->selectedText();
+                if (sel.empty()) return true;
+
+                if (auto *w = window()) {
+                    w->SetClipboard(sel);
+                }
+
+                // ensure we can actually modify the shape
+                if (!editing_) {
+                    current_ = shape;
+                    editing_ = true;
+                    shape->SetEditing(true);
+                    if (auto *w = window()) {
+                        w->StartTextInput();
+                    }
+                }
+
+                if (current_ == shape) {
+                    shape->DeleteSelectionIfAny();
+                }
+
+                return true;
+            }
+
+            if (evt.sym == dr4::KEYCODE_V) {
+                auto *shape = dynamic_cast<TextShape*>(canvas_->GetSelectedShape());
+                if (!shape) return false;
+
+                if (auto *w = window()) {
+                    std::string clip = w->GetClipboard();
+                    if (!clip.empty()) {
+                        // if we're not editing this yet, start editing it
+                        if (!editing_) {
+                            current_ = shape;
+                            editing_ = true;
+                            shape->SetEditing(true);
+                            w->StartTextInput();
+                        }
+
+                        if (current_ == shape) {
+                            current_->DeleteSelectionIfAny();
+                            current_->AppendUtf8(clip.c_str());
+                        }
+                    }
+                }
+                return true;
+            }
+        }
+
         if (!editing_) {
             if (evt.sym == dr4::KEYCODE_ENTER || evt.sym == dr4::KEYCODE_F2) {
                 if (auto *shape = dynamic_cast<TextShape*>(canvas_->GetSelectedShape())) {
@@ -508,6 +826,19 @@ public:
                 }
                 return true;
 
+            case dr4::KEYCODE_LEFT: {
+                bool ctrl  = hasCtrl(evt.mods);
+                bool shift = hasShift(evt.mods);
+                current_->MoveCaretLeft(ctrl, shift);
+                return true;
+            }
+
+            case dr4::KEYCODE_RIGHT: {
+                bool ctrl  = hasCtrl(evt.mods);
+                bool shift = hasShift(evt.mods);
+                current_->MoveCaretRight(ctrl, shift);
+                return true;
+            }
             default:
                 break;
         }
