@@ -4,7 +4,8 @@
 #include <swuix/state.hpp>
 #include <swuix/window/common.hpp>
 
-#include "widgets/plugins_dropdown.hpp"
+#include "plugins_dropdown.hpp"
+#include "theme_picker_action.hpp"
 
 class Desktop;
 class Renderer;
@@ -90,6 +91,7 @@ class MenuBar final : public Widget {
     Button *toggle;
     Button *plugins;
     Button *shot;
+    Button *themeBtn;
 
 public:
     MenuBar(Rect2f f, Widget *p, State *s, Desktop *r) : Widget(f, p, s) {
@@ -99,11 +101,14 @@ public:
                               state, new ScreenshotAction(r));
         plugins = new MenuButton({260, 0, 80, f.size.y}, this, "Plugins",
                                  state, new TogglePluginsDropdownAction(r));
+        themeBtn = new MenuButton({340, 0, 90, f.size.y}, this, "Theme",
+                                 state, new ToggleThemePickerAction(r));
 
         appendChild(view);
         appendChild(toggle);
         appendChild(shot);
         appendChild(plugins);
+        appendChild(themeBtn);
     }
 
     const char *title() const override {
@@ -115,6 +120,7 @@ public:
         toggle->resize({70, texture->GetHeight()});
         plugins->resize({80, texture->GetHeight()});
         shot->resize({90, texture->GetHeight()});
+        themeBtn->resize({90, texture->GetHeight()});
     }
 
     void draw() override {

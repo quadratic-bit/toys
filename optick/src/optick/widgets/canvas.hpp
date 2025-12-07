@@ -39,6 +39,31 @@ public:
         theme_.handleActiveColor = dr4::Color(255, 0, 0, 255);
     }
 
+    void SetShapeFillColor(dr4::Color c) {
+        theme_.shapeFillColor = c;
+        requestRedraw();
+    }
+
+    void SetShapeBorderColor(dr4::Color c) {
+        theme_.shapeBorderColor = c;
+        requestRedraw();
+    }
+
+    void SetSelectColor(dr4::Color c) {
+        theme_.selectColor = c;
+        requestRedraw();
+    }
+
+    void SetTextColor(dr4::Color c) {
+        theme_.textColor = c;
+        requestRedraw();
+    }
+
+    void SetHandleColor(dr4::Color c) {
+        theme_.handleColor = c;
+        requestRedraw();
+    }
+
     void setToolGroups(std::vector<ToolGroupDesc> &&g) {
         toolGroups_ = std::move(g);
     }
