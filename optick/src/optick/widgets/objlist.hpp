@@ -121,10 +121,20 @@ public:
 inline void ObjectView::populate(ObjectPreview *prev) {
     unpopulate();
 
+    Object *obj = prev->obj;
+
     ObjectViewName *objname = new ObjectViewName(prev, {5, 5, 125, 24}, NULL, state);
     this->appendChild(objname);
 
-    ObjectViewPropertyList *objprops = new ObjectViewPropertyList(prev->obj, {5, 50, frame().size.x - 10, frame().size.y - 55}, NULL, state);
+    Rect2f f = frame();
+    Rect2f list_frame {
+        8,
+        60,
+        f.size.x - 16,
+        f.size.y - 68
+    };
+
+    ObjectViewPropertyList *objprops = new ObjectViewPropertyList(obj, list_frame, nullptr, state);
     this->appendChild(objprops);
 
     requestRedraw();

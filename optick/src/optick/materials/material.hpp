@@ -6,6 +6,10 @@
 #include "../trace/color.hpp"
 #include "reflection.hpp"
 
+REGISTER_TYPE(double,      TypeIndex::Double);
+REGISTER_TYPE(opt::Color,  TypeIndex::Color);
+REGISTER_TYPE(std::string, TypeIndex::String);
+
 using std::vector;
 using std::pair;
 using std::string;

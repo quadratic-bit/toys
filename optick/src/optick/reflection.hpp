@@ -10,7 +10,13 @@ using std::vector;
 
 struct TypeIndex { enum Enum {
     Unknown,
+
+    Double,
+    Color,
+    String,
+
     Material,
+
     __COUNT
 };};
 

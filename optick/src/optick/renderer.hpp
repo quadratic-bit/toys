@@ -454,9 +454,7 @@ public:
     }
 
     DispatchResult onKeyDown(DispatcherCtx, const KeyDownEvent *e) override {
-        printf("fuck me\n");
         if ((e->mods & dr4::KEYMOD_CTRL) && e->keycode == dr4::KEYCODE_P) {
-            printf("twice\n");
             // make sure both textures are up to date
             this->draw();
             if (canvas) canvas->draw();
