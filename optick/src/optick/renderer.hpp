@@ -453,20 +453,22 @@ public:
         else enableRender();
     }
 
+    void captureScreenshot() {
+        this->draw();
+        if (canvas) canvas->draw();
+
+        if (canvas && canvas->getTexture()) {
+            texture->Draw(*canvas->getTexture());
+        }
+
+        if (auto *img = texture->GetImage()) {
+            SaveImageAsPNG(img, MakeTimestampedName());
+        }
+    }
+
     DispatchResult onKeyDown(DispatcherCtx, const KeyDownEvent *e) override {
         if ((e->mods & dr4::KEYMOD_CTRL) && e->keycode == dr4::KEYCODE_P) {
-            // make sure both textures are up to date
-            this->draw();
-            if (canvas) canvas->draw();
-
-            // composite overlay into renderer texture
-            if (canvas && canvas->getTexture()) {
-                texture->Draw(*canvas->getTexture());
-            }
-
-            if (auto *img = texture->GetImage()) {
-                SaveImageAsPNG(img, MakeTimestampedName());
-            }
+            captureScreenshot();
             return CONSUME;
         }
         return PROPAGATE;

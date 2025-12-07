@@ -9,6 +9,13 @@
 class Desktop;
 class Renderer;
 
+class ScreenshotAction final : public Action {
+    Desktop *root_;
+public:
+    ScreenshotAction(Desktop *r) : root_(r) {}
+    void apply(void *, Widget *) override;
+};
+
 class LaunchObjView : public Action {
     Desktop *root;
     State   *state;
@@ -82,16 +89,20 @@ class MenuBar final : public Widget {
     Button *view;
     Button *toggle;
     Button *plugins;
+    Button *shot;
 
 public:
     MenuBar(Rect2f f, Widget *p, State *s, Desktop *r) : Widget(f, p, s) {
         view = new MenuButton({0, 0, 100, f.size.y}, this, "Properties", state, new LaunchObjView(r, state));
         toggle = new MenuButton({100, 0, 70, f.size.y}, this, "Toggle", state, new ToggleRender(r));
-        plugins = new MenuButton({170, 0, 80, f.size.y}, this, "Plugins",
+        shot = new MenuButton({170, 0, 90, f.size.y}, this, "Shot",
+                              state, new ScreenshotAction(r));
+        plugins = new MenuButton({260, 0, 80, f.size.y}, this, "Plugins",
                                  state, new TogglePluginsDropdownAction(r));
 
         appendChild(view);
         appendChild(toggle);
+        appendChild(shot);
         appendChild(plugins);
     }
 
@@ -103,6 +114,7 @@ public:
         view->resize({100, texture->GetHeight()});
         toggle->resize({70, texture->GetHeight()});
         plugins->resize({80, texture->GetHeight()});
+        shot->resize({90, texture->GetHeight()});
     }
 
     void draw() override {
