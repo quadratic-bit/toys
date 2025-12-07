@@ -10,6 +10,7 @@
 
 #include "pp/canvas.hpp"
 #include "pp/tool.hpp"
+#include "widgets/tool_group.hpp"
 
 class Canvas final : public pp::Canvas, public FocusableWidget {
     // owned by this canvas
@@ -21,6 +22,8 @@ class Canvas final : public pp::Canvas, public FocusableWidget {
     pp::Tool *activeTool_{nullptr};
 
     pp::ControlsTheme theme_;
+
+    std::vector<ToolGroupDesc> toolGroups_;
 
 public:
     Canvas(Rect2f frame, Widget *p, State *s)
@@ -34,6 +37,14 @@ public:
         theme_.handleColor       = dr4::Color(255, 0, 0, 255);
         theme_.handleHoverColor  = dr4::Color(255, 0, 0, 255);
         theme_.handleActiveColor = dr4::Color(255, 0, 0, 255);
+    }
+
+    void setToolGroups(std::vector<ToolGroupDesc> &&g) {
+        toolGroups_ = std::move(g);
+    }
+
+    const std::vector<ToolGroupDesc> &toolGroups() const {
+        return toolGroups_;
     }
 
     dr4::Texture *getTexture() const { return texture; }

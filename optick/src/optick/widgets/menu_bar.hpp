@@ -1,9 +1,10 @@
 #pragma once
 #include <swuix/widgets/button.hpp>
+#include <swuix/common.hpp>
+#include <swuix/state.hpp>
+#include <swuix/window/common.hpp>
 
-#include "swuix/common.hpp"
-#include "swuix/state.hpp"
-#include "swuix/window/common.hpp"
+#include "widgets/plugins_dropdown.hpp"
 
 class Desktop;
 class Renderer;
@@ -80,13 +81,18 @@ public:
 class MenuBar final : public Widget {
     Button *view;
     Button *toggle;
+    Button *plugins;
 
 public:
     MenuBar(Rect2f f, Widget *p, State *s, Desktop *r) : Widget(f, p, s) {
         view = new MenuButton({0, 0, 100, f.size.y}, this, "Properties", state, new LaunchObjView(r, state));
         toggle = new MenuButton({100, 0, 70, f.size.y}, this, "Toggle", state, new ToggleRender(r));
+        plugins = new MenuButton({170, 0, 80, f.size.y}, this, "Plugins",
+                                 state, new TogglePluginsDropdownAction(r));
+
         appendChild(view);
         appendChild(toggle);
+        appendChild(plugins);
     }
 
     const char *title() const override {
@@ -95,6 +101,8 @@ public:
 
     void layout() override {
         view->resize({100, texture->GetHeight()});
+        toggle->resize({70, texture->GetHeight()});
+        plugins->resize({80, texture->GetHeight()});
     }
 
     void draw() override {

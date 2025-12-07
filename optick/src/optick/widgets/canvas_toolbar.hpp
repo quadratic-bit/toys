@@ -106,6 +106,8 @@ public:
         buildButtons();
     }
 
+    const std::vector<ToolGroupDesc> &groups() const { return groups_; }
+
     const char *title() const override {
         return "Tools";
     }

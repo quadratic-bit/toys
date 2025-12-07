@@ -181,6 +181,49 @@ public:
         children.clear();
     }
 
+    Widget *root() {
+        Widget *w = this;
+        if (!w) return nullptr;
+        while (w->parent && w->parent != w) {
+            w = w->parent;
+        }
+        return w;
+    }
+
+    const Widget *root() const {
+        const Widget *w = this;
+        if (!w) return nullptr;
+        while (w->parent && w->parent != w) {
+            w = w->parent;
+        }
+        return w;
+    }
+
+    Vec2f absolutePos() const {
+        Vec2f acc{0, 0};
+        const Widget *w = this;
+        while (w) {
+            acc.x += w->position.x;
+            acc.y += w->position.y;
+            if (!w->parent || w->parent == w) break;
+            w = w->parent;
+        }
+        return acc;
+    }
+
+    Rect2f absoluteFrame() const {
+        return { absolutePos(), texture->GetSize() };
+    }
+
+    template<class T>
+        T *findDescendant() {
+            for (Widget *child : children) {
+                if (auto *v = dynamic_cast<T*>(child)) return v;
+                if (auto *r = child->findDescendant<T>()) return r;
+            }
+            return nullptr;
+        }
+
     // ============ Positioning ============
 
     virtual bool isClipped() const { return true; }

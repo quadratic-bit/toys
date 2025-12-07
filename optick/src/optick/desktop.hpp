@@ -7,8 +7,10 @@
 #include "cum/manager.hpp"
 
 class Desktop final : public Widget {
+    cum::Manager *mgr_;
+
 public:
-    Desktop(Rect2f f, Widget *p, State *s, cum::Manager *mgr) : Widget(f, p, s) {
+    Desktop(Rect2f f, Widget *p, State *s, cum::Manager *mgr) : Widget(f, p, s), mgr_(mgr) {
         Renderer *renderer = new Renderer({185, 50, 800, 600}, NULL, state, mgr);
         ControlPanel *toolbox = new ControlPanel(renderer, {5, 50, 175, 150}, NULL, state);
         ObjectsList *objlist = new ObjectsList(renderer->getScene().objects, this, {1000, 225, 250, 200}, {250, 175}, NULL, state);
@@ -20,6 +22,8 @@ public:
         }
         this->parent = this;
     }
+
+    cum::Manager *manager() const { return mgr_; }
 
     template<class T>
     T *findChild() {
