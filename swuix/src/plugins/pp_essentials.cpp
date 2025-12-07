@@ -2,6 +2,7 @@
 #include <cum/plugin.hpp>
 
 #include "./pp_line_tool.cpp"
+#include "./pp_rect_tool.cpp"
 #include "./pp_text_tool.cpp"
 
 class PrimitivesPlugin : public cum::PPToolPlugin {
@@ -26,6 +27,7 @@ public:
     std::vector<std::unique_ptr<pp::Tool>> CreateTools(pp::Canvas *cvs) override {
         std::vector<std::unique_ptr<pp::Tool>> tools;
         tools.emplace_back(std::make_unique<LineTool>(cvs));
+        tools.emplace_back(std::make_unique<RectTool>(cvs));
         tools.emplace_back(std::make_unique<TextTool>(cvs));
         return tools;
     }
