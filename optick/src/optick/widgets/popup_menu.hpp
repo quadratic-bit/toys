@@ -12,6 +12,7 @@
 struct MenuItemDesc {
     std::string label;
     Action     *action;
+    bool        enabled = true;
 };
 
 class PopupMenu;
@@ -29,9 +30,23 @@ public:
 };
 
 class MenuItemButton final : public Button {
+    bool enabled_ = true;
+
 public:
-    MenuItemButton(Rect2f f, Widget *p, const char *l, State *s, Action *a)
-        : Button(f, p, l, s, a) {}
+    MenuItemButton(Rect2f f, Widget *p, const char *l, State *s, Action *a, bool en = true)
+        : Button(f, p, l, s, a), enabled_(en) {}
+
+    DispatchResult onMouseDown(DispatcherCtx ctx, const MouseDownEvent *e) override {
+        bool c = containsMouse(ctx);
+        if (c && !enabled_) return CONSUME;
+        return Button::onMouseDown(ctx, e);
+    }
+
+    DispatchResult onMouseUp(DispatcherCtx ctx, const MouseUpEvent *e) override {
+        bool c = containsMouse(ctx);
+        if (c && !enabled_) return CONSUME;
+        return Button::onMouseUp(ctx, e);
+    }
 
     void draw_idle() override {
         Rect2f f = frame();
@@ -40,6 +55,7 @@ public:
     }
 
     void draw_hover() override {
+        if (!enabled_) { draw_idle(); return; }
         Rect2f f = frame();
         const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.08f);
         Rectangle *r = rectFill(state->window, f, {d.r, d.g, d.b});
@@ -47,6 +63,7 @@ public:
     }
 
     void draw_press() override {
+        if (!enabled_) { draw_idle(); return; }
         Rect2f f = frame();
         const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.12f);
         Rectangle *r = rectFill(state->window, f, {d.r, d.g, d.b});
@@ -77,7 +94,7 @@ public:
     DispatchResult onMouseDown(DispatcherCtx ctx, const MouseDownEvent *) override {
         if (!frame().Contains(ctx.mouse_rel)) {
             destroy();
-            return CONSUME;
+            return PROPAGATE;
         }
         return PROPAGATE;
     }
@@ -106,10 +123,17 @@ private:
         float w = std::max(minWidth_, frame().size.x - 2 * padding_);
 
         for (auto &it : items_) {
-            Action *wrapped = new CloseAfterAction(it.action, this);
+            Action *wrapped = nullptr;
+
+            if (it.enabled) {
+                wrapped = new CloseAfterAction(it.action, this);
+            } else {
+                wrapped = new BtnCallbackAction(nullptr);
+            }
+
             Rect2f bf { x, y, w, itemHeight_ };
 
-            auto *btn = new MenuItemButton(bf, this, it.label.c_str(), state, wrapped);
+            auto *btn = new MenuItemButton(bf, this, it.label.c_str(), state, wrapped, it.enabled);
             appendChild(btn);
 
             y += itemHeight_;

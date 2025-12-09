@@ -45,17 +45,32 @@ void TogglePluginsDropdownAction::apply(void *, Widget *target) {
         return;
     }
 
+    const bool canvasActive = root_->findDescendant<Canvas>() != nullptr;
+
+    std::vector<MenuItemDesc> items;
+
+    if (!canvasActive) {
+        items.push_back({ "(Plugin tools available in Annotate mode)", new BtnCallbackAction(nullptr), false });
+
+        Rect2f tf = target->absoluteFrame();
+        Vec2f pos { tf.pos.x, tf.pos.y + tf.size.y };
+        Rect2f pf { pos.x, pos.y, 240.0f, 10.0f };
+
+        auto *popup = new PopupMenu(items, pf, root_, target->state);
+        root_->prependChild(popup);
+        root_->requestRedraw();
+        return;
+    }
+
     auto *toolbar = root_->findDescendant<CanvasToolBar>();
     if (!toolbar) return;
 
     const auto &groups = toolbar->groups();
 
-    std::vector<MenuItemDesc> items;
-
     for (const auto &g : groups) {
         if (isEssentialsGroup(g)) continue;
 
-        items.push_back({ "-- " + g.label + " --", new BtnCallbackAction(nullptr) });
+        items.push_back({ "-- " + g.label + " --", new BtnCallbackAction(nullptr), false });
 
         for (pp::Tool *t : g.tools) {
             if (!t) continue;
@@ -65,12 +80,12 @@ void TogglePluginsDropdownAction::apply(void *, Widget *target) {
                     ? std::string(t->Icon())
                     : std::string(t->Name());
 
-            items.push_back({ "  " + label, new SelectToolPtrAction(root_, t) });
+            items.push_back({ "  " + label, new SelectToolPtrAction(root_, t), true });
         }
     }
 
     if (items.empty()) {
-        items.push_back({ "(No plugin tools)", new BtnCallbackAction(nullptr) });
+        items.push_back({ "(No plugin tools)", new BtnCallbackAction(nullptr), false });
     }
 
     Rect2f tf = target->absoluteFrame();

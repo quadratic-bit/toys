@@ -36,6 +36,48 @@ public:
     void apply(void *, Widget *);
 };
 
+class TogglePropertiesPanelAction final : public Action {
+    Desktop *root_;
+public:
+    TogglePropertiesPanelAction(Desktop *r) : root_(r) {}
+    void apply(void *, Widget *) override;
+};
+
+class ToggleObjectsPanelAction final : public Action {
+    Desktop *root_;
+public:
+    ToggleObjectsPanelAction(Desktop *r) : root_(r) {}
+    void apply(void *, Widget *) override;
+};
+
+class ToggleControlsPanelAction final : public Action {
+    Desktop *root_;
+public:
+    ToggleControlsPanelAction(Desktop *r) : root_(r) {}
+    void apply(void *, Widget *) override;
+};
+
+class ToggleRendererPanelAction final : public Action {
+    Desktop *root_;
+public:
+    ToggleRendererPanelAction(Desktop *r) : root_(r) {}
+    void apply(void *, Widget *) override;
+};
+
+class ToggleFileDropdownAction final : public Action {
+    Desktop *root_;
+public:
+    ToggleFileDropdownAction(Desktop *r) : root_(r) {}
+    void apply(void *, Widget *target) override;
+};
+
+class ToggleViewDropdownAction final : public Action {
+    Desktop *root_;
+public:
+    ToggleViewDropdownAction(Desktop *r) : root_(r) {}
+    void apply(void *, Widget *target) override;
+};
+
 class MenuButton final : public Button {
     void _draw_separator() {
         Rect2f f = frame();
@@ -87,28 +129,19 @@ public:
 };
 
 class MenuBar final : public Widget {
+    Button *file;
     Button *view;
-    Button *toggle;
     Button *plugins;
-    Button *shot;
-    Button *themeBtn;
 
 public:
     MenuBar(Rect2f f, Widget *p, State *s, Desktop *r) : Widget(f, p, s) {
-        view = new MenuButton({0, 0, 100, f.size.y}, this, "Properties", state, new LaunchObjView(r, state));
-        toggle = new MenuButton({100, 0, 70, f.size.y}, this, "Toggle", state, new ToggleRender(r));
-        shot = new MenuButton({170, 0, 90, f.size.y}, this, "Shot",
-                              state, new ScreenshotAction(r));
-        plugins = new MenuButton({260, 0, 80, f.size.y}, this, "Plugins",
-                                 state, new TogglePluginsDropdownAction(r));
-        themeBtn = new MenuButton({340, 0, 90, f.size.y}, this, "Theme",
-                                 state, new ToggleThemePickerAction(r));
+        file    = new MenuButton({0,   0, 70, f.size.y}, this, "File",    state, new ToggleFileDropdownAction(r));
+        view    = new MenuButton({70,  0, 70, f.size.y}, this, "View",    state, new ToggleViewDropdownAction(r));
+        plugins = new MenuButton({140, 0, 90, f.size.y}, this, "Plugins", state, new TogglePluginsDropdownAction(r));
 
+        appendChild(file);
         appendChild(view);
-        appendChild(toggle);
-        appendChild(shot);
         appendChild(plugins);
-        appendChild(themeBtn);
     }
 
     const char *title() const override {
@@ -116,11 +149,9 @@ public:
     }
 
     void layout() override {
-        view->resize({100, texture->GetHeight()});
-        toggle->resize({70, texture->GetHeight()});
-        plugins->resize({80, texture->GetHeight()});
-        shot->resize({90, texture->GetHeight()});
-        themeBtn->resize({90, texture->GetHeight()});
+        file->resize({70, texture->GetHeight()});
+        view->resize({70, texture->GetHeight()});
+        plugins->resize({90, texture->GetHeight()});
     }
 
     void draw() override {
