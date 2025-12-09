@@ -81,7 +81,7 @@ public:
 class MenuButton final : public Button {
     void _draw_separator() {
         Rect2f f = frame();
-        dr4::Line *l = thickLine(state->window, {f.size.x - 1, 0}, {f.size.x - 1, f.size.y - 2}, {CLR_BORDER}, 1);
+        dr4::Line *l = thickLine(state->window, {f.size.x - 1, 0}, {f.size.x - 1, f.size.y - 2}, {CLR_BORDER_SUBTLE}, 1);
         texture->Draw(*l);
 
         l = thickLine(state->window, {0, f.size.y - 1.5f}, {f.size.x, f.size.y - 1.5f}, {CLR_BORDER}, 2);
@@ -101,7 +101,7 @@ public:
     void draw_hover() override {
         Rect2f f = frame();
         Rectangle *r;
-        const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.06);
+        const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_3), 0.06);
         r = rectFill(state->window, f, {d.r, d.g, d.b});
         texture->Draw(*r);
 
@@ -111,7 +111,7 @@ public:
     void draw_press() override {
         Rect2f f = frame();
         Rectangle *r;
-        const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.10);
+        const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_3), 0.10);
         r = rectFill(state->window, f, {d.r, d.g, d.b});
         texture->Draw(*r);
 
@@ -121,7 +121,7 @@ public:
     void draw_idle() override {
         Rect2f f = frame();
         Rectangle *r;
-        r = rectFill(state->window, f, {CLR_SURFACE_2});
+        r = rectFill(state->window, f, {CLR_SURFACE_3});
         texture->Draw(*r);
 
         _draw_separator();

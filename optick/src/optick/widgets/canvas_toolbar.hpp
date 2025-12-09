@@ -48,7 +48,7 @@ public:
 
         if (isActive()) {
             const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.18);
-            r = rectBorder(state->window, f, {d.r, d.g, d.b}, 2, {CLR_BORDER});
+            r = rectBorder(state->window, f, {d.r, d.g, d.b}, 2, {CLR_PRIMARY});
         } else {
             r = rectBorder(state->window, f, {CLR_SURFACE_2}, 2, {CLR_BORDER});
         }

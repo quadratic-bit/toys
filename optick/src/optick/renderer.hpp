@@ -385,7 +385,7 @@ public:
             if (!obj->selected()) continue;
             AABB box;
             if (!obj->worldAABB(&box)) continue;
-            drawWireframe(box, viewW, viewH, 255, 80, 0);
+            drawWireframe(box, viewW, viewH, CLR_PRIMARY);
         }
 
         outline(state->window, frame(), 2, {CLR_BORDER});

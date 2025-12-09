@@ -6,6 +6,7 @@
 #include "extern/window.hpp"
 #include "swuix/traits/focusable.hpp"
 #include "swuix/widget.hpp"
+#include "swuix/window/common.hpp"
 #include "swuix/state.hpp"
 
 #include "pp/canvas.hpp"
@@ -29,14 +30,14 @@ public:
     Canvas(Rect2f frame, Widget *p, State *s)
         : Widget(frame, p, s), FocusableWidget(frame, p, s)
     {
-        theme_.shapeBorderColor  = dr4::Color(255, 255, 255, 255);
-        theme_.shapeFillColor    = dr4::Color(255, 0,   0,   255);
-        theme_.selectColor       = dr4::Color(0,   255, 0,   255);
-        theme_.textColor         = dr4::Color(255, 255, 255, 255);
+        theme_.shapeBorderColor  = dr4::Color(CLR_BORDER_STRONG, 255);
+        theme_.shapeFillColor    = dr4::Color(CLR_PRIMARY_SURF,  255);
+        theme_.selectColor       = dr4::Color(CLR_PRIMARY,       255);
+        theme_.textColor         = dr4::Color(CLR_TEXT_STRONG,   255);
         theme_.baseFontSize      = 16.0f;
-        theme_.handleColor       = dr4::Color(255, 0, 0, 255);
-        theme_.handleHoverColor  = dr4::Color(255, 0, 0, 255);
-        theme_.handleActiveColor = dr4::Color(255, 0, 0, 255);
+        theme_.handleColor       = dr4::Color(CLR_PRIMARY,     255);
+        theme_.handleHoverColor  = dr4::Color(CLR_PRIMARY_HOV, 255);
+        theme_.handleActiveColor = dr4::Color(CLR_PRIMARY_ACT, 255);
     }
 
     void SetShapeFillColor(dr4::Color c) {
@@ -141,7 +142,7 @@ public:
     }
 
     void draw() override {
-        texture->Clear({0, 0, 0, 50});
+        texture->Clear({CLR_SURFACE_1, 50});
         for (auto &s : shapes_) {
             s->DrawOn(*texture);
         }

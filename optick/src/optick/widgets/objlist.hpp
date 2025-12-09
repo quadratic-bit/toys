@@ -41,11 +41,9 @@ public:
         Rect2f f = frame();
         Rectangle *r;
         if (obj->selected()) {
-            // TODO: move into a constant (soft-selection)
-            const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.18);
-            r = rectBorder(state->window, f, {d.r, d.g, d.b}, 2, {CLR_BORDER});
+            r = rectBorder(state->window, f, {CLR_PRIMARY_SURF}, 2, {CLR_PRIMARY});
         } else {
-            r = rectBorder(state->window, f, {CLR_SURFACE_2}, 2, {CLR_BORDER});
+            r = rectBorder(state->window, f, {CLR_SURFACE_1}, 2, {CLR_BORDER});
         }
         texture->Draw(*r);
 
@@ -81,9 +79,9 @@ public:
 	}
 
 	void draw() override {
-        texture->Clear({CLR_SURFACE_2});
+        texture->Clear({CLR_SURFACE_1});
         Rect2f f = frame();
-        Rectangle *r = rectBorder(state->window, f, {CLR_SURFACE_2}, 2, {CLR_BORDER});
+        Rectangle *r = rectBorder(state->window, f, {CLR_SURFACE_1}, 2, {CLR_BORDER});
         texture->Draw(*r);
 	}
 };

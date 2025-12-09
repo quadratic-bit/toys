@@ -104,7 +104,7 @@ public:
 
 	void draw() override {
         Rect2f f = frame();
-        Rectangle *r = rectBorder(state->window, f, {CLR_SURFACE_2}, 2, {CLR_BORDER});
+        Rectangle *r = rectBorder(state->window, f, {CLR_SURFACE_1}, 2, {CLR_BORDER});
         texture->Draw(*r);
 	}
 };
