@@ -28,7 +28,7 @@ public:
 
 class ToolButton final : public Button {
     Canvas *canvas_;
-    size_t index_;
+    size_t  index_;
 
     bool isActive() const {
         if (!canvas_) return false;

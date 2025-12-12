@@ -195,6 +195,7 @@ class Renderer final : public TitledWidget {
     cum::Manager *mgr;
     bool alive = true;
     Canvas *canvas = nullptr;
+    CanvasToolBar *toolbar = nullptr;
 
     void buildTiles() {
         tile_w = (back_img->GetWidth() + TILE - 1) / TILE;
@@ -402,6 +403,9 @@ public:
     void enableRender()  {
         state->unfocus();
         destroyChild(canvas);
+        destroyChild(toolbar);
+        canvas = nullptr;
+        toolbar = nullptr;
         alive = true;
     }
 
@@ -433,7 +437,7 @@ public:
 
         canvas->setTools(std::move(tools));
 
-        CanvasToolBar *toolbar = new CanvasToolBar(
+        toolbar = new CanvasToolBar(
             canvas,
             toolGroups,
             {canvas->frame().size.x - toolbarWidth, 0, toolbarWidth, texture->GetHeight()},
