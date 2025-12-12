@@ -33,6 +33,8 @@ protected:
     virtual void draw_idle();
     virtual void draw_text();
 
+    bool align_left = false;
+
 public:
     Button(Rect2f f, Widget *p, const char *l, State *s, Action *a)
         : Widget(f, p, s), hovered(false), pressed(false), action(a), label(l) {}

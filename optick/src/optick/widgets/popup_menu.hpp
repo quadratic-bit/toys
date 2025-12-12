@@ -34,7 +34,9 @@ class MenuItemButton final : public Button {
 
 public:
     MenuItemButton(Rect2f f, Widget *p, const char *l, State *s, Action *a, bool en = true)
-        : Button(f, p, l, s, a), enabled_(en) {}
+            : Button(f, p, l, s, a), enabled_(en) {
+        align_left = true;
+    }
 
     DispatchResult onMouseDown(DispatcherCtx ctx, const MouseDownEvent *e) override {
         bool c = containsMouse(ctx);
@@ -50,14 +52,14 @@ public:
 
     void draw_idle() override {
         Rect2f f = frame();
-        Rectangle *r = rectFill(state->window, f, {CLR_SURFACE_2});
+        Rectangle *r = rectFill(state->window, f, {CLR_SURFACE_3});
         texture->Draw(*r);
     }
 
     void draw_hover() override {
         if (!enabled_) { draw_idle(); return; }
         Rect2f f = frame();
-        const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.08f);
+        const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_3), 0.08f);
         Rectangle *r = rectFill(state->window, f, {d.r, d.g, d.b});
         texture->Draw(*r);
     }
@@ -65,7 +67,7 @@ public:
     void draw_press() override {
         if (!enabled_) { draw_idle(); return; }
         Rect2f f = frame();
-        const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_2), 0.12f);
+        const RGBu8 d = OKLabDarken(RGB(CLR_SURFACE_3), 0.12f);
         Rectangle *r = rectFill(state->window, f, {d.r, d.g, d.b});
         texture->Draw(*r);
     }
@@ -109,8 +111,8 @@ public:
 
     void draw() override {
         Rect2f f = frame();
-        texture->Clear({CLR_SURFACE_2});
-        Rectangle *bg = rectBorder(state->window, f, {CLR_SURFACE_2}, 2, {CLR_BORDER});
+        texture->Clear({CLR_SURFACE_3});
+        Rectangle *bg = rectBorder(state->window, f, {CLR_SURFACE_3}, 2, {CLR_BORDER});
         texture->Draw(*bg);
     }
 

@@ -75,10 +75,10 @@ void TogglePluginsDropdownAction::apply(void *, Widget *target) {
         for (pp::Tool *t : g.tools) {
             if (!t) continue;
 
-            std::string label =
-                !t->Icon().empty()
-                    ? std::string(t->Icon())
-                    : std::string(t->Name());
+            std::string label = std::string(t->Name()) + std::string("");
+            if (!t->Icon().empty()) {
+                label = std::string(t->Icon()) + "  " + label;
+            }
 
             items.push_back({ "  " + label, new SelectToolPtrAction(root_, t), true });
         }

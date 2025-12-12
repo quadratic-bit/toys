@@ -60,7 +60,13 @@ void Button::draw_idle() {
 }
 
 void Button::draw_text() {
-    Text *t = textAligned(state->window, label, texture->GetSize() / 2.0f, Color(CLR_TEXT_STRONG), state->appfont, 16, HAlign::CENTER);
+    Text *t;
+    if (align_left) {
+        t = textAligned(state->window, label, {2, texture->GetHeight() / 2.0f}, Color(CLR_TEXT_STRONG), state->appfont, 16, HAlign::LEFT);
+    } else {
+        t = textAligned(state->window, label, texture->GetSize() / 2.0f, Color(CLR_TEXT_STRONG), state->appfont, 16, HAlign::CENTER);
+
+    }
     texture->Draw(*t);
 }
 

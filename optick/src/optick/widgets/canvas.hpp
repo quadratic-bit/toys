@@ -156,6 +156,9 @@ public:
         mev.pos    = ctx.mouse_rel;
         mev.button = dr4::MouseButtonType::LEFT;
 
+        if (activeTool_ && activeTool_->OnMouseDown(mev))
+            return CONSUME;
+
         for (auto it = shapes_.rbegin(); it != shapes_.rend(); ++it) {
             pp::Shape *shape = it->get();
             if (shape->OnMouseDown(mev)) {
@@ -163,11 +166,6 @@ public:
                 return CONSUME;
             }
         }
-
-        if (!activeTool_) return PROPAGATE;
-
-        if (activeTool_->OnMouseDown(mev))
-            return CONSUME;
 
         return PROPAGATE;
     }
@@ -226,6 +224,13 @@ public:
         dr4::Event::KeyEvent kev{};
         kev.sym = (dr4::KeyCode)e->keycode;
         kev.mods = e->mods;
+
+        if (activeTool_ && e->keycode == dr4::KEYCODE_ESCAPE) {
+            activeTool_->OnEnd();
+            activeTool_ = nullptr;
+            requestRedraw();
+            return CONSUME;
+        }
 
         if ((e->mods & dr4::KEYMOD_CTRL) && e->keycode == dr4::KEYCODE_P) {
             parent->onKeyDown(ctx, e);
