@@ -102,6 +102,16 @@ static inline Scene makeDemoScene() {
     const Vector3 verts[] = { Vector3(-10, -5, -10), Vector3(-8, -2, -10), Vector3(-11, -1, -10) };
     scn.objects.push_back(new Polygon("triangle", std::vector<Vector3>(verts, verts + 3), opt::Color(1.0, 1.0, 1.0), normal));
 
+    MaterialRefractive *poly_glass = new MaterialRefractive(/*ior*/1.5);
+    scn.objects.push_back(new Tetrahedron("glass tetra",
+        Vector3(-6.0, -1.0, -9.5),
+        Vector3(-4.8, -1.0, -9.6),
+        Vector3(-5.6,  0.4, -9.1),
+        Vector3(-5.4, -0.2, -10.4),
+        opt::Color(0.95, 1.0, 1.0),
+        poly_glass
+    ));
+
     MaterialOpaque *solid = new MaterialOpaque(/*kd*/1.0, /*ks*/1.0, /*shininess*/32);
     scn.objects.push_back(new Sphere("red ball",
         Vector3(-1.5, -0.2, -5), 0.7,

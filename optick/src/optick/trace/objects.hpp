@@ -1,7 +1,8 @@
 #pragma once
-#include <string>
+#include <array>
+#include <cmath>
 #include <vector>
-#include <limits>
+#include <string>
 
 #include "../materials/material.hpp"
 #include "common.hpp"
@@ -272,6 +273,103 @@ struct Polygon : public Object {
         for (size_t i = 0; i < verts3.size(); ++i) box.include(verts3[i]);
         *out = box;
 
+        return out->isValid();
+    }
+};
+
+struct Tetrahedron : public Object {
+    std::array<Vector3, 4> v;
+    std::array<std::array<int,3>, 4> f;
+
+    Tetrahedron(std::string name_,
+                const Vector3 &v0,
+                const Vector3 &v1,
+                const Vector3 &v2,
+                const Vector3 &v3,
+                const opt::Color &col,
+                Material *m)
+        : Object(std::move(name_), Vector3(0,0,0), col, m)
+        , v{v0, v1, v2, v3}
+        , f{{
+            {{0,1,2}},
+            {{0,1,3}},
+            {{0,2,3}},
+            {{1,2,3}}
+        }}
+    {
+        center = (v[0] + v[1] + v[2] + v[3]) * 0.25;
+    }
+
+    static bool intersectTri(const Ray &ray,
+                             const Vector3 &a,
+                             const Vector3 &b,
+                             const Vector3 &c,
+                             double eps,
+                             double *tOut,
+                             Vector3 *nOut)
+    {
+        // Moller–Trumbore
+        Vector3 e1 = b - a;
+        Vector3 e2 = c - a;
+
+        Vector3 pvec = ray.d % e2;
+        double det = e1 ^ pvec;
+
+        if (std::fabs(det) < 1e-12) return false;
+        double invDet = 1.0 / det;
+
+        Vector3 tvec = ray.o - a;
+        double u = (tvec ^ pvec) * invDet;
+        if (u < 0.0 || u > 1.0) return false;
+
+        Vector3 qvec = tvec % e1;
+        double v = (ray.d ^ qvec) * invDet;
+        if (v < 0.0 || u + v > 1.0) return false;
+
+        double t = (e2 ^ qvec) * invDet;
+        if (t <= eps) return false;
+
+        Vector3 n = !(e1 % e2);
+        if ((ray.d ^ n) > 0.0) n = n * -1.0;
+
+        *tOut = t;
+        *nOut = n;
+        return true;
+    }
+
+    bool intersect(const Ray &ray, double eps, Hit *hit) const override {
+        double bestT = 0.0;
+        Vector3 bestN;
+        bool any = false;
+
+        for (const auto &fi : f) {
+            const Vector3 &a = v[fi[0]];
+            const Vector3 &b = v[fi[1]];
+            const Vector3 &c = v[fi[2]];
+
+            double t = 0.0;
+            Vector3 n;
+            if (!intersectTri(ray, a, b, c, eps, &t, &n)) continue;
+
+            if (!any || t < bestT) {
+                any = true;
+                bestT = t;
+                bestN = n;
+            }
+        }
+
+        if (!any) return false;
+
+        hit->pos  = ray.o + ray.d * bestT;
+        hit->norm = bestN;
+        hit->dist = bestT;
+        return true;
+    }
+
+    bool worldAABB(AABB *out) const override {
+        AABB box;
+        for (int i = 0; i < 4; ++i) box.include(v[i]);
+        *out = box;
         return out->isValid();
     }
 };
