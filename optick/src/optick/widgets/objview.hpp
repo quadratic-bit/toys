@@ -6,6 +6,8 @@
 #include <swuix/widgets/textinput.hpp>
 
 #include "swuix/common.hpp"
+#include "swuix/traits/scrollable.hpp"
+#include "swuix/widgets/tall_view.hpp"
 #include "swuix/window/common.hpp"
 #include "trace/objects.hpp"
 #include "../materials/material.hpp"
@@ -176,20 +178,30 @@ public:
     }
 };
 
-class ObjectViewPropertyList final : public Widget {
+class ObjectViewPropertyList final : public ScrollableWidget {
     Object *obj;
     FieldList fields;
 
 public:
-    ObjectViewPropertyList(Object *o, Rect2f f, Widget *p, State *s)
-            : Widget(f, p, s), obj(o) {
+    ObjectViewPropertyList(Object *o, Rect2f f, Vec2f clip, Widget *p, State *s)
+        : Widget(f, p, s)
+        , ScrollableWidget(f, clip, p, s)
+        , obj(o)
+    {
+        obj->collectFields(fields);
         obj->mat->collectFields(fields);
-        Text *t = textAligned(state->window, "Материал", {1, 1}, Color(CLR_TEXT_STRONG), state->appfont, 16, HAlign::LEFT, dr4::Text::VAlign::TOP);
-        Vec2f offset = t->GetBounds();
+
+        float y = 0.0f;
         for (size_t i = 0; i < fields.size(); ++i) {
-            auto *property = new ObjectViewPropertyEditor(fields[i], {0, static_cast<float>(i * 35) + offset.y + 3, f.size.x, 35}, nullptr, s);
+            auto *property = new ObjectViewPropertyEditor(fields[i],
+                {0, y, f.size.x, 35}, nullptr, s);
             appendChild(property);
+            y += 35.0f;
         }
+
+        texture->SetSize({texture->GetWidth(), y + 10.0f});
+        requestLayout();
+        requestRedraw();
     }
 
     const char *title() const override {

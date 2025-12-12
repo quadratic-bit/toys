@@ -14,6 +14,7 @@ struct TypeIndex { enum Enum {
     Double,
     Color,
     String,
+    Vector3,
 
     Material,
 
@@ -27,6 +28,9 @@ struct TypeToEnum { enum {
 
 #define REGISTER_TYPE(CppType, EnumVal) \
   template<> struct TypeToEnum< CppType > { enum { value = EnumVal }; }
+
+
+REGISTER_TYPE(Vector3, TypeIndex::Vector3);
 
 struct Field {
     virtual ~Field() {}

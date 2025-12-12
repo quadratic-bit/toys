@@ -534,7 +534,7 @@ public:
         bool all_uploaded = true;
         for (uint8_t u : tile_uploaded) { if (!u) { all_uploaded = false; break; } }
         if (all_uploaded) {
-            scene.objects[2]->center.x += 0.05f;
+            scene.objects[3]->center.x += 0.05f;
 
             buildTiles();
             startFrameJobs();

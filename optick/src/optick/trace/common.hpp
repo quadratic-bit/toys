@@ -35,10 +35,34 @@ struct Ray {
     }
 };
 
-inline std::string double2string(double v, int precision=2) {
+inline std::string double2string(double v, int max_decimals = 6) {
+    if (std::fabs(v) < std::pow(10.0, -max_decimals)) {
+        v = 0.0;
+    }
+
+    if (v == 0.0) {
+        return "0";
+    }
+
     std::ostringstream s;
-    s << std::setprecision(precision) << v;
-    return s.str();
+    s.imbue(std::locale::classic());
+    s << std::fixed << std::setprecision(max_decimals) << v;
+
+    std::string out = s.str();
+
+    auto dot = out.find('.');
+    if (dot != std::string::npos) {
+        std::size_t end = out.size() - 1;
+        while (end > dot && out[end] == '0') {
+            --end;
+        }
+        if (end == dot) {
+            --end;
+        }
+        out.erase(end + 1);
+    }
+
+    return out;
 }
 
 template<typename T>
@@ -73,4 +97,31 @@ inline opt::Color parse_from_string<opt::Color>(const std::string &s) {
     opt::Color c; is >> c;
     if (!is) throw std::runtime_error("parse error Color");
     return c;
+}
+
+template<>
+inline std::string stringify<Vector3>(const Vector3 &v) {
+    return double2string(v.x) + " " + double2string(v.y) + " " + double2string(v.z);
+}
+
+template<>
+inline Vector3 parse_from_string<Vector3>(const std::string &s) {
+    // "x y z" or "x, y, z" or "(x,y,z)"
+    double x=0, y=0, z=0;
+    const char *p = s.c_str();
+
+    auto skip = [&]() {
+        while (*p && (std::isspace((unsigned char)*p) || *p=='(' || *p==')' || *p==',')) ++p;
+    };
+
+    auto read = [&](double &out) {
+        skip();
+        char *end = nullptr;
+        out = std::strtod(p, &end);
+        if (!end || end == p) throw std::runtime_error("bad Vector3");
+        p = end;
+    };
+
+    read(x); read(y); read(z);
+    return Vector3(x, y, z);
 }

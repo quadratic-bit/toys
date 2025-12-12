@@ -38,7 +38,7 @@ struct AABB {
     }
 };
 
-class Object {
+class Object : public Reflectable {
     bool is_selected;
 
 public:
@@ -73,6 +73,13 @@ public:
 
     // false = no finite box
     virtual bool worldAABB(AABB *out) const = 0;
+
+    void collectFields(FieldList &out) override {
+        Fields<Object>(this, out)
+            .add(&Object::name,   "name")
+            .add(&Object::center, "center")
+            .add(&Object::color,  "color");
+    }
 };
 
 struct Sphere : public Object {
@@ -84,7 +91,7 @@ struct Sphere : public Object {
     /**
      * Ray-sphere intersection using stable quadratic form
      */
-    bool intersect(const Ray &ray, double eps, Hit *hit) const {
+    bool intersect(const Ray &ray, double eps, Hit *hit) const override {
         // Solve |o + t d - c|^2 = R^2  with a stable quadratic
         // d is normalized => a = 1
         Vector3 L = ray.o - this->center;
@@ -115,11 +122,16 @@ struct Sphere : public Object {
         return true;
     }
 
-    bool worldAABB(AABB *out) const {
+    bool worldAABB(AABB *out) const override {
         const Vector3 r(radius, radius, radius);
         out->mn = center - r;
         out->mx = center + r;
         return true;
+    }
+
+    void collectFields(FieldList &out) override {
+        Object::collectFields(out);
+        Fields<Sphere>(this, out).add(&Sphere::radius, "radius");
     }
 };
 

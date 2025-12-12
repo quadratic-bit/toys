@@ -42,7 +42,7 @@ public:
 
     bool createView() {
         if (objview_ || findChild<ObjectView>()) return false;
-        objview_ = new ObjectView({5, 225, 175, 225}, NULL, state);
+        objview_ = new ObjectView({5, 225, 250, 225}, NULL, state);
         prependChild(objview_);
         return true;
     }

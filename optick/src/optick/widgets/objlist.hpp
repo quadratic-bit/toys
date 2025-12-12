@@ -132,7 +132,7 @@ inline void ObjectView::populate(ObjectPreview *prev) {
         f.size.y - 68
     };
 
-    ObjectViewPropertyList *objprops = new ObjectViewPropertyList(obj, list_frame, nullptr, state);
+    ObjectViewPropertyList *objprops = new ObjectViewPropertyList(obj, list_frame, list_frame.size, nullptr, state);
     this->appendChild(objprops);
 
     requestRedraw();
