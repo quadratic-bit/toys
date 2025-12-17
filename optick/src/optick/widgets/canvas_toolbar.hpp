@@ -124,11 +124,17 @@ public:
             Text *t = textAligned(
                 state->window,
                 groups_[i].label.c_str(),
-                {5.0f, y + 8.0f},                       // FIXME:
+                {5.0f, y + 8.0f},
                 Color(CLR_TEXT_STRONG),
                 state->appfont
             );
             texture->Draw(*t);
+        }
+    }
+
+    void requestRedrawAll() {
+        for (auto btn : toolButtonsByIndex_) {
+            btn->requestRedraw();
         }
     }
 
