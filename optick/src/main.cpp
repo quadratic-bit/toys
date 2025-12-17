@@ -1,6 +1,6 @@
-#include <cstdio>
-#include <swuix/manager.hpp>
 #include <dlfcn.h>
+
+#include <swuix/manager.hpp>
 
 #include <cum/manager.hpp>
 #include <cum/ifc/dr4.hpp>

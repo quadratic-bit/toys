@@ -7,21 +7,20 @@ opt::Color MaterialRefractive::sample(TraceContext ctx) const {
     double etai = 1.0;  // incident medium IoR
     double etat = ior;  // transmit medium IoR
 
-    // FIXME: does this work for planes?
     Vector3 N = ctx.hit.norm;
     if (cos_incident > 0.0) {  // inside the sphere
         N = N * -1.0;
-        double tmp = etai; // swap media IoR
+        double tmp = etai;  // swap media IoR
         etai = etat;
         etat = tmp;
     }
 
-    Vector3 T;  // refracted direction (i.e. transmitted dir, unit)
+    Vector3 T;  // refracted direction
     if (T.refract(ctx.ray.d, N, etai, etat)) {
         opt::Color inc_clr = ctx.scene->trace(Ray(ctx.hit.pos + T * ctx.eps, T), ctx.depth + 1, ctx.max_depth, ctx.eps);
         return ctx.target->color * inc_clr;
     }
-    else // Total Internal Reflection
+    else // TIR
     {
         Vector3 R = Vector3::reflect(ctx.ray.d, ctx.hit.norm);
         opt::Color inc_clr = ctx.scene->trace(Ray(ctx.hit.pos + R * ctx.eps, R), ctx.depth + 1, ctx.max_depth, ctx.eps);

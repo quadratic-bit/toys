@@ -5,7 +5,7 @@
 #include <string>
 
 #include "../materials/material.hpp"
-#include "common.hpp"
+#include "./common.hpp"
 
 using std::string;
 
@@ -49,7 +49,11 @@ public:
     Material *mat;
 
     Object(string name_, const Vector3 &pos, const opt::Color &col, Material *m)
-        : is_selected(false), center(pos), color(col), name(name_), mat(m) {}
+        : is_selected(false)
+        , center(pos)
+        , color(col)
+        , name(name_)
+        , mat(m) {}
 
     virtual ~Object() {};
 
@@ -106,14 +110,14 @@ struct Sphere : public Object {
         double t0 = q;  // / a (a=1)
         double t1 = c / q;
 
-        if (t0 > t1) {  // ensure t0 is the smaller root
+        if (t0 > t1) {  // t0 is the smaller root
             double tmp = t0;
             t0 = t1;
             t1 = tmp;
         }
 
         double t = t0;
-        if (t <= eps) t = t1;  // root is too close or behind
+        if (t <= eps) t = t1;        // root is too close or behind
         if (t <= eps) return false;  // both roots are bad
 
         hit->pos = ray.o + ray.d * t;
@@ -139,10 +143,10 @@ struct Plane : public Object {
     Vector3 normal; // must be unit
 
     Plane(string name_,
-          const Vector3  &point_on_plane,
-          const Vector3  &n,
-          const opt::Color    &col,
-                Material *m)
+          const Vector3 &point_on_plane,
+          const Vector3 &n,
+          const opt::Color &col,
+          Material *m)
         : Object(name_, point_on_plane, col, m), normal(!n) {}
 
     bool intersect(const Ray &ray, double eps, Hit *hit) const {
@@ -182,10 +186,11 @@ struct Polygon : public Object {
     std::vector<Vec2> verts2;  // projected onto (u,v)
 
     Polygon(string name_, const std::vector<Vector3> &verts, const opt::Color &col, Material *m)
-            : Object(name_, Vector3(0, 0, 0), col, m),
-            verts3(verts),
-            normal(0, 1, 0),
-            u(1, 0, 0), v(0, 1, 0)
+            : Object(name_, Vector3(0, 0, 0), col, m)
+            , verts3(verts)
+            , normal(0, 1, 0)
+            , u(1, 0, 0)
+            , v(0, 1, 0)
     {
         if (verts3.size() < 3) return;
 
@@ -247,7 +252,7 @@ struct Polygon : public Object {
             double cross = abx * apy - aby * apx;
 
             if (std::fabs(cross) < 1e-12) {
-                double dot = apx * abx + apy * aby;
+                double dot  = apx * abx + apy * aby;
                 double len2 = abx * abx + aby * aby;
                 if (dot >= -1e-12 && dot <= len2 + 1e-12) return true;
             }
@@ -317,8 +322,8 @@ struct Tetrahedron : public Object {
                              const Vector3 &b,
                              const Vector3 &c,
                              double eps,
-                             double *tOut,
-                             Vector3 *nOut)
+                             double  *t_out,
+                             Vector3 *n_out)
     {
         // Moller–Trumbore
         Vector3 e1 = b - a;
@@ -344,8 +349,8 @@ struct Tetrahedron : public Object {
         Vector3 n = !(e1 % e2);
         if ((ray.d ^ n) > 0.0) n = n * -1.0;
 
-        *tOut = t;
-        *nOut = n;
+        *t_out = t;
+        *n_out = n;
         return true;
     }
 

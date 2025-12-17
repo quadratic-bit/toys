@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "../trace/color.hpp"
-#include "reflection.hpp"
+#include "./reflection.hpp"
 
 REGISTER_TYPE(double,      TypeIndex::Double);
 REGISTER_TYPE(opt::Color,  TypeIndex::Color);
@@ -14,7 +14,6 @@ using std::vector;
 using std::pair;
 using std::string;
 
-// forward-declare
 struct TraceContext;
 
 class Material : public Reflectable {
@@ -27,7 +26,6 @@ public:
     virtual opt::Color emission()   const { return opt::Color(0, 0, 0); }
 };
 
-// A mirror surface
 class MaterialReflective : public Material {
 public:
     MaterialReflective() : Material() {}
@@ -37,7 +35,6 @@ public:
     void collectFields(FieldList &) {}
 };
 
-// A transparent material with a specified index of refraction (ior)
 class MaterialRefractive : public Material {
 public:
     double ior;
@@ -51,7 +48,7 @@ public:
     }
 };
 
-// An opaque surface with Lambert/Blinn-Phong lighting model
+// Lambert/Blinn-Phong lighting model
 class MaterialOpaque : public Material {
 public:
     double kd;         // diffuse albedo scale (0..1)
@@ -78,7 +75,8 @@ public:
     explicit MaterialEmissive(const opt::Color &Le_=opt::Color(1, 1, 1)) : Le(Le_) {}
 
     opt::Color sample(TraceContext ctx) const;
-    bool  isEmissive() const { return true; }
+
+    bool       isEmissive() const { return true; }
     opt::Color emission()   const { return Le; }
 
     void collectFields(FieldList &out) {

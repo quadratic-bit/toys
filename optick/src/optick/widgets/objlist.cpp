@@ -1,5 +1,5 @@
-#include "objlist.hpp"
-#include "desktop.hpp"
+#include "./objlist.hpp"
+#include "./desktop.hpp"
 
 void ObjectsList::toggleSelect(ObjectPreview *preview) {
     bool toggled = preview->obj->toggleSelect();

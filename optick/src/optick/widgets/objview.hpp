@@ -1,16 +1,15 @@
 #pragma once
-#include <cstdio>
 #include <functional>
 
+#include <swuix/common.hpp>
 #include <swuix/widgets/button.hpp>
 #include <swuix/widgets/titled.hpp>
 #include <swuix/widgets/textinput.hpp>
-
-#include "swuix/common.hpp"
-#include "swuix/traits/scrollable.hpp"
+#include <swuix/traits/scrollable.hpp>
 #include <swuix/widgets/scrollbar.hpp>
-#include "swuix/window/common.hpp"
-#include "trace/objects.hpp"
+#include <swuix/window/common.hpp>
+
+#include "../trace/objects.hpp"
 #include "../materials/material.hpp"
 
 class PropertyTextInput final : public TextInput {

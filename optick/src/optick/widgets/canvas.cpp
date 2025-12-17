@@ -1,4 +1,4 @@
-#include "widgets/canvas_toolbar.hpp"
+#include "./canvas_toolbar.hpp"
 
 DispatchResult Canvas::onKeyDown(DispatcherCtx ctx, const KeyDownEvent *e) {
     if (state->getFocus() != this) return PROPAGATE;

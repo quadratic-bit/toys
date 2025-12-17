@@ -5,8 +5,8 @@
 #include <swuix/widgets/scrollbar.hpp>
 #include <swuix/widgets/button.hpp>
 
-#include "trace/objects.hpp"
-#include "objview.hpp"
+#include "../trace/objects.hpp"
+#include "./objview.hpp"
 
 class ObjectPreview;
 class ObjectsList;

@@ -1,9 +1,9 @@
 #pragma once
 #include <vector>
 
-#include "objects.hpp"
+#include "./objects.hpp"
 
-struct Scene; // forward-declare for TraceContext
+struct Scene;
 
 struct TraceContext {
     double  eps;
@@ -28,7 +28,7 @@ struct Scene {
      * Background color (based on Y component of ray's direction d)
      */
     opt::Color sampleBackground(const Vector3 &d) const {
-        double t = 0.5 * (d.y + 1.0); // map y [-1,1] to t [0,1] (d is normalized)
+        double t = 0.5 * (d.y + 1.0);  // map y [-1,1] to t [0,1] (d is normalized)
         if (t < 0) t = 0;
         if (t > 1) t = 1;
         return backgroundTop * t + backgroundBottom * (1.0 - t);
@@ -38,11 +38,11 @@ struct Scene {
      * Shadow test from point p towards light direction to_light (unit) up to max_dist
      */
     bool occluded(const Vector3 &p, const Vector3 &to_light, double max_dist, double eps) const {
-        Ray sray(p + to_light * eps, to_light); // offset origin to avoid self-intersection
+        Ray sray(p + to_light * eps, to_light);  // offset origin to avoid self-intersection
         for (size_t i = 0; i < objects.size(); ++i) {
             Hit h;
             if (!objects[i]->intersect(sray, eps, &h)) continue;
-            if (h.dist < max_dist) return true; // blocked by something
+            if (h.dist < max_dist) return true;  // blocked by something
         }
         return false;
     }
@@ -50,8 +50,13 @@ struct Scene {
     /**
      * Ignore the target emissive if it is the first hit
      */
-    bool occludedTowards(const Vector3 &p, const Vector3 &to_light,
-            double max_dist, double eps, const Object *target_light_geom) const {
+    bool occludedTowards(
+                const Vector3 &p,
+                const Vector3 &to_light,
+                double max_dist,
+                double eps,
+                const Object *target_light_geom) const
+    {
         Ray sray(p + to_light * eps, to_light);
         const Object* first_obj = NULL;
         Hit h_first;
@@ -67,9 +72,9 @@ struct Scene {
             }
         }
 
-        if (!first_obj) return false; // nothing in the way
-        if (first_obj == target_light_geom) return false; // hit the light
-        return true; // some other geometry blocks
+        if (!first_obj) return false;  // nothing in the way
+        if (first_obj == target_light_geom) return false;  // hit the light
+        return true;  // some other geometry blocks
     }
 
     /**

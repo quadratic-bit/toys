@@ -1,7 +1,7 @@
 #pragma once
 #include <algorithm>
 
-#include "matrices.hpp"
+#include "./matrices.hpp"
 
 inline double clampd(double value, double min, double max) {
     return std::max(min, std::min(max, value));
@@ -69,7 +69,7 @@ public:
         return *this / std::sqrt(len2);
     }
 
-    // rodrigues rotation: rotate vector around unit axis by angle in radians
+    // Rodrigues' rotation
     inline Vector3 rotateAroundAxis(const Vector3 &a_unit, double ang) {
         const double c = std::cos(ang);
         const double s = std::sin(ang);
@@ -104,12 +104,12 @@ public:
         return right * left;
     }
 
-    // Dot product
+    // dot product
     double operator^(const Vector3 &right) const {
         return x * right.x + y * right.y + z * right.z;
     }
 
-    // Cross product
+    // cross product
     Vector3 operator%(const Vector3 &right) const {
         return Vector3(
             y * right.z - z * right.y,

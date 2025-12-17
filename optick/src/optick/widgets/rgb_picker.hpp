@@ -1,6 +1,5 @@
 #pragma once
 #include <algorithm>
-#include <cstdint>
 
 #include <swuix/widget.hpp>
 #include <swuix/traits/focusable.hpp>
@@ -39,7 +38,7 @@ private:
     uint8_t channelValue() const;
     void setFromMouse(DispatcherCtx ctx);
 
-    // Draw a cheap gradient with a fixed number of steps
+    // draw a cheap gradient with a fixed number of steps
     void drawGradientBar(Rect2f bar, dr4::Color left, dr4::Color right);
     void drawKnob(Rect2f bar);
 };

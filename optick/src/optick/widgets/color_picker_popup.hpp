@@ -3,7 +3,7 @@
 #include <swuix/common.hpp>
 #include <swuix/state.hpp>
 
-#include "canvas_theme_picker.hpp"
+#include "./canvas_theme_picker.hpp"
 
 class ColorPickerPopup final : public Widget {
     CanvasThemePicker *picker_{nullptr};

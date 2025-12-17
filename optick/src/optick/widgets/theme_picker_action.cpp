@@ -1,8 +1,8 @@
-#include "theme_picker_action.hpp"
+#include "./theme_picker_action.hpp"
 
-#include "desktop.hpp"
-#include "canvas.hpp"
-#include "color_picker_popup.hpp"
+#include "../desktop.hpp"
+#include "./canvas.hpp"
+#include "./color_picker_popup.hpp"
 
 static ColorPickerPopup *findExisting(Desktop *root) {
     if (!root) return nullptr;

@@ -4,14 +4,15 @@
 #include <swuix/state.hpp>
 #include <swuix/window/common.hpp>
 
-#include "plugins_dropdown.hpp"
-#include "theme_picker_action.hpp"
+#include "./plugins_dropdown.hpp"
+#include "./theme_picker_action.hpp"
 
 class Desktop;
 class Renderer;
 
 class ScreenshotAction final : public Action {
     Desktop *root_;
+
 public:
     ScreenshotAction(Desktop *r) : root_(r) {}
     void apply(void *, Widget *) override;
@@ -38,6 +39,7 @@ public:
 
 class TogglePropertiesPanelAction final : public Action {
     Desktop *root_;
+
 public:
     TogglePropertiesPanelAction(Desktop *r) : root_(r) {}
     void apply(void *, Widget *) override;
@@ -45,6 +47,7 @@ public:
 
 class ToggleControlsPanelAction final : public Action {
     Desktop *root_;
+
 public:
     ToggleControlsPanelAction(Desktop *r) : root_(r) {}
     void apply(void *, Widget *) override;
@@ -52,6 +55,7 @@ public:
 
 class ToggleFileDropdownAction final : public Action {
     Desktop *root_;
+
 public:
     ToggleFileDropdownAction(Desktop *r) : root_(r) {}
     void apply(void *, Widget *target) override;
@@ -59,6 +63,7 @@ public:
 
 class ToggleViewDropdownAction final : public Action {
     Desktop *root_;
+
 public:
     ToggleViewDropdownAction(Desktop *r) : root_(r) {}
     void apply(void *, Widget *target) override;

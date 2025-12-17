@@ -1,10 +1,10 @@
 #pragma once
-#include "widgets/objview.hpp"
-#include "widgets/toolbox.hpp"
-#include "widgets/objlist.hpp"
-#include "widgets/menu_bar.hpp"
+#include "./widgets/objview.hpp"
+#include "./widgets/toolbox.hpp"
+#include "./widgets/objlist.hpp"
+#include "./widgets/menu_bar.hpp"
 
-#include "cum/manager.hpp"
+#include <cum/manager.hpp>
 
 class Desktop final : public Widget {
     cum::Manager *mgr_;
@@ -108,8 +108,8 @@ public:
         float W = texture->GetWidth();
         float H = texture->GetHeight() - menuH;
 
-        float sidebarW = W * 0.25f;          // right sidebar
-        float renderW  = W - sidebarW;       // left main area
+        float sidebarW = W * 0.25f;     // right sidebar
+        float renderW  = W - sidebarW;  // left main area
 
         auto *r  = findDescendant<Renderer>();
         auto *ol = findDescendant<ObjectsList>();
@@ -122,14 +122,13 @@ public:
         }
 
         if (ol) {
-            // preserve scroll offset when moving the viewport:
+            // preserve scroll offset when moving the viewport
             float progY = ol->contentProgressY();
             ol->viewport_pos = {renderW, menuH};
             ol->position.y   = ol->viewport_pos.y - progY;
             ol->position.x   = renderW;
 
             ol->viewport->SetSize({sidebarW, H});
-            // keep content width == viewport width
             ol->texture->SetSize({sidebarW, ol->texture->GetHeight()});
 
             ol->requestLayout();

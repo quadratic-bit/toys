@@ -21,7 +21,7 @@ struct Color {
     }
 
     /**
-     * Hadamard product of two colors, useful for tinting
+     * Hadamard product of two colors
      */
     Color operator*(const Color &other) const {
         return Color(r * other.r, g * other.g, b * other.b);

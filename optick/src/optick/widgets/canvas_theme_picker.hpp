@@ -1,6 +1,6 @@
 #pragma once
-#include "canvas.hpp"
-#include "rgb_picker.hpp"
+#include "./canvas.hpp"
+#include "./rgb_picker.hpp"
 
 class CanvasThemePicker final : public RGBPicker {
     Canvas *canvas_;

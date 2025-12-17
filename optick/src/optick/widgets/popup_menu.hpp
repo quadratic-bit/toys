@@ -18,8 +18,9 @@ struct MenuItemDesc {
 class PopupMenu;
 
 class CloseAfterAction final : public Action {
-    Action   *inner_;
+    Action    *inner_;
     PopupMenu *menu_;
+
 public:
     CloseAfterAction(Action *inner, PopupMenu *menu)
         : inner_(inner), menu_(menu) {}

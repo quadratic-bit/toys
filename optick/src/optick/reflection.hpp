@@ -3,7 +3,7 @@
 #include <typeinfo>
 #include <vector>
 
-#include "trace/common.hpp"
+#include "./trace/common.hpp"
 
 using std::string;
 using std::vector;
@@ -51,9 +51,9 @@ struct Field {
 
 template<typename Owner, typename T>
 class FieldMember : public Field {
-    Owner *owner;
+    Owner    *owner;
     T Owner::*member;
-    string name_;
+    string    name_;
 
 public:
     FieldMember(Owner *o, T Owner::*m, string name)
@@ -72,7 +72,7 @@ public:
     }
 };
 
-// Owns temporaries emitted during collectFields
+// owns temporaries emitted during collectFields
 struct FieldList {
     std::vector<Field*> vec;
 
@@ -93,7 +93,7 @@ struct FieldList {
     }
 };
 
-// Emitter
+// emitter
 template<typename Owner>
 struct Fields {
     Owner *o;

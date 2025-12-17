@@ -1,4 +1,4 @@
-#include "rgb_picker.hpp"
+#include "./rgb_picker.hpp"
 
 static float clampf(float v, float lo, float hi) {
     return std::max(lo, std::min(hi, v));

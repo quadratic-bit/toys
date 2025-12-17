@@ -1,10 +1,10 @@
-#include "plugins_dropdown.hpp"
+#include "./plugins_dropdown.hpp"
 
-#include "desktop.hpp"
-#include "canvas.hpp"
-#include "canvas_toolbar.hpp"
-#include "tool_group.hpp"
-#include "widgets/popup_menu.hpp"
+#include "../desktop.hpp"
+#include "./canvas.hpp"
+#include "./canvas_toolbar.hpp"
+#include "./tool_group.hpp"
+#include "./popup_menu.hpp"
 
 static PopupMenu *findExistingPopup(Desktop *root) {
     if (!root) return nullptr;

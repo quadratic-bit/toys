@@ -1,9 +1,9 @@
-#include "desktop.hpp"
-#include "renderer.hpp"
+#include "../desktop.hpp"
+#include "../renderer.hpp"
 
-#include "widgets/popup_menu.hpp"
-#include "theme_picker_action.hpp"
-#include "canvas.hpp"
+#include "./popup_menu.hpp"
+#include "./theme_picker_action.hpp"
+#include "./canvas.hpp"
 
 static PopupMenu *findExistingPopup(Desktop *root) {
     if (!root) return nullptr;

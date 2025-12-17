@@ -1,8 +1,8 @@
 #include "../trace/scene.hpp"
 
 opt::Color MaterialOpaque::sample(TraceContext ctx) const {
-    opt::Color out(0, 0, 0);      // accumulated outgoing radiance
-    Vector3 V = -ctx.ray.d;  // direction to camera
+    opt::Color out(0, 0, 0);  // accumulated outgoing radiance
+    Vector3 V = -ctx.ray.d;   // direction to camera
 
     for (size_t oi = 0; oi < ctx.scene->objects.size(); ++oi) {
         const Object *obj = ctx.scene->objects[oi];
@@ -11,32 +11,32 @@ opt::Color MaterialOpaque::sample(TraceContext ctx) const {
         const opt::Color Le = obj->mat->emission();  // radiance color
         const double power = 100.0;
 
-        Vector3 Lvec = obj->center - ctx.hit.pos;  // hit -> light
-        double dist2 = Lvec ^ Lvec;
-        double dist  = std::sqrt(dist2);
-        Vector3 Ldir = Lvec / dist;
+        Vector3 Lvec  = obj->center - ctx.hit.pos;  // hit -> light
+        double  dist2 = Lvec ^ Lvec;
+        double  dist  = std::sqrt(dist2);
+        Vector3 Ldir  = Lvec / dist;
 
         if (ctx.scene->occludedTowards(ctx.hit.pos, Ldir, dist, ctx.eps, obj)) continue;
 
         // incoming radiance estimate with 1/(4πr^2) falloff
         opt::Color Lradiance = Le * (power / (4.0 * M_PI * dist2));
 
-        // lambertian diffuse (cosine term)
+        // lambertian diffuse
         double ndotl = std::max(0.0, ctx.hit.norm ^ Ldir);
 
-        // add diffuse contribution (albedo * kd * cos) * light
+        // diffuse contribution
         out += (ctx.target->color * (kd * ndotl)) * Lradiance;
 
         // Blinn-Phong specular
         if (ks > 0.0) {
-            Vector3 H = !(Ldir + V);  // half-vector
+            Vector3 H = !(Ldir + V);
             double ndoth = std::max(0.0, ctx.hit.norm ^ H);
             double spec  = std::pow(ndoth, shininess) * ks;
-            out += Lradiance * spec; // colored by light, not by albedo
+            out += Lradiance * spec;
         }
     }
 
-    // constant ambient fill to avoid pure black
+    // ambient
     out += ctx.target->color * (0.02 * kd);
 
     return out;

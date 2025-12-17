@@ -4,13 +4,13 @@
 #include <swuix/widget.hpp>
 #include <swuix/widgets/button.hpp>
 #include <swuix/widgets/titled.hpp>
-
 #include <swuix/common.hpp>
 #include <swuix/state.hpp>
 
 #include <pp/tool.hpp>
-#include "canvas.hpp"
-#include "tool_group.hpp"
+
+#include "./canvas.hpp"
+#include "./tool_group.hpp"
 
 class CanvasToolBar;
 
@@ -21,7 +21,9 @@ class SelectToolAction final : public Action {
 
 public:
     SelectToolAction(Canvas *c, CanvasToolBar *tb, size_t idx)
-        : canvas_(c), toolbar_(tb), toolIndex_(idx) {}
+        : canvas_(c)
+        , toolbar_(tb)
+        , toolIndex_(idx) {}
 
     void apply(void *, Widget *) override;
 };
@@ -181,10 +183,9 @@ private:
             for (pp::Tool *tool : groups_[gi].tools) {
                 if (!tool) continue;
 
-                const char *label =
-                    !tool->Icon().empty()
-                        ? tool->Icon().data()
-                        : tool->Name().data();
+                const char *label = ! tool->Icon().empty()
+                                    ? tool->Icon().data()
+                                    : tool->Name().data();
 
                 Rect2f bf { x, y, w, btnHeight };
 

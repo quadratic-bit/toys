@@ -40,9 +40,7 @@ inline std::string double2string(double v, int max_decimals = 6) {
         v = 0.0;
     }
 
-    if (v == 0.0) {
-        return "0";
-    }
+    if (v == 0.0) return "0";
 
     std::ostringstream s;
     s.imbue(std::locale::classic());
@@ -86,7 +84,7 @@ T parse_from_string(const std::string &s) {
 
 template<>
 inline bool parse_from_string<bool>(const std::string &s) {
-    if (s == "1" || s == "true" || s == "True") return true;
+    if (s == "1" || s == "true"  || s == "True") return true;
     if (s == "0" || s == "false" || s == "False") return false;
     throw std::runtime_error("parse error bool");
 }

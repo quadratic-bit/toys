@@ -1,24 +1,24 @@
 #pragma once
-#include <SDL3/SDL_mutex.h>
 #include <atomic>
-#include <cstdio>
 #include <memory>
-#include <swuix/widgets/titled.hpp>
-#include <swuix/state.hpp>
-
 #include <chrono>
 #include <sstream>
 #include <iomanip>
 
-#include "cum/ifc/pp.hpp"
-#include "cum/manager.hpp"
-#include "dr4/math/color.hpp"
-#include "dr4/texture.hpp"
-#include "swuix/common.hpp"
-#include "trace/camera.hpp"
-#include "trace/scene.hpp"
-#include "trace/cs.hpp"
-#include "widgets/canvas.hpp"
+#include <SDL3/SDL_mutex.h>
+
+#include <swuix/common.hpp>
+#include <swuix/widgets/titled.hpp>
+
+#include <cum/ifc/pp.hpp>
+#include <cum/manager.hpp>
+
+#include <dr4/math/color.hpp>
+#include <dr4/texture.hpp>
+
+#include "./trace/camera.hpp"
+#include "./trace/scene.hpp"
+#include "./widgets/canvas.hpp"
 #include "./widgets/canvas_toolbar.hpp"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -50,12 +50,14 @@ static bool SaveImageAsPNG(const dr4::Image *img, const std::string &path) {
         }
     }
 
-    return stbi_write_png(path.c_str(),
-                          static_cast<int>(w),
-                          static_cast<int>(h),
-                          4,
-                          px.data(),
-                          static_cast<int>(w * 4)) != 0;
+    return stbi_write_png(
+        path.c_str(),
+        static_cast<int>(w),
+        static_cast<int>(h),
+        4,
+        px.data(),
+        static_cast<int>(w * 4)
+    ) != 0;
 }
 
 static std::string MakeTimestampedName() {
@@ -168,14 +170,13 @@ static inline Scene makeDemoScene() {
 class Renderer final : public Widget {
     Scene  scene;
     Camera cam;
-    ViewCS cs;
 
     dr4::Image *front_img = nullptr;
     dr4::Image *back_img  = nullptr;
 
     bool initialized;
 
-    int max_depth;
+    int    max_depth;
     double eps;
 
     SDL_Thread    *workers[N_WORKERS];
@@ -185,14 +186,14 @@ class Renderer final : public Widget {
     bool job_stop;        // signal threads to exit
     bool job_has_work;    // a frame is active
     int  job_width, job_height;
-    int  job_next_tile;  // next index into tile_order
+    int  job_next_tile;   // next index into tile_order
 
     enum { TILE = 16 };
 
     int tile_w, tile_h;
     int num_tiles;  // tile_w * tile_h
 
-    std::atomic<bool> tiles_need_present {false};
+    std::atomic<bool> tiles_need_present{false};
 
     std::unique_ptr<std::atomic<uint8_t>[]> tile_done;
     std::vector<uint8_t>                    tile_uploaded;
@@ -225,6 +226,7 @@ class Renderer final : public Widget {
 
     void allocTileFlags(int count) {
         tile_done.reset(new std::atomic<uint8_t>[count]);
+
         for (int i = 0; i < count; ++i)
             tile_done[i].store(0, std::memory_order_relaxed);
 
@@ -267,7 +269,8 @@ class Renderer final : public Widget {
                         opt::Color::encode(bg.r),
                         opt::Color::encode(bg.g),
                         opt::Color::encode(bg.b),
-                    255)
+                        255
+                    )
                 );
             }
         }
@@ -283,7 +286,6 @@ class Renderer final : public Widget {
         if (front_img) { delete front_img; front_img = nullptr; }
         if (back_img)  { delete back_img;  back_img  = nullptr; }
 
-        // TODO: check on memory leaks
         front_img = state->window->CreateImage();
         front_img->SetSize({static_cast<float>(vw), static_cast<float>(vh)});
         front_img->SetPos({0, 0});
@@ -297,7 +299,6 @@ class Renderer final : public Widget {
 
         buildTiles();
 
-        // build camera
         cam = Camera(Vector3(0, 2, 2.5), 45.0, vw, vh);
         max_depth = 5;
         eps = 1e-4;
@@ -313,9 +314,10 @@ class Renderer final : public Widget {
 
 public:
     Renderer(Rect2f rect, Widget *p, State *s, cum::Manager *mgr_)
-            : Widget(rect, p, s),
-            cam(Vector3(0, 2, 2.5), 45.0, rect.size.x, rect.size.y),
-            initialized(false), max_depth(5), eps(1e-4), mgr(mgr_) {
+            : Widget(rect, p, s)
+            , cam(Vector3(0, 2, 2.5), 45.0, rect.size.x, rect.size.y)
+            , initialized(false), max_depth(5), eps(1e-4), mgr(mgr_)
+    {
         scene = makeDemoScene();
 
         job_mtx      = SDL_CreateMutex();
@@ -374,12 +376,11 @@ public:
             int c = E[e][1];
             if (!ok[a] || !ok[c]) continue;
             dr4::Line *line = thickLine(
-                    state->window,
-                    {static_cast<float>(sx[a]),
-                     static_cast<float>(sy[a])},
-                    {static_cast<float>(sx[c]),
-                     static_cast<float>(sy[c])},
-            {r, g, b}, 1);
+                state->window,
+                {static_cast<float>(sx[a]), static_cast<float>(sy[a])},
+                {static_cast<float>(sx[c]), static_cast<float>(sy[c])},
+                {r, g, b}, 1
+            );
             texture->Draw(*line);
         }
     }
@@ -423,9 +424,10 @@ public:
         float toolbarWidth = 50.0f;
 
         canvas = new Canvas(
-                {0, 0,
-                 texture->GetWidth(), texture->GetHeight()},
-                nullptr, state);
+            {0, 0, texture->GetWidth(), texture->GetHeight()},
+            nullptr,
+            state
+        );
 
         std::vector<std::unique_ptr<pp::Tool>> tools;
         std::vector<ToolGroupDesc> toolGroups;
@@ -450,7 +452,10 @@ public:
         toolbar = new CanvasToolBar(
             canvas,
             toolGroups,
-            {canvas->frame().size.x - toolbarWidth, 0, toolbarWidth, texture->GetHeight()},
+            {
+                {canvas->frame().size.x - toolbarWidth, 0},
+                {toolbarWidth, texture->GetHeight()}
+            },
             nullptr,
             state
         );
@@ -488,7 +493,7 @@ public:
         return PROPAGATE;
     }
 
-    DispatchResult onIdle(DispatcherCtx, const IdleEvent *ev) override {
+    DispatchResult onIdle(DispatcherCtx, const IdleEvent *) override {
         if (!alive) return PROPAGATE;
 
         const int viewW = int(std::floor(frame().size.x));
@@ -500,8 +505,7 @@ public:
         for (;;) {
             int ti = -1;
             for (int i = 0; i < num_tiles; ++i) {
-                if (!tile_uploaded[i] &&
-                        tile_done[i].load(std::memory_order_acquire) != 0) {
+                if (!tile_uploaded[i] && tile_done[i].load(std::memory_order_acquire) != 0) {
                     ti = i;
                     break;
                 }
@@ -519,11 +523,6 @@ public:
 
             tile_uploaded[ti] = 1;
             any_uploaded = true;
-
-            if (ev && ev->deadline > 0) {
-                //  Windownow() in seconds:
-                // if (Windownow() >= ev->deadline - margin) break;
-            }
         }
 
         if (any_uploaded) {
@@ -552,19 +551,24 @@ inline int Renderer::workerEntry(void *self_void) {
     for (;;) {
         // take a tile
         SDL_LockMutex(self->job_mtx);
-        while (!self->job_stop &&
-               (!self->job_has_work || self->job_next_tile >= self->num_tiles)) {
+        while (
+                !self->job_stop &&
+               (!self->job_has_work || self->job_next_tile >= self->num_tiles)
+        ) {
             SDL_WaitCondition(self->job_cv, self->job_mtx);
         }
+
         if (self->job_stop) {
             SDL_UnlockMutex(self->job_mtx);
             break;
         }
+
         // if all tiles already taken, loop to wait for next frame
         if (self->job_next_tile >= self->num_tiles) {
             SDL_UnlockMutex(self->job_mtx);
             continue;
         }
+
         const int ord_idx = self->job_next_tile++;
         const int tile_id = self->tile_order[ord_idx];
 

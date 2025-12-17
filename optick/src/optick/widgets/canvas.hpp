@@ -1,17 +1,17 @@
 #pragma once
-#include <cstdio>
 #include <memory>
 
-#include "dr4/keycodes.hpp"
-#include "extern/window.hpp"
-#include "swuix/traits/focusable.hpp"
-#include "swuix/widget.hpp"
-#include "swuix/window/common.hpp"
-#include "swuix/state.hpp"
+#include <extern/window.hpp>
 
-#include "pp/canvas.hpp"
-#include "pp/tool.hpp"
-#include "widgets/tool_group.hpp"
+#include <swuix/traits/focusable.hpp>
+#include <swuix/widget.hpp>
+#include <swuix/window/common.hpp>
+#include <swuix/state.hpp>
+
+#include <pp/canvas.hpp>
+#include <pp/tool.hpp>
+
+#include "./tool_group.hpp"
 
 class Canvas final : public pp::Canvas, public FocusableWidget {
     // owned by this canvas

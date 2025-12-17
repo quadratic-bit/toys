@@ -1,6 +1,6 @@
 #pragma once
-#include "dr4/math/color.hpp"
-#include "renderer.hpp"
+#include <dr4/math/color.hpp>
+#include "../renderer.hpp"
 
 class Strafe : public Action {
     Renderer *target;

@@ -16,22 +16,25 @@ struct Camera {
     double  vfov;    // vertical fov (in degrees)
     double  width;   // in pixels
     double  height;  // in pixels
-    Basis b;
+    Basis   b;
 
     double minPitchDeg;
     double maxPitchDeg;
 
-    Camera(Vector3 pos_, double vfov_, double w, double h) 
-            : pos(pos_), target(pos + Vector3(0, 0, -1)), vfov(vfov_), width(w), height(h),
-        minPitchDeg(-89), maxPitchDeg(89) {
-        makeBasis();
-    }
+    Camera(Vector3 pos_, double vfov_, double w, double h)
+            : pos(pos_)
+            , target(pos + Vector3(0, 0, -1))
+            , vfov(vfov_)
+            , width(w)
+            , height(h)
+            , minPitchDeg(-89)
+            , maxPitchDeg(89) { makeBasis(); }
 
     void makeBasis() {
         Vector3 up(0, 1, 0);
-        b.fwd = !(target - pos);
+        b.fwd   = !(target - pos);
         b.right = !(b.fwd % up);
-        b.up = b.right % b.fwd;
+        b.up    = b.right % b.fwd;
 
         const double vfov_rad = vfov * (M_PI / 180.0);
 
@@ -54,7 +57,7 @@ struct Camera {
         double fx =  fy / aspect;
 
         double ndc_x = (x / z) * fx;
-        double ndc_y = (y/z) * fy;
+        double ndc_y = (y / z) * fy;
 
         *sx = int(std::floor(( ndc_x * 0.5 + 0.5) * w));
         *sy = int(std::floor((-ndc_y * 0.5 + 0.5) * h));
@@ -86,7 +89,7 @@ struct Camera {
     }
 
     void pitch(double degrees) {
-        const Vector3 worldUp(0, 1, 0);
+        const Vector3 world_up(0, 1, 0);
         Vector3 fwd = !(this->target - this->pos);
 
         double p0 = getCurrentPitch();
@@ -94,52 +97,52 @@ struct Camera {
         double delta = p1 - p0;
         if (std::fabs(delta) < 1e-9) return;
 
-        Vector3 right = (fwd % worldUp).normalizeClamp();
+        Vector3 right = (fwd % world_up).normalizeClamp();
         if (right.x == 0 && right.y == 0 && right.z == 0) {
             right = Vector3(1, 0, 0);
         }
 
-        Vector3 fwdRot = fwd.rotateAroundAxis(right, deg2rad(delta));
-        fwdRot = !fwdRot;
+        Vector3 fwd_rot = fwd.rotateAroundAxis(right, deg2rad(delta));
+        fwd_rot = !fwd_rot;
 
-        Vector3 right2 = (fwdRot % worldUp).normalizeClamp();
+        Vector3 right2 = (fwd_rot % world_up).normalizeClamp();
         if (right2.x == 0 && right2.y == 0 && right2.z == 0) {
             return;
         }
 
-        this->target = this->pos + fwdRot;
+        this->target = this->pos + fwd_rot;
         this->makeBasis();
     }
 
-    // positive forwards, negative backward
+    // positive forwards
     void move(double dist) {
         Vector3 fwd = !(this->target - this->pos);
-        Vector3 fwdXZ = Vector3(fwd.x, 0.0, fwd.z).normalizeClamp();
-        if (fwdXZ.x == 0 && fwdXZ.y == 0 && fwdXZ.z == 0) return;
+        Vector3 fwd_xz = Vector3(fwd.x, 0.0, fwd.z).normalizeClamp();
+        if (fwd_xz.x == 0 && fwd_xz.y == 0 && fwd_xz.z == 0) return;
 
-        Vector3 delta = fwdXZ * dist;
-        this->pos    = this->pos    + delta;
-        this->target = this->target + delta;
+        Vector3 delta = fwd_xz * dist;
+        this->pos     = this->pos    + delta;
+        this->target  = this->target + delta;
         this->makeBasis();
     }
 
-    // positive right, negative left
+    // positive right
     void strafe(double dist) {
-        const Vector3 worldUp(0, 1, 0);
-        Vector3 fwd = !(this->target - this->pos);
-        Vector3 right = (fwd % worldUp).normalizeClamp();
+        const Vector3 world_up(0, 1, 0);
+        Vector3 fwd   = !(this->target - this->pos);
+        Vector3 right = (fwd % world_up).normalizeClamp();
         if (right.x == 0 && right.y == 0 && right.z == 0) return;
 
         Vector3 delta = right * dist;
-        this->pos    = this->pos    + delta;
-        this->target = this->target + delta;
+        this->pos     = this->pos    + delta;
+        this->target  = this->target + delta;
         this->makeBasis();
     }
 
-    // positive up, negative down
+    // positive up
     void elevate(double dist) {
-        const Vector3 worldUp(0, 1, 0);
-        Vector3 delta = worldUp * dist;
+        const Vector3 world_up(0, 1, 0);
+        Vector3 delta = world_up * dist;
 
         this->pos    = this->pos    + delta;
         this->target = this->target + delta;
