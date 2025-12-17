@@ -7,7 +7,7 @@
 
 #include "swuix/common.hpp"
 #include "swuix/traits/scrollable.hpp"
-#include "swuix/widgets/tall_view.hpp"
+#include <swuix/widgets/scrollbar.hpp>
 #include "swuix/window/common.hpp"
 #include "trace/objects.hpp"
 #include "../materials/material.hpp"
@@ -182,6 +182,8 @@ class ObjectViewPropertyList final : public ScrollableWidget {
     Object *obj;
     FieldList fields;
 
+    VScrollbar *scrollbar_ = nullptr;
+
 public:
     ObjectViewPropertyList(Object *o, Rect2f f, Vec2f clip, Widget *p, State *s)
         : Widget(f, p, s)
@@ -200,6 +202,10 @@ public:
         }
 
         texture->SetSize({texture->GetWidth(), y + 10.0f});
+
+        scrollbar_ = new VScrollbar(state);
+        scrollbar_->attachTo(this);
+
         requestLayout();
         requestRedraw();
     }
@@ -208,13 +214,54 @@ public:
         return "ObjectView property list";
     }
 
+    void layout() override {
+        const float viewportW = viewport->GetWidth();
+        const float viewportH = viewport->GetHeight();
+
+        const float rowH = 35.0f;
+        const float contentW = std::max(40.0f, viewportW - SCROLLBAR_W);
+
+        float y = 0.0f;
+        for (Widget *c : children) {
+            auto *ed = dynamic_cast<ObjectViewPropertyEditor*>(c);
+            if (!ed) continue; // skip scrollbar + buttons
+
+            ed->position = {0.0f, y};
+            ed->texture->SetSize({contentW, rowH});
+            ed->requestLayout();
+            y += rowH;
+        }
+
+        float contentH = y + 10.0f;
+        texture->SetSize({viewportW, std::max(contentH, viewportH)});
+
+        if (scrollbar_) {
+            float progress_px = contentProgressY();
+
+            scrollbar_->position.x = texture->GetWidth() - SCROLLBAR_W;
+            scrollbar_->position.y = progress_px;
+            scrollbar_->texture->SetSize({SCROLLBAR_W, viewportH});
+
+            float trackH = scrollbar_->scrollHeight();
+            float ratio = (texture->GetHeight() <= 1.0f) ? 1.0f : (viewportH / texture->GetHeight());
+            ratio = std::clamp(ratio, 0.05f, 1.0f);
+
+            float sliderH = std::max(10.0f, trackH * ratio);
+            scrollbar_->slider->texture->SetSize({scrollbar_->slider->texture->GetWidth(), sliderH});
+            scrollbar_->slider->position.y = SCROLL_BUT_H + scrollbar_->scrollProgress();
+
+            scrollbar_->layout();
+            scrollbar_->slider->layout();
+            scrollbar_->slider->requestRedraw();
+        }
+
+        requestRedraw();
+    }
+
     void draw() override {
         Rect2f f = frame();
         Rectangle *r = rectFill(state->window, f, {CLR_SURFACE_2});
         texture->Draw(*r);
-
-        Text *t = textAligned(state->window, "Материал", {1, 1}, Color(CLR_TEXT_STRONG), state->appfont, 16, HAlign::LEFT, dr4::Text::VAlign::TOP);
-        texture->Draw(*t);
     }
 };
 
