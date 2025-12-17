@@ -160,6 +160,8 @@ public:
     void Open() override {
         if (is_open_) return;
 
+        SDL_SetHint(SDL_HINT_APP_ID, "swuix");
+
         if (!SDL_Init(SDL_INIT_VIDEO)) {
             throw std::runtime_error(std::string("SDL_Init failed: ") + SDL_GetError());
         }
@@ -168,12 +170,17 @@ public:
                 title_.c_str(),
                 static_cast<int>(size_.x),
                 static_cast<int>(size_.y),
-                SDL_WINDOW_RESIZABLE,
+                0,
                 &window_, &renderer_)) {
             std::string err = SDL_GetError();
             SDL_Quit();
             throw std::runtime_error(err);
         }
+
+        SDL_SetWindowResizable(window_, false);
+
+        SDL_SetWindowMinimumSize(window_, size_.x, size_.y);
+        SDL_SetWindowMaximumSize(window_, size_.x, size_.y);
 
         if (!TTF_Init()) {
             std::string err = SDL_GetError();
