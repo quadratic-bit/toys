@@ -44,6 +44,13 @@ public:
     bool createView() {
         if (objview_ || findChild<ObjectView>()) return false;
         objview_ = new ObjectView({5, 225, 250, 225}, NULL, state);
+        if (auto *list = findDescendant<ObjectsList>()) {
+            if (auto *sel = list->selectedPreview()) {
+                objview_->populate(sel);
+            } else {
+                objview_->unpopulate();
+            }
+        }
         prependChild(objview_);
         return true;
     }

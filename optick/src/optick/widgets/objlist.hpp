@@ -102,6 +102,8 @@ public:
         requestRedraw();
     }
 
+    ObjectPreview *selectedPreview() const { return selected; }
+
     void toggleSelect(ObjectPreview *preview);
 
     const char *title() const override { return "Objects"; }
