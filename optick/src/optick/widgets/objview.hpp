@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdio>
 #include <functional>
 
 #include <swuix/widgets/button.hpp>
@@ -31,8 +32,48 @@ public:
         Rectangle *r = rectBorder(state->window, f, {CLR_SURFACE_2}, 2, {CLR_BORDER});
         texture->Draw(*r);
 
-        Text *t = textAligned(state->window, getText().c_str(), {5, f.size.y / 2}, Color(CLR_TEXT_STRONG), state->appfont);
+        const float inset = 5.0f;
+        const float xText = inset - scrollX(); // scroll left when text too wide
+        const float yMid  = f.size.y / 2.0f;
+
+        // selection highlight (only when focused)
+        if (state->getFocus() == this && selectionActive()) {
+            auto [a, b] = selectionRange();
+            float x0 = xText + prefixWidthPx(a);
+            float x1 = xText + prefixWidthPx(b);
+            if (x1 < x0) std::swap(x0, x1);
+
+            r->SetPos({x0, 4.0f});
+            r->SetSize({x1 - x0, f.size.y - 8.0f});
+            r->SetFillColor(dr4::Color(CLR_PRIMARY, 90));
+            r->SetBorderColor(TRANSPARENT);
+            texture->Draw(*r);
+        }
+
+        // text (left aligned)
+        Text *t = textAligned(
+            state->window,
+            getText().c_str(),
+            {xText, yMid},
+            Color(CLR_TEXT_STRONG),
+            state->appfont,
+            16,
+            HAlign::LEFT
+        );
         texture->Draw(*t);
+
+        // caret
+        if (state->getFocus() == this && caretVisible()) {
+            float cx = xText + caretXpx();
+            dr4::Line *l = thickLine(
+                state->window,
+                {cx, 4.0f},
+                {cx, f.size.y - 4.0f},
+                {CLR_TEXT_STRONG},
+                1
+            );
+            texture->Draw(*l);
+        }
     }
 };
 
@@ -43,6 +84,7 @@ class ObjectViewPropertyEditor final : public Widget {
     Button    *incBtn = nullptr;
     Button    *decBtn = nullptr;
 
+    float desiredInputW_ = -1.0f;
     bool invalid = false;
 
     bool isNumeric() const {
@@ -68,6 +110,7 @@ class ObjectViewPropertyEditor final : public Widget {
         }
 
         requestRedraw();
+        if (parent) parent->requestLayout();
     }
 
     void step(double delta) {
@@ -84,6 +127,7 @@ class ObjectViewPropertyEditor final : public Widget {
         }
 
         requestRedraw();
+        if (parent) parent->requestLayout();
     }
 
 public:
@@ -155,6 +199,76 @@ public:
         return "ObjectView property editor";
     }
 
+    void setDesiredInputWidth(float w) {
+        desiredInputW_ = w;
+        requestLayout();
+        requestRedraw();
+    }
+
+    float inputTextWidthPx() const {
+        return input ? input->textWidthPx() : 0.0f;
+    }
+
+    void layout() override {
+        const float pad = 4.0f;
+        const float rowH = frame().size.y;
+
+        const float buttonsW = isNumeric() ? (rowH * 0.6f) : 0.0f;
+        const float rightReserve = isNumeric() ? (buttonsW + pad) : 0.0f;
+
+        float inputW = desiredInputW_ > 0.0f
+            ? desiredInputW_
+            : std::max(60.0f, frame().size.x * 0.45f);
+
+        if (isNumeric()) {
+            inputW = std::max(60.0f, inputW - rightReserve);
+        }
+
+        // clamp inputW to what fits
+        float maxInputW = frame().size.x - rightReserve - pad - 60.0f; // leave at least 60 for label
+        inputW = std::clamp(inputW, 60.0f, std::max(60.0f, maxInputW));
+
+        float labelW = frame().size.x - inputW - rightReserve - pad;
+        labelW = std::max(60.0f, labelW);
+
+        Rect2f inputFrame {
+            labelW,
+            pad,
+            inputW,
+            rowH - pad * 2.0f
+        };
+
+        if (input) {
+            input->position = inputFrame.pos;
+            input->texture->SetSize(inputFrame.size);
+            input->requestLayout();
+            input->requestRedraw();
+        }
+
+        if (isNumeric() && incBtn && decBtn) {
+            Rect2f incFrame {
+                frame().size.x - buttonsW,
+                pad,
+                buttonsW,
+                (rowH - pad * 2.0f) * 0.5f
+            };
+            Rect2f decFrame {
+                frame().size.x - buttonsW,
+                pad + (rowH - pad * 2.0f) * 0.5f,
+                buttonsW,
+                (rowH - pad * 2.0f) * 0.5f
+            };
+
+            incBtn->position = incFrame.pos;
+            incBtn->texture->SetSize(incFrame.size);
+            incBtn->requestRedraw();
+
+            decBtn->position = decFrame.pos;
+            decBtn->texture->SetSize(decFrame.size);
+            decBtn->requestRedraw();
+        }
+    }
+
     void draw() override {
         Rect2f f = frame();
         Rectangle *r = rectFill(state->window, f, {CLR_SURFACE_2});
@@ -220,6 +334,24 @@ public:
 
         const float rowH = 35.0f;
         const float contentW = std::max(40.0f, viewportW - SCROLLBAR_W);
+
+        float maxPx = 0.0f;
+        for (Widget *c : children) {
+            if (auto *ed = dynamic_cast<ObjectViewPropertyEditor*>(c))
+                maxPx = std::max(maxPx, ed->inputTextWidthPx());
+        }
+
+        // pixels -> desired input box width (padding + a little slack)
+        float desired = maxPx + 16.0f;
+
+        // clamp to what fits in the panel
+        float maxFit = std::max(60.0f, viewportW - SCROLLBAR_W - 80.0f); // 80px min label
+        desired = std::clamp(desired, 80.0f, maxFit);
+
+        for (Widget *c : children) {
+            if (auto *ed = dynamic_cast<ObjectViewPropertyEditor*>(c))
+                ed->setDesiredInputWidth(desired);
+        }
 
         float y = 0.0f;
         for (Widget *c : children) {
