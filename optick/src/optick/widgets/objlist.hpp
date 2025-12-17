@@ -1,6 +1,7 @@
 #pragma once
 #include <cassert>
-#include <swuix/widgets/tall_view.hpp>
+
+#include <swuix/traits/scrollable.hpp>
 #include <swuix/widgets/scrollbar.hpp>
 #include <swuix/widgets/button.hpp>
 
@@ -12,11 +13,10 @@ class ObjectsList;
 
 class Select : public Action {
     ObjectPreview *preview;
-    ObjectsList *list;
+    ObjectsList   *list;
 
 public:
     Select(ObjectPreview *p, ObjectsList *l) : preview(p), list(l) {}
-
     void apply(void *, Widget *);
 };
 
@@ -24,20 +24,39 @@ class ObjectPreview final : public Widget {
     friend class ObjectsList;
     friend class ObjectView;
     friend class ObjectViewName;
+
     Object *obj;
+
+    Button *selectBtn_ = nullptr;
 
 public:
     ObjectPreview(Object *o, ObjectsList *l, Rect2f f, Widget *p, State *s)
-            : Widget(f, p, s), obj(o) {
-        Button *select_btn = new Button({f.size.x - 75, 5, 70, f.size.y - 10}, NULL, "Select", state, new Select(this, l));
-        this->appendChild(select_btn);
+        : Widget(f, p, s), obj(o)
+    {
+        selectBtn_ = new Button(
+            {f.size.x - 75, 5, 70, f.size.y - 10},
+            nullptr,
+            "Select",
+            state,
+            new Select(this, l)
+        );
+        appendChild(selectBtn_);
     }
 
 	const char *title() const override {
 		return obj->name.c_str();
 	}
 
-	void draw() override {
+    void layout() override {
+        if (!selectBtn_) return;
+        Rect2f f = frame();
+
+        selectBtn_->position = {f.size.x - 75.0f, 5.0f};
+        selectBtn_->texture->SetSize({70.0f, f.size.y - 10.0f});
+        selectBtn_->requestLayout();
+    }
+
+    void draw() override {
         Rect2f f = frame();
         Rectangle *r;
         if (obj->selected()) {
@@ -49,41 +68,100 @@ public:
 
         Text *t = textAligned(state->window, title(), {5, f.size.y / 2}, Color(CLR_TEXT_STRONG), state->appfont);
         texture->Draw(*t);
-	}
+    }
 };
 
 class Desktop;
 
-class ObjectsList final : public TallView {
+class ObjectsList final : public ScrollableWidget {
     const std::vector<Object*> &objects;
     Desktop *root;
-    ObjectPreview *selected;
+    ObjectPreview *selected = nullptr;
+
+    VScrollbar *scrollbar_ = nullptr;
 
 public:
-	ObjectsList(const std::vector<Object*> &objects_, Desktop *d, Rect2f f, Vec2f clip, Widget *p, State *s)
-			: Widget(f, p, s), TallView(f, clip, p, s), objects(objects_), root(d), selected(NULL) {
+    ObjectsList(const std::vector<Object*> &objects_, Desktop *d, Rect2f f, Vec2f clip, Widget *p, State *s)
+        : Widget(Rect2f(f.pos, clip), p, s)
+        , ScrollableWidget(f, clip, p, s)
+        , objects(objects_)
+        , root(d)
+    {
         for (size_t i = 0; i < objects.size(); ++i) {
-            ObjectPreview *obj = new ObjectPreview(objects[i], this, {5, static_cast<float>(5 + 35 * i), frame().size.x - 20, 30}, NULL, state);
-            this->appendChild(obj);
+            auto *objPrev = new ObjectPreview(objects[i], this, {5, 5.0f + 35.0f * (float)i, clip.x - 20.0f, 30}, nullptr, state);
+            appendChild(objPrev);
         }
 
-        texture->SetSize({texture->GetWidth(), static_cast<float>(5 + 35 * objects.size())});
+        // width should match viewport width
+        texture->SetSize({clip.x, std::max(clip.y, 10.0f)});
+
+        scrollbar_ = new VScrollbar(state);
+        scrollbar_->attachTo(this);
+
         requestLayout();
         requestRedraw();
-	}
+    }
 
     void toggleSelect(ObjectPreview *preview);
 
-	const char *title() const override {
-		return "Objects";
-	}
+    const char *title() const override { return "Objects"; }
 
-	void draw() override {
+    void layout() override {
+        const float pad = 5.0f;
+        const float rowH = 30.0f;
+        const float rowStep = 35.0f;
+
+        const float viewportW = viewport->GetWidth();
+        const float viewportH = viewport->GetHeight();
+
+        // leave space for the scrollbar on the right
+        const float itemW = std::max(40.0f, viewportW - 2.0f * pad - SCROLLBAR_W);
+
+        float y = pad;
+        for (Widget *c : children) {
+            auto *op = dynamic_cast<ObjectPreview*>(c);
+            if (!op) continue;
+
+            op->position = {pad, y};
+            op->texture->SetSize({itemW, rowH});
+            op->layout();
+
+            y += rowStep;
+        }
+
+        float contentH = y + pad;
+        texture->SetSize({viewportW, std::max(contentH, viewportH)});
+
+        if (scrollbar_) {
+            float progress_px = contentProgressY();
+
+            scrollbar_->position.x = texture->GetWidth() - SCROLLBAR_W;
+            scrollbar_->position.y = progress_px;
+
+            scrollbar_->texture->SetSize({SCROLLBAR_W, viewportH});
+
+            float trackH = scrollbar_->scrollHeight();
+            float ratio = (texture->GetHeight() <= 1.0f) ? 1.0f : (viewportH / texture->GetHeight());
+            ratio = std::clamp(ratio, 0.05f, 1.0f);
+
+            float sliderH = std::max(10.0f, trackH * ratio);
+            scrollbar_->slider->texture->SetSize({scrollbar_->slider->texture->GetWidth(), sliderH});
+            scrollbar_->slider->position.y = SCROLL_BUT_H + scrollbar_->scrollProgress();
+
+            scrollbar_->layout();
+            scrollbar_->slider->layout();
+            scrollbar_->slider->requestRedraw();
+        }
+
+        requestRedraw();
+    }
+
+    void draw() override {
         texture->Clear({CLR_SURFACE_1});
         Rect2f f = frame();
         Rectangle *r = rectBorder(state->window, f, {CLR_SURFACE_1}, 2, {CLR_BORDER});
         texture->Draw(*r);
-	}
+    }
 };
 
 class ObjectViewName final : public TextInput {
@@ -91,9 +169,11 @@ class ObjectViewName final : public TextInput {
 
 public:
     ObjectViewName(ObjectPreview *preview, Rect2f f, Widget *p, State *s)
-            : Widget(f, p, s),
-            FocusableWidget(f, p, s),
-            TextInput(f, p, s), prev(preview) {
+        : Widget(f, p, s)
+        , FocusableWidget(f, p, s)
+        , TextInput(f, p, s)
+        , prev(preview)
+    {
         setText(preview->obj->name);
     }
 

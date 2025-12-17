@@ -165,7 +165,7 @@ static inline Scene makeDemoScene() {
 
 #define N_WORKERS 4
 
-class Renderer final : public TitledWidget {
+class Renderer final : public Widget {
     Scene  scene;
     Camera cam;
     ViewCS cs;
@@ -313,7 +313,7 @@ class Renderer final : public TitledWidget {
 
 public:
     Renderer(Rect2f rect, Widget *p, State *s, cum::Manager *mgr_)
-            : Widget(rect, p, s), TitledWidget(rect, p, s),
+            : Widget(rect, p, s),
             cam(Vector3(0, 2, 2.5), 45.0, rect.size.x, rect.size.y),
             initialized(false), max_depth(5), eps(1e-4), mgr(mgr_) {
         scene = makeDemoScene();
@@ -407,7 +407,7 @@ public:
             requestRedraw();
         }
 
-        TitledWidget::blit(target, acc);
+        Widget::blit(target, acc);
     }
 
     void enableRender()  {

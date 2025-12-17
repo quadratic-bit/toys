@@ -34,16 +34,8 @@ void TogglePropertiesPanelAction::apply(void *, Widget *) {
     if (root_) root_->togglePropertiesView();
 }
 
-void ToggleObjectsPanelAction::apply(void *, Widget *) {
-    if (root_) root_->toggleObjectsList();
-}
-
 void ToggleControlsPanelAction::apply(void *, Widget *) {
     if (root_) root_->toggleControlsPanel();
-}
-
-void ToggleRendererPanelAction::apply(void *, Widget *) {
-    if (root_) root_->toggleRendererPanel();
 }
 
 void ToggleFileDropdownAction::apply(void *, Widget *target) {
@@ -78,9 +70,7 @@ void ToggleViewDropdownAction::apply(void *, Widget *target) {
 
     std::vector<MenuItemDesc> items;
     items.push_back({ "Properties", new TogglePropertiesPanelAction(root_), true });
-    items.push_back({ "Objects",    new ToggleObjectsPanelAction(root_),    true });
     items.push_back({ "Controls",   new ToggleControlsPanelAction(root_),   true });
-    items.push_back({ "Renderer",   new ToggleRendererPanelAction(root_),   true });
 
     Rect2f tf = target->absoluteFrame();
     Vec2f pos { tf.pos.x, tf.pos.y + tf.size.y };

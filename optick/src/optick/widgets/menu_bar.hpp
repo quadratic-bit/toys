@@ -43,24 +43,10 @@ public:
     void apply(void *, Widget *) override;
 };
 
-class ToggleObjectsPanelAction final : public Action {
-    Desktop *root_;
-public:
-    ToggleObjectsPanelAction(Desktop *r) : root_(r) {}
-    void apply(void *, Widget *) override;
-};
-
 class ToggleControlsPanelAction final : public Action {
     Desktop *root_;
 public:
     ToggleControlsPanelAction(Desktop *r) : root_(r) {}
-    void apply(void *, Widget *) override;
-};
-
-class ToggleRendererPanelAction final : public Action {
-    Desktop *root_;
-public:
-    ToggleRendererPanelAction(Desktop *r) : root_(r) {}
     void apply(void *, Widget *) override;
 };
 

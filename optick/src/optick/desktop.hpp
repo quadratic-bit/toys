@@ -27,6 +27,7 @@ public:
             this->appendChild(w);
         }
         this->parent = this;
+        requestLayout();
     }
 
     cum::Manager *manager() const { return mgr_; }
@@ -89,31 +90,51 @@ public:
         if (!renderer_) return;
 
         toolbox_ = new ControlPanel(renderer_, {5, 50, 175, 150}, NULL, state);
-        appendChild(toolbox_);
+        prependChild(toolbox_);
         requestRedraw();
     }
 
-    void toggleRendererPanel() {
-        if (renderer_) {
-            // dependent panels rely on renderer_
-            if (toolbox_) { destroyChild(toolbox_); toolbox_ = nullptr; }
-            if (objlist_) { destroyChild(objlist_); objlist_ = nullptr; }
-            if (objview_) { destroyChild(objview_); objview_ = nullptr; }
+    void layout() override {
+        auto *mb = findChild<MenuBar>();
+        float menuH = mb ? mb->texture->GetHeight() : 0.0f;
 
-            destroyChild(renderer_);
-            renderer_ = nullptr;
+        float W = texture->GetWidth();
+        float H = texture->GetHeight() - menuH;
 
-            requestRedraw();
-            return;
+        float sidebarW = W * 0.25f;          // right sidebar
+        float renderW  = W - sidebarW;       // left main area
+
+        auto *r  = findDescendant<Renderer>();
+        auto *ol = findDescendant<ObjectsList>();
+
+        if (r) {
+            r->position = {0, menuH};
+            r->texture->SetSize({renderW, H});
+            r->requestLayout();
+            r->requestRedraw();
         }
 
-        renderer_ = new Renderer({185, 50, 800, 600}, NULL, state, mgr_);
-        appendChild(renderer_);
+        if (ol) {
+            // preserve scroll offset when moving the viewport:
+            float progY = ol->contentProgressY();
+            ol->viewport_pos = {renderW, menuH};
+            ol->position.y   = ol->viewport_pos.y - progY;
+            ol->position.x   = renderW;
 
-        appendChild(toolbox_);
-        appendChild(objlist_);
+            ol->viewport->SetSize({sidebarW, H});
+            // keep content width == viewport width
+            ol->texture->SetSize({sidebarW, ol->texture->GetHeight()});
 
-        requestRedraw();
+            ol->requestLayout();
+            ol->requestRedraw();
+        }
+
+        if (mb) {
+            mb->position = {0, 0};
+            mb->texture->SetSize({W, menuH});
+            mb->requestLayout();
+            mb->requestRedraw();
+        }
     }
 
     const char *title() const override {
