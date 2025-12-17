@@ -14,7 +14,7 @@ class VScrollbarSlider final : public DraggableWidget {
     VScrollbar *scrollbar;
 
 public:
-    VScrollbarSlider(Rect2f, VScrollbar*, State*);
+    VScrollbarSlider(Rect2f, VScrollbar *, State *);
 
     const char *title() const override {
         return "Scrollbar slider";
@@ -37,7 +37,7 @@ public:
         return "Scrollbar";
     }
 
-    void attachTo(ScrollableWidget*);
+    void attachTo(ScrollableWidget *);
 
     float scrollHeight() const {
         return texture->GetHeight() - 2 * SCROLL_BUT_H;

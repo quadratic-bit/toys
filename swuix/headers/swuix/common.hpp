@@ -1,7 +1,6 @@
 #pragma once
-
-#include "dr4/window.hpp"
-#include "dr4/math/rect.hpp"
+#include <dr4/window.hpp>
+#include <dr4/math/rect.hpp>
 
 typedef double Time;  // monotonic time, presented in seconds
 

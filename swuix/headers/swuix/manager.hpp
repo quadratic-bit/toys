@@ -1,12 +1,11 @@
 #pragma once
 #include <chrono>
-#include <cstdio>
+#include <thread>
 #include <optional>
 
 #include <swuix/window/common.hpp>
 #include <swuix/state.hpp>
 #include <swuix/traits/focusable.hpp>
-#include <thread>
 
 class EventManager {
     State *state;

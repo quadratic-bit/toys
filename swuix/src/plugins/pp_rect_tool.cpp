@@ -183,7 +183,7 @@ public:
         using MBT = dr4::MouseButtonType;
         if (evt.button != MBT::LEFT) return false;
 
-        // Prefer handles when selected
+        // prefer handles when selected
         if (selected_) {
             Handle h = hitHandle(evt.pos);
             if (h != Handle::NONE) {
@@ -192,7 +192,7 @@ public:
             }
         }
 
-        // Allow moving by dragging inside the rect
+        // allow moving by dragging inside the rect
         if (rect().Contains(evt.pos)) {
             drag_ = DragMode::MOVE;
             dragOffset_ = evt.pos - pos_;

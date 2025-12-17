@@ -1,7 +1,6 @@
 #ifndef TEXT_TOOL
 #define TEXT_TOOL
 
-#include <cstdio>
 #include <memory>
 #include <string>
 #include <cmath>

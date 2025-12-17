@@ -1,5 +1,4 @@
-#include "dr4/math/color.hpp"
-#include <cstdio>
+#include <dr4/math/color.hpp>
 #include <swuix/widgets/scrollbar.hpp>
 #include <swuix/widgets/button.hpp>
 #include <swuix/state.hpp>

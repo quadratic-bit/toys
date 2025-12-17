@@ -11,7 +11,7 @@ class TitleBar final : public DraggableWidget {
     MinimizableWidget *host;
 
 public:
-    TitleBar(State*);
+    TitleBar(State *);
 
     const char *title() const override {
         return "Titlebar";
@@ -19,7 +19,7 @@ public:
 
     bool isClipped() const override { return false; }
 
-    void attachTo(MinimizableWidget*);
+    void attachTo(MinimizableWidget *);
 
     DispatchResult onMouseMove(DispatcherCtx, const MouseMoveEvent *) override;
 

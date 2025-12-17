@@ -17,9 +17,9 @@ using std::vector;
 struct State;
 
 struct DispatcherCtx {
-    Vec2f    mouse_rel;
-    Rect2f   surface;
-    State   *state;
+    Vec2f   mouse_rel;
+    Rect2f  surface;
+    State  *state;
 
     void clip(Rect2f rect) {
         surface = intersect(surface, rect);

@@ -1,10 +1,10 @@
-#include <cum/manager.hpp>
-#include <cum/plugin.hpp>
-
 #include <sstream>
 #include <string_view>
 #include <unordered_map>
 #include <dlfcn.h>
+
+#include <cum/manager.hpp>
+#include <cum/plugin.hpp>
 
 namespace cum {
 

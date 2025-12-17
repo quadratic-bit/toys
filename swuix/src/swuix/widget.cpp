@@ -32,18 +32,18 @@ DispatchResult Widget::onMouseMove(DispatcherCtx ctx, const MouseMoveEvent *e) {
 }
 
 DispatcherCtx Widget::resolveContext() const {
-    // Find logical root
+    // find logical root
     const Widget *root = this;
     while (root->parent && root->parent != root) root = root->parent;
 
-    // Collect path root -> this (excluding root, including `this`)
+    // collect path root -> this (excluding root, including `this`)
     std::vector<const Widget*> path;
     for (const Widget* w = this; w && w != root; w = w->parent) path.push_back(w);
     std::reverse(path.begin(), path.end());
 
     DispatcherCtx ctx = DispatcherCtx::fromAbsolute(state->mouse.pos, root->frame(), state);
 
-    // Descend
+    // descend
     const Widget *par = root;
     for (const Widget* child : path) {
         if (child->isClipped()) {

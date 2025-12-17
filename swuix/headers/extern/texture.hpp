@@ -10,9 +10,9 @@
 #include <SDL3_ttf/SDL_ttf.h>
 #include <SDL3_gfx/SDL3_gfxPrimitives.h>
 
-#include "dr4/texture.hpp"
-#include "dr4/math/vec2.hpp"
-#include "dr4/math/color.hpp"
+#include <dr4/texture.hpp>
+#include <dr4/math/vec2.hpp>
+#include <dr4/math/color.hpp>
 
 inline SDL_FRect frect(float x, float y, float w, float h) {
     SDL_FRect r;
@@ -753,14 +753,14 @@ inline void SwuixCircle::DrawOn(dr4::Texture &texture) const {
         SDL_SetRenderClipRect(ren, nullptr);
     }
 
-    // Fill
+    // fill
     if (fill_.a != 0) {
         filledCircleRGBA(ren,
                          cx, cy, r,
                          fill_.r, fill_.g, fill_.b, fill_.a);
     }
 
-    // Border thickness (approximate by concentric rings)
+    // border thickness (approximate by concentric rings)
     if (border_t_ > 0.0f && border_.a != 0) {
         const int t = std::max(1, static_cast<int>(std::floor(border_t_)));
         for (int i = 0; i < t; ++i) {

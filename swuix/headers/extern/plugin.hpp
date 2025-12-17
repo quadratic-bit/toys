@@ -1,7 +1,7 @@
 #pragma once
-#include "cum/ifc/dr4.hpp"
+#include <cum/ifc/dr4.hpp>
 
-#include "window.hpp"
+#include "./window.hpp"
 
 class SwuixBackend : public cum::DR4BackendPlugin {
     SwuixWindow *last_window_{nullptr};

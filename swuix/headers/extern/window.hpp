@@ -1,5 +1,4 @@
 #pragma once
-
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
@@ -7,14 +6,14 @@
 #include <stdexcept>
 #include <string>
 
-#include "dr4/window.hpp"
-#include "dr4/event.hpp"
-#include "dr4/keycodes.hpp"
-#include "dr4/mouse_buttons.hpp"
-#include "dr4/math/vec2.hpp"
-#include "dr4/math/color.hpp"
+#include <dr4/window.hpp>
+#include <dr4/event.hpp>
+#include <dr4/keycodes.hpp>
+#include <dr4/mouse_buttons.hpp>
+#include <dr4/math/vec2.hpp>
+#include <dr4/math/color.hpp>
 
-#include "texture.hpp"
+#include "./texture.hpp"
 
 static inline dr4::MouseButtonType MapSDLMouseButton(Uint8 b) {
     switch (b) {
@@ -41,7 +40,7 @@ static inline uint16_t MapSDLModToDR4(Uint16 sdlmods) {
 static inline dr4::KeyCode MapSDLKey(SDL_Keycode key) {
     using namespace dr4;
     switch (key) {
-        // Letters
+        // letters
         case SDLK_A: return KEYCODE_A; case SDLK_B: return KEYCODE_B; case SDLK_C: return KEYCODE_C;
         case SDLK_D: return KEYCODE_D; case SDLK_E: return KEYCODE_E; case SDLK_F: return KEYCODE_F;
         case SDLK_G: return KEYCODE_G; case SDLK_H: return KEYCODE_H; case SDLK_I: return KEYCODE_I;
@@ -52,13 +51,13 @@ static inline dr4::KeyCode MapSDLKey(SDL_Keycode key) {
         case SDLK_V: return KEYCODE_V; case SDLK_W: return KEYCODE_W; case SDLK_X: return KEYCODE_X;
         case SDLK_Y: return KEYCODE_Y; case SDLK_Z: return KEYCODE_Z;
 
-        // Numbers (row)
+        // numbers (row)
         case SDLK_0: return KEYCODE_NUM0; case SDLK_1: return KEYCODE_NUM1; case SDLK_2: return KEYCODE_NUM2;
         case SDLK_3: return KEYCODE_NUM3; case SDLK_4: return KEYCODE_NUM4; case SDLK_5: return KEYCODE_NUM5;
         case SDLK_6: return KEYCODE_NUM6; case SDLK_7: return KEYCODE_NUM7; case SDLK_8: return KEYCODE_NUM8;
         case SDLK_9: return KEYCODE_NUM9;
 
-        // Editing / control
+        // editing / control
         case SDLK_ESCAPE:       return KEYCODE_ESCAPE;
         case SDLK_LCTRL:        return KEYCODE_LCONTROL;
         case SDLK_LSHIFT:       return KEYCODE_LSHIFT;
@@ -91,20 +90,20 @@ static inline dr4::KeyCode MapSDLKey(SDL_Keycode key) {
         case SDLK_INSERT:       return KEYCODE_INSERT;
         case SDLK_DELETE:       return KEYCODE_DELETE;
 
-        // Numpad
+        // numpad
         case SDLK_KP_0: return KEYCODE_NUMPAD0; case SDLK_KP_1: return KEYCODE_NUMPAD1;
         case SDLK_KP_2: return KEYCODE_NUMPAD2; case SDLK_KP_3: return KEYCODE_NUMPAD3;
         case SDLK_KP_4: return KEYCODE_NUMPAD4; case SDLK_KP_5: return KEYCODE_NUMPAD5;
         case SDLK_KP_6: return KEYCODE_NUMPAD6; case SDLK_KP_7: return KEYCODE_NUMPAD7;
         case SDLK_KP_8: return KEYCODE_NUMPAD8; case SDLK_KP_9: return KEYCODE_NUMPAD9;
 
-        // Arrows
+        // arrows
         case SDLK_LEFT:  return KEYCODE_LEFT;
         case SDLK_RIGHT: return KEYCODE_RIGHT;
         case SDLK_UP:    return KEYCODE_UP;
         case SDLK_DOWN:  return KEYCODE_DOWN;
 
-        // Function keys
+        // function keys
         case SDLK_F1:  return KEYCODE_F1;  case SDLK_F2:  return KEYCODE_F2;
         case SDLK_F3:  return KEYCODE_F3;  case SDLK_F4:  return KEYCODE_F4;
         case SDLK_F5:  return KEYCODE_F5;  case SDLK_F6:  return KEYCODE_F6;
@@ -121,14 +120,13 @@ static inline dr4::KeyCode MapSDLKey(SDL_Keycode key) {
 
 class SwuixWindow final : public dr4::Window {
 public:
-    explicit SwuixWindow(dr4::Vec2f size,
-                         std::string title = "swuix")
-        : window_(nullptr),
-          renderer_(nullptr),
-          text_engine_(nullptr),
-          size_(size),
-          title_(std::move(title)),
-          is_open_(false) {}
+    explicit SwuixWindow(dr4::Vec2f size, std::string title = "swuix")
+        : window_(nullptr)
+        , renderer_(nullptr)
+        , text_engine_(nullptr)
+        , size_(size)
+        , title_(std::move(title))
+        , is_open_(false) {}
 
     ~SwuixWindow() override { Close(); }
 

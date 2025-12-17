@@ -8,7 +8,7 @@
 
 #include <swuix/traits/focusable.hpp>
 #include <swuix/state.hpp>
-#include <swuix/window/common.hpp> // for dr4::Text / dr4::Line helpers
+#include <swuix/window/common.hpp>
 
 class TextInput : public virtual FocusableWidget {
 protected:
@@ -19,13 +19,10 @@ protected:
     size_t selAnchor_ = 0;
     bool   selecting_ = false;
 
-    // caret blink
-    bool   caretVisible_ = true;
+    bool caretVisible_ = true;
 
-    // horizontal scroll so caret stays visible
-    float  scrollX_ = 0.0f;
+    float scrollX_ = 0.0f;
 
-    // ----- styling hooks (override if needed) -----
     virtual const dr4::Font *textFont() const { return state ? state->appfont : nullptr; }
     virtual float textFontSize() const { return 16.0f; }
     virtual float textInsetX() const { return 5.0f; }   // left padding inside the box
