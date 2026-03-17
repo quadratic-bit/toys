@@ -10,3 +10,6 @@ Personal projects made for educational purposes
 
 ### LLVM
 - [GraphPass](./llvm/) &mdash; LLVM pass for building control/data flow DOT graph
+
+### DOS
+- Random DOS [programs](./asm/)
