@@ -1,0 +1,4 @@
+data/
+bench
+*.d
+*.o
