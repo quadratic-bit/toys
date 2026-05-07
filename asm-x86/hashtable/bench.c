@@ -17,6 +17,11 @@
 
 #include <x86intrin.h>
 
+enum {
+	INPUT_ALIGN = 32,
+	INPUT_PAD   = 64
+};
+
 typedef struct loaded_file {
 	char       *data;
 	size_t      size;
@@ -155,18 +160,21 @@ static loaded_file_t load_file(const char *path) {
 		close(fd);
 		die_msg("negative file size");
 	}
-	if ((uintmax_t)st.st_size > (uintmax_t)(SIZE_MAX - 1U)) {
+	if ((uintmax_t)st.st_size > (uintmax_t)(SIZE_MAX - INPUT_PAD - 1U)) {
 		close(fd);
 		die_msg("file too large for this build");
 	}
 
 	file.size = (size_t)st.st_size;
 	file.path = path;
-	file.data = (char *)malloc(file.size + 1U);
-	if (file.data == NULL) {
+	void *aligned_data = NULL;
+	int align_rc = posix_memalign(&aligned_data, INPUT_ALIGN, file.size + INPUT_PAD + 1U);
+	if (align_rc != 0) {
+		errno = align_rc;
 		close(fd);
-		die_perror("malloc", path);
+		die_perror("posix_memalign", path);
 	}
+	file.data = (char *)aligned_data;
 
 	while (done < file.size) {
 		const ssize_t n = read(fd, file.data + done, file.size - done);
@@ -186,7 +194,8 @@ static loaded_file_t load_file(const char *path) {
 		done += (size_t)n;
 	}
 
-	file.data[file.size] = '\0';
+	memset(file.data + file.size, ' ', INPUT_PAD);
+	file.data[file.size + INPUT_PAD] = '\0';
 
 	if (close(fd) != 0) {
 		free(file.data);

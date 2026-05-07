@@ -1,6 +1,6 @@
 /*
- * ht.c v6
- * second tail comparison with simd
+ * ht.c v10
+ * manual ht_lookup, 32 aligned
  */
 
 #include "ht.h"
@@ -12,15 +12,13 @@
 #include <immintrin.h>
 
 typedef struct ht_entry {
-	uint64_t hash;
 	uint64_t prefix8;
+	uint64_t count;
 
+	uint32_t hash;
 	uint32_t next;        /* 0 = end of chain */
 	uint32_t key_off;     /* offset into arena */
 	uint32_t key_len;
-	uint32_t reserved;
-
-	uint64_t count;
 } ht_entry_t;
 
 struct ht {
@@ -36,18 +34,19 @@ struct ht {
 	size_t      arena_cap;
 };
 
-static inline uint64_t mix64(uint64_t x) {
-	x ^= x >> 33;
-	x *= 0xff51afd7ed558ccdULL;
-	x ^= x >> 33;
-	x *= 0xc4ceb9fe1a85ec53ULL;
-	x ^= x >> 33;
-	return x;
+enum {
+	KEY_ALIGN = 32,
+	KEY_PAD   = 32
+};
+
+static size_t align_up32(size_t x) {
+	return (x + 31U) & ~(size_t)31U;
 }
 
-static uint64_t hash_bytes(const void *data, size_t len) {
+size_t ht_most_frequent_index_ext(const ht_t *ht);
+
+static uint32_t hash_bytes(const void *data, size_t len) {
 	const uint8_t *p = (const uint8_t *)data;
-	const size_t orig_len = len;
 	uint32_t crc = 0;
 
 	while (len >= 8) {
@@ -76,7 +75,7 @@ static uint64_t hash_bytes(const void *data, size_t len) {
 		crc = _mm_crc32_u8(crc, *p);
 	}
 
-	return mix64(((uint64_t)crc << 32) ^ (uint64_t)orig_len);
+	return crc;
 }
 
 static uint64_t prefix8_bytes(const void *data, size_t len) {
@@ -205,12 +204,20 @@ static int grow_arena(ht_t *ht, size_t need_bytes) {
 	size_t new_cap = ht->arena_cap ? ht->arena_cap : 4096;
 
 	new_cap = grow(new_cap, need_bytes);
+	if (new_cap == 0) {
+		return 0;
+	}
 
-	char *new_arena = (char *)realloc(ht->arena, new_cap);
+	char *new_arena = (char *)aligned_alloc(KEY_ALIGN, new_cap);
 	if (!new_arena) {
 		return 0;
 	}
 
+	if (ht->arena && ht->arena_len != 0) {
+		memcpy(new_arena, ht->arena, ht->arena_len);
+	}
+
+	free(ht->arena);
 	ht->arena = new_arena;
 	ht->arena_cap = new_cap;
 	return 1;
@@ -223,7 +230,7 @@ static int rehash(ht_t *ht, size_t new_bucket_count) {
 	}
 
 	for (uint32_t i = 1; i <= (uint32_t)ht->size; i++) {
-		size_t bucket = (size_t)(ht->entries[i].hash & (uint64_t)(new_bucket_count - 1));
+		size_t bucket = (size_t)(ht->entries[i].hash & (uint32_t)(new_bucket_count - 1));
 		ht->entries[i].next = new_buckets[bucket];
 		new_buckets[bucket] = i;
 	}
@@ -248,7 +255,7 @@ ht_t *ht_create() {
 
 	ht->buckets =   (uint32_t *)calloc(ht->bucket_count, sizeof(uint32_t));
 	ht->entries = (ht_entry_t *)malloc((ht->entries_cap + 1) * sizeof(ht_entry_t));
-	ht->arena   =       (char *)malloc(ht->arena_cap);
+	ht->arena   =       (char *)aligned_alloc(KEY_ALIGN, ht->arena_cap);
 
 	if (!ht->buckets || !ht->entries || !ht->arena) {
 		ht_destroy(ht);
@@ -308,14 +315,14 @@ uint64_t ht_increment(ht_t *ht, const void *key, size_t key_len, uint64_t delta)
 		return 0;
 	}
 
-	uint64_t hash = hash_bytes(key, key_len);
+	uint32_t hash32 = hash_bytes(key, key_len);
 	uint64_t prefix8 = prefix8_bytes(key, key_len);
-	size_t bucket = (size_t)(hash & (uint64_t)(ht->bucket_count - 1));
+	size_t bucket = (size_t)(hash32 & (uint32_t)(ht->bucket_count - 1));
 
 	for (uint32_t i = ht->buckets[bucket]; i != 0; i = ht->entries[i].next) {
 		ht_entry_t *e = &ht->entries[i];
 
-		if (e->hash == hash && e->key_len == key_len && e->prefix8 == prefix8 &&
+		if (e->hash == hash32 && e->key_len == key_len && e->prefix8 == prefix8 &&
 		    key_eq_candidate(ht, e, key, key_len)
 		) {
 			e->count += delta;
@@ -330,7 +337,7 @@ uint64_t ht_increment(ht_t *ht, const void *key, size_t key_len, uint64_t delta)
 		if (new_bucket_count == 0 || !rehash(ht, new_bucket_count)) {
 			return 0;
 		}
-		bucket = (size_t)(hash & (uint64_t)(ht->bucket_count - 1));
+		bucket = (size_t)(hash32 & (uint32_t)(ht->bucket_count - 1));
 	}
 
 	if (ht->size + 1 > ht->entries_cap) {
@@ -339,55 +346,44 @@ uint64_t ht_increment(ht_t *ht, const void *key, size_t key_len, uint64_t delta)
 		}
 	}
 
-	if (ht->arena_len + key_len > ht->arena_cap) {
-		if (!grow_arena(ht, ht->arena_len + key_len)) {
+	size_t key_off_size = align_up32(ht->arena_len);
+	size_t stored_len = key_len < KEY_PAD ? KEY_PAD : key_len;
+
+	if (key_off_size < ht->arena_len || key_off_size > SIZE_MAX - stored_len) {
+		return 0;
+	}
+
+	if (key_off_size + stored_len > ht->arena_cap) {
+		if (!grow_arena(ht, key_off_size + stored_len)) {
 			return 0;
 		}
 	}
 
-	uint32_t key_off = (uint32_t)ht->arena_len;
+	uint32_t key_off = (uint32_t)key_off_size;
+
 	if (key_len != 0) {
-		memcpy(ht->arena + ht->arena_len, key, key_len);
-		ht->arena_len += key_len;
+		memcpy(ht->arena + key_off_size, key, key_len);
 	}
+	if (stored_len > key_len) {
+		memset(ht->arena + key_off_size + key_len, ' ', stored_len - key_len);
+	}
+
+	ht->arena_len = key_off_size + stored_len;
 
 	uint32_t idx = (uint32_t)(ht->size + 1);
 	ht_entry_t *e = &ht->entries[idx];
 
+	e->prefix8  = prefix8;
+	e->count    = delta;
+	e->hash     = hash32;
 	e->next     = ht->buckets[bucket];
 	e->key_off  = key_off;
 	e->key_len  = (uint32_t)key_len;
-	e->reserved = 0;
-	e->hash     = hash;
-	e->count    = delta;
-	e->prefix8  = prefix8;
 
 	ht->buckets[bucket] = idx;
 	ht->size = idx;
 
 	return e->count;
-}
-
-uint64_t ht_lookup(const ht_t *ht, const void *key, size_t key_len) {
-	if (!ht || (!key && key_len != 0) || ht->bucket_count == 0) {
-		return 0;
-	}
-
-	uint64_t hash = hash_bytes(key, key_len);
-	uint64_t prefix8 = prefix8_bytes(key, key_len);
-	size_t bucket = (size_t)(hash & (uint64_t)(ht->bucket_count - 1));
-
-	for (uint32_t i = ht->buckets[bucket]; i != 0; i = ht->entries[i].next) {
-		const ht_entry_t *e = &ht->entries[i];
-
-		if (e->hash == hash && e->key_len == key_len && e->prefix8 == prefix8 &&
-		    key_eq_candidate(ht, e, key, key_len)
-		) {
-			return e->count;
-		}
-	}
-
-	return 0;
 }
 
 ht_view_t ht_most_frequent(const ht_t *ht) {
@@ -400,15 +396,11 @@ ht_view_t ht_most_frequent(const ht_t *ht) {
 		return out;
 	}
 
-	size_t best = 1;
-	for (size_t i = 2; i <= ht->size; i++) {
-		if (ht->entries[i].count > ht->entries[best].count) {
-			best = i;
-		}
-	}
+	size_t best = ht_most_frequent_index_ext(ht);
+	const ht_entry_t *e = &ht->entries[best];
 
-	out.key.ptr = ht->arena + ht->entries[best].key_off;
-	out.key.len = ht->entries[best].key_len;
-	out.count   = ht->entries[best].count;
+	out.key.ptr = ht->arena + e->key_off;
+	out.key.len = e->key_len;
+	out.count   = e->count;
 	return out;
 }

@@ -1,10 +1,10 @@
 CC       ?= gcc
 TARGET    = bench
-HT_OBJS  ?= ht.o ht_most_frequent_index_ext.o
+HT_OBJS  ?= ht.o ht_lookup_ext.o ht_most_frequent_index_ext.o
 OBJS     := bench.o $(HT_OBJS)
 
 CPPFLAGS ?=
-CFLAGS   ?= -std=c99 -O3 -DNDEBUG -g -march=native -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wstrict-prototypes -Wmissing-prototypes -MMD -MP
+CFLAGS   ?= -std=c11 -O3 -DNDEBUG -g -march=native -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wstrict-prototypes -Wmissing-prototypes -MMD -MP
 LDFLAGS  ?=
 LDLIBS   ?=
 VALGRIND ?= valgrind
